@@ -1,0 +1,7 @@
+.env
+*.js
+*.js.map
+
+.idea
+.DS_STORE
+node_modules
