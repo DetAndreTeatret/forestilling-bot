@@ -1,7 +1,7 @@
 //Login the given Browser to SchedgeUp through the standard login url
 
 import {createPage} from "../browser.js";
-import {Browser} from 'puppeteer'
+import {Browser, Page} from 'puppeteer'
 
 const LOGIN_URL = "https://www.schedgeup.com/login"
 
@@ -10,10 +10,8 @@ const LOGIN_URL = "https://www.schedgeup.com/login"
 const emailInput = "#session_email"
 const passwordInput = "#session_password"
 const loginBtn = "input[type=\"submit\"]"
-export async function login(browser: Browser) {
+export async function login(page: Page) {
     console.log("Starting login process...")
-    const page = await createPage(browser)
-
     console.log(`Navigating to ${LOGIN_URL}...`)
     await page.goto(LOGIN_URL)
 

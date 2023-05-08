@@ -26,6 +26,13 @@ export async function createPage(browser: Browser) {
         }
     })
 
+    //Forward relevant console info from browser console to node console
+    page.on('console', message => {
+        if(message.type() == "info") {
+            console.info("[Puppeteer INFO]" + message.text())
+        }
+    })
+
     //Minimize display size
     await page.setViewport({
         width: 640,
