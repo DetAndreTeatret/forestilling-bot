@@ -1,13 +1,51 @@
 import {Page} from "puppeteer";
 import {navigateToUrl} from "../main.js";
 
-//css selectors
+//YYYY-MM-DD
+//DD is irrelevant
+const SCHEDULE_DATE_FORMAT = "?date=%y-%m-01"
 
+//css selectors
 const eventFields = "[class^='eventBlurb']"
-export async function getEventIds(page: Page) { //TODO: Add date range("?date=YYYY-MM-DD")
-    console.log("Reading all events from schedule page")
-    //console.log(await page.content())
-    await page.waitForSelector(eventFields)
+
+export async function getEventIds(page: Page, dateFrom: Date, dateTo: Date) {
+    const dateStrings: string[] = []
+    if(dateFrom.getMonth() < dateTo.getMonth() || dateFrom.getFullYear() < dateTo.getFullYear()) {
+        console.log("Getting event ids for range " + formatDateYYYYMM(dateFrom) + " to " + formatDateYYYYMM(dateTo))
+        let fromMonth = dateFrom.getMonth(), toMonth = dateTo.getMonth(), fromYear = dateFrom.getFullYear()
+        while(true) {
+            if(fromMonth > 13) {
+                fromMonth = 1
+            }
+
+            console.log("Created " + SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth)))
+            dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth)))
+
+            if(fromMonth == toMonth) {
+                if (fromYear == dateTo.getFullYear()) {
+                    break;
+                }
+                fromYear++
+            }
+            fromMonth++
+        }
+    } else {
+        await navigateToSchedule(page)
+        return await scrapeSchedule(page)
+    }
+
+    const ids: string[] = []
+    for (const date of dateStrings) {
+        await navigateToSchedule(page, date)
+        for (const id of await scrapeSchedule(page)) {
+            ids.push(id)
+        }
+    }
+
+    return ids
+}
+
+async function scrapeSchedule(page: Page) {
     return await page.$$eval(eventFields, (events) => {
         const readEvents: string[] = []
         events.forEach((event) => {
@@ -24,8 +62,13 @@ export async function getEventIds(page: Page) { //TODO: Add date range("?date=YY
     })
 }
 
-export async function navigateToSchedule(page: Page) {
+function formatDateYYYYMM(date: Date) {
+    return "" + date.getFullYear() + "-" + date.getMonth()
+}
+
+async function navigateToSchedule(page: Page, dateString?: string) {
     //Cant be static because the ID is from .env
     const SCHEDULE_URL = `https://www.schedgeup.com/theatre/${process.env["THEATRE_ID"]!}/schedule`
-    await navigateToUrl(page, SCHEDULE_URL)
+    await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
+    await page.waitForSelector(eventFields)
 }

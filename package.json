@@ -4,7 +4,8 @@
   "description": "Bot for å lese av informasjon fra SchedgeUp",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node main.js"
   },
   "type": "module",
   "keywords": [],

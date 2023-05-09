@@ -1,6 +1,6 @@
 import {Page} from "puppeteer";
 
-const DASHBOARD_URL = "https://www.schedgeup.com/users/2080/dashboard"
+const DASHBOARD_URL_FORMAT = "https://www.schedgeup.com/users/%s/dashboard"
 
 //css selectors
 
@@ -10,6 +10,6 @@ export async function scrapePickups(page: Page) {
 }
 
 export async function navigateToDashboard(page: Page) {
-    console.log(`Navigating to ${DASHBOARD_URL}...`)
-    await page.goto(DASHBOARD_URL)
+    console.log(`Navigating to ${DASHBOARD_URL_FORMAT}...`)
+    await page.goto(DASHBOARD_URL_FORMAT)
 }
