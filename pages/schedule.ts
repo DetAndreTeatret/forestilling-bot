@@ -18,8 +18,7 @@ export async function getEventIds(page: Page, dateFrom: Date, dateTo: Date) {
                 fromMonth = 1
             }
 
-            console.log("Created " + SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth)))
-            dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth)))
+            dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth + 1)))
 
             if(fromMonth == toMonth) {
                 if (fromYear == dateTo.getFullYear()) {
@@ -63,12 +62,11 @@ async function scrapeSchedule(page: Page) {
 }
 
 function formatDateYYYYMM(date: Date) {
-    return "" + date.getFullYear() + "-" + date.getMonth()
+    return "" + date.getFullYear() + "-" + (date.getMonth() + 1)
 }
 
 async function navigateToSchedule(page: Page, dateString?: string) {
     //Cant be static because the ID is from .env
     const SCHEDULE_URL = `https://www.schedgeup.com/theatre/${process.env["THEATRE_ID"]!}/schedule`
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
-    await page.waitForSelector(eventFields)
 }

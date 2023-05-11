@@ -2,6 +2,7 @@
 
 import {createPage} from "../browser.js";
 import {Browser, Page} from 'puppeteer'
+import {navigateToUrl} from "../main.js";
 
 const LOGIN_URL = "https://www.schedgeup.com/login"
 
@@ -12,10 +13,8 @@ const passwordInput = "#session_password"
 const loginBtn = "input[type=\"submit\"]"
 export async function login(page: Page) {
     console.log("Starting login process...")
-    console.log(`Navigating to ${LOGIN_URL}...`)
-    await page.goto(LOGIN_URL)
+    await navigateToUrl(page, LOGIN_URL)
 
-    await page.waitForSelector(emailInput)
     console.log("Entering login info...")
     await page.type(emailInput, process.env["SCHEDGEUP_EMAIL"]!)
     await page.type(passwordInput, process.env["SCHEDGEUP_PASS"]!)

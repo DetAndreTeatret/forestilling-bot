@@ -31,7 +31,6 @@ export async function scrapeEvents(page: Page, ids: string[]) {
         const usersSelector = ".assignedUsers"
         console.log("Extracting users from " + id)
         await navigateToUrl(page, EVENT_ASSIGN_FORMAT.replace("%s", id))
-        await page.waitForSelector(usersSelector)
 
         //Fetch the workers currently assigned to this show
         const workers = await page.$$eval(usersSelector, (events) => {
@@ -50,10 +49,15 @@ export async function scrapeEvents(page: Page, ids: string[]) {
 
             events.forEach((element) => {
                 const role = element.querySelector(".skilled_role")
-                const who = element.querySelector(".bar_info")
+                const whoList = element.querySelectorAll(".userBar")
 
-                if(role != null && who != null) {
-                    workers.push(new Worker(role.innerText.split(" ")[0], who.innerText))
+                if(role != null && whoList.length > 0) {
+                    for (let whoListElement of whoList) {
+                        const who = whoListElement.querySelector(".bar_info")
+                        if(who != null) {
+                            workers.push(new Worker(role.innerText.split(" ")[0], who.innerText))
+                        }
+                    }
                 }
             });
 
