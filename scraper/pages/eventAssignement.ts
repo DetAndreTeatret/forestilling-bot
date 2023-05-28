@@ -1,5 +1,5 @@
-import {navigateToUrl} from "../main.js";
 import {Page} from "puppeteer";
+import {navigateToUrl} from "../browser.js";
 
 const EVENT_ASSIGN_FORMAT = "https://www.schedgeup.com/assignments/%s/edit"
 
@@ -48,16 +48,16 @@ export async function scrapeEvents(page: Page, ids: string[]) {
             const workers: Worker[] = []
 
             events.forEach((element) => {
-                const role = element.querySelector(".skilled_role")
+                const role = element.querySelector(".skilled_role") as HTMLElement
                 const whoList = element.querySelectorAll(".userBar")
 
                 if(role != null && whoList.length > 0) {
-                    for (let whoListElement of whoList) {
-                        const who = whoListElement.querySelector(".bar_info")
+                    whoList.forEach(whoListElement => {
+                        const who = whoListElement.querySelector(".bar_info") as HTMLElement
                         if(who != null) {
                             workers.push(new Worker(role.innerText.split(" ")[0], who.innerText))
                         }
-                    }
+                    })
                 }
             });
 
@@ -67,7 +67,8 @@ export async function scrapeEvents(page: Page, ids: string[]) {
         //Fetch the name of this show
         const title: string = await page.$eval("#header", event => {
             //Include spaces in split so there is no space at the end of title text
-            return event.querySelector(".subtitle").innerText.split(" • ")[0]
+            const subtitle = event.querySelector(".subtitle") as HTMLElement
+            return subtitle == null ? "null" : subtitle.innerText.split(" • ")[0]
         })
 
         events.push(new Event(id, title, JSON.parse(workers)))

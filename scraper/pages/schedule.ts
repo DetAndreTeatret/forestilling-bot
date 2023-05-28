@@ -1,5 +1,6 @@
 import {Page} from "puppeteer";
-import {navigateToUrl} from "../main.js";
+import {DateRange} from "../../common/date.js";
+import {navigateToUrl} from "../browser.js";
 
 //YYYY-MM-DD
 //DD is irrelevant
@@ -8,11 +9,11 @@ const SCHEDULE_DATE_FORMAT = "?date=%y-%m-01"
 //css selectors
 const eventFields = "[class^='eventBlurb']"
 
-export async function getEventIds(page: Page, dateFrom: Date, dateTo: Date) {
+export async function getEventIds(page: Page, dateRange: DateRange) {
     const dateStrings: string[] = []
-    if(dateFrom.getMonth() < dateTo.getMonth() || dateFrom.getFullYear() < dateTo.getFullYear()) {
-        console.log("Getting event ids for range " + formatDateYYYYMM(dateFrom) + " to " + formatDateYYYYMM(dateTo))
-        let fromMonth = dateFrom.getMonth(), toMonth = dateTo.getMonth(), fromYear = dateFrom.getFullYear()
+    if(!dateRange.isSingleMonth()) {
+        console.log("Getting event ids for range " + dateRange.toString())
+        let fromMonth = dateRange.dateFrom.getMonth(), toMonth = dateRange.dateTo.getMonth(), fromYear = dateRange.dateFrom.getFullYear()
         while(true) {
             if(fromMonth > 13) {
                 fromMonth = 1
@@ -21,7 +22,7 @@ export async function getEventIds(page: Page, dateFrom: Date, dateTo: Date) {
             dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth + 1)))
 
             if(fromMonth == toMonth) {
-                if (fromYear == dateTo.getFullYear()) {
+                if (fromYear == dateRange.dateTo.getFullYear()) {
                     break;
                 }
                 fromYear++
@@ -44,11 +45,21 @@ export async function getEventIds(page: Page, dateFrom: Date, dateTo: Date) {
     return ids
 }
 
-async function scrapeSchedule(page: Page) {
-    return await page.$$eval(eventFields, (events) => {
+async function scrapeSchedule(page: Page, dateRange?: DateRange) {
+    return await page.$$eval(eventFields, (events, dateRange) => {
         const readEvents: string[] = []
-        events.forEach((event) => {
-            const href: string = event.href
+        events.forEach(element => {
+
+            //@ts-ignore
+            const dateString = element.innerText.split(" ")[1].split("/")
+            const date = new Date(dateString[2], dateString[1], dateString[0])
+
+            if(dateRange !== undefined && !dateRange.contains(date)) {
+                return
+            }
+            //TODO how to remove this error? The element in question does in fact have a href
+            //@ts-ignore
+            const href: string = element.href
             const id = href.match("\\d+")
             if(id == null || id.length > 1) {
                 throw new Error("Regex matched wrongly for event href")
@@ -58,11 +69,7 @@ async function scrapeSchedule(page: Page) {
             }
         })
         return readEvents
-    })
-}
-
-function formatDateYYYYMM(date: Date) {
-    return "" + date.getFullYear() + "-" + (date.getMonth() + 1)
+    }, dateRange)
 }
 
 async function navigateToSchedule(page: Page, dateString?: string) {

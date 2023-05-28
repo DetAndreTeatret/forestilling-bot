@@ -1,4 +1,4 @@
-import puppeteer, {Browser} from 'puppeteer'
+import puppeteer, {Browser, Page} from 'puppeteer'
 
 export async function startBrowser() {
     console.log("Starting browser...")
@@ -40,4 +40,9 @@ export async function createPage(browser: Browser) {
     })
 
     return page
+}
+
+export async function navigateToUrl(page: Page, url: string) {
+    console.log("Navigating to " + url + "...")
+    await page.goto(url, {waitUntil: "networkidle2"})
 }
