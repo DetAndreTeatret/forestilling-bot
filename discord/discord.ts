@@ -1,4 +1,3 @@
-import dotenv from 'dotenv'
 import {
     GatewayIntentBits,
     Client,
@@ -6,14 +5,18 @@ import {
     Collection,
     ClientOptions,
     ChatInputCommandInteraction,
-    Guild, TextChannel, ChannelType
+    Guild, TextChannel, ChannelType, GuildMember
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
+import {Event} from "../scraper/pages/eventAssignement.js"
+import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
-const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not edit this away\\) ID:\\d+$")
+const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
+
+const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+$")
 
 class SuperClient extends Client {
     commands = new Collection()
@@ -102,12 +105,47 @@ async function mapRunningChannels(guild: Guild) {
     return runningChannels
 }
 
-async function createNewChannelForEvent(guild: Guild, schedgeUpId: string) {
+async function createNewChannelForEvent(guild: Guild, event: Event) {
+    const channel = await guild.channels.create({
+        name: event.title,
+        type: ChannelType.GuildText,
+        topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id)
+    })
 
+    for (const worker of event.workers) {
+        const user = await getUserFromSchedgeUp(worker)
+        await addMemberToChannel(channel, user.discord.member)
+    }
 }
 
-async function updateMembersForChannel() {
+/**
+ *
+ * @param channel
+ * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
+ */
+async function updateMembersForChannel(channel: TextChannel, event: Event) {
+    const usersFromDiscord: User[] = []
+    for (let member of channel.members.values()) {
+        usersFromDiscord.push(await getUserFromDiscord(member))
+    }
 
+    const usersFromSchedgeUp: User[] = []
+    for (let worker of event.workers) {
+        usersFromSchedgeUp.push(await getUserFromSchedgeUp(worker))
+    }
+
+    //Subtract users already in discord
+    const usersToAdd = usersFromSchedgeUp.filter((value) => {
+        return !usersFromDiscord.includes(value)
+    })
+
+    for (let user of usersToAdd) {
+        await addMemberToChannel(channel, user.discord.member)
+    }
+}
+
+async function addMemberToChannel(channel: TextChannel, member: GuildMember) {
+    await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
 }
 
 async function postEventStatusMessage() {

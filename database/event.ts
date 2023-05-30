@@ -1,12 +1,10 @@
 
 
 export class EventInfo {
-    picture: string
-    callTime: Date
-
+    picture?: string
 
 }
 
-export async function getEventInfo(name: string): Promise<EventInfo> {
+export async function getEventInfo(name: string) {
 
 }

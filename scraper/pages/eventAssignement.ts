@@ -3,16 +3,18 @@ import {navigateToUrl} from "../browser.js";
 
 const EVENT_ASSIGN_FORMAT = "https://www.schedgeup.com/assignments/%s/edit"
 
-class Worker {
+export class Worker {
+    id: string | null //null if Guest
     role: string
     who: string
-    constructor(role: string, who: string) {
+    constructor(id: string | null, role: string, who: string) {
+        this.id = id;
         this.role = role;
         this.who = who;
     }
 }
 
-class Event {
+export class Event {
     id: string
     title: string
     workers: Worker[]
@@ -37,9 +39,11 @@ export async function scrapeEvents(page: Page, ids: string[]) {
 
             //Duplicate since browser can not see our class
             class Worker {
+                id: string | null //null if Guest
                 role: string
                 who: string
-                constructor(role: string, who: string) {
+                constructor(id: string | null, role: string, who: string) {
+                    this.id = id;
                     this.role = role;
                     this.who = who;
                 }
@@ -53,9 +57,10 @@ export async function scrapeEvents(page: Page, ids: string[]) {
 
                 if(role != null && whoList.length > 0) {
                     whoList.forEach(whoListElement => {
+                        const id = whoListElement.getAttribute("data-id")
                         const who = whoListElement.querySelector(".bar_info") as HTMLElement
                         if(who != null) {
-                            workers.push(new Worker(role.innerText.split(" ")[0], who.innerText))
+                            workers.push(new Worker(id, role.innerText.split(" ")[0], who.innerText))
                         }
                     })
                 }
