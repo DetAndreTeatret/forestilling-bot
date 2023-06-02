@@ -5,7 +5,7 @@ import {
     Collection,
     ClientOptions,
     ChatInputCommandInteraction,
-    Guild, TextChannel, ChannelType, GuildMember
+    Guild, TextChannel, ChannelType, GuildMember, Snowflake
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
@@ -18,13 +18,76 @@ const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 
 const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+$")
 
-class SuperClient extends Client {
+export class SuperClient extends Client {
     commands = new Collection()
     //TODO: Some object for accessing SchedgeUp Events so they can be reached in commands
 
-        constructor(options: ClientOptions) {
+    constructor(options: ClientOptions) {
             super(options);
         }
+
+    /**
+     * Get all currently created channels that should be managed by this bot.
+     * The keys in the returned collections are the SchedgeUp event id the channel was created for.
+     * @param guild The guild to search for running channels
+     */
+    public async mapRunningChannels(guild: Guild) {
+        const channels = await guild.channels.fetch()
+        const runningChannels = new Collection<string, TextChannel>()
+
+        for (let channel of channels.values()) {
+            if(channel === null || channel.type != ChannelType.GuildText) continue
+
+            const textChannel = channel as TextChannel
+            if(textChannel.topic === null) continue
+
+            if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
+                const id = textChannel.topic.split(":")[1]
+                runningChannels.set(id, textChannel)
+            }
+        }
+
+        return runningChannels
+    }
+
+    async createNewChannelForEvent(guild: Guild, event: Event) {
+        const channel = await guild.channels.create({
+            name: event.title,
+            type: ChannelType.GuildText,
+            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id)
+        })
+
+        for (const worker of event.workers) {
+            const user = await getUserFromSchedgeUp(worker)
+            await addMemberToChannel(channel, user.discord.member)
+        }
+    }
+
+    /**
+     *
+     * @param channel
+     * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
+     */
+    async updateMembersForChannel(channel: TextChannel, event: Event) {
+        const usersFromDiscord: User[] = []
+        for (let member of channel.members.values()) {
+            usersFromDiscord.push(await getUserFromDiscord(member))
+        }
+
+        const usersFromSchedgeUp: User[] = []
+        for (let worker of event.workers) {
+            usersFromSchedgeUp.push(await getUserFromSchedgeUp(worker))
+        }
+
+        //Subtract users already in discord
+        const usersToAdd = usersFromSchedgeUp.filter((value) => {
+            return !usersFromDiscord.includes(value)
+        })
+
+        for (let user of usersToAdd) {
+            await addMemberToChannel(channel, user.discord.member)
+        }
+    }
 }
 
 export async function startDiscordClient() {
@@ -81,69 +144,6 @@ export async function startDiscordClient() {
     return client
 }
 
-/**
- * Get all currently created channels that should be managed by this bot.
- * The keys in the returned collections are the SchedgeUp event id the channel was created for.
- * @param guild The guild to search for running channels
- */
-async function mapRunningChannels(guild: Guild) {
-    const channels = await guild.channels.fetch()
-    const runningChannels = new Collection<string, TextChannel>()
-
-    for (let channel of channels.values()) {
-        if(channel === null || channel.type != ChannelType.GuildText) continue
-
-        const textChannel = channel as TextChannel
-        if(textChannel.topic === null) continue
-
-        if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
-            const id = textChannel.topic.split(":")[1]
-            runningChannels.set(id, textChannel)
-        }
-    }
-
-    return runningChannels
-}
-
-async function createNewChannelForEvent(guild: Guild, event: Event) {
-    const channel = await guild.channels.create({
-        name: event.title,
-        type: ChannelType.GuildText,
-        topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id)
-    })
-
-    for (const worker of event.workers) {
-        const user = await getUserFromSchedgeUp(worker)
-        await addMemberToChannel(channel, user.discord.member)
-    }
-}
-
-/**
- *
- * @param channel
- * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
- */
-async function updateMembersForChannel(channel: TextChannel, event: Event) {
-    const usersFromDiscord: User[] = []
-    for (let member of channel.members.values()) {
-        usersFromDiscord.push(await getUserFromDiscord(member))
-    }
-
-    const usersFromSchedgeUp: User[] = []
-    for (let worker of event.workers) {
-        usersFromSchedgeUp.push(await getUserFromSchedgeUp(worker))
-    }
-
-    //Subtract users already in discord
-    const usersToAdd = usersFromSchedgeUp.filter((value) => {
-        return !usersFromDiscord.includes(value)
-    })
-
-    for (let user of usersToAdd) {
-        await addMemberToChannel(channel, user.discord.member)
-    }
-}
-
 async function addMemberToChannel(channel: TextChannel, member: GuildMember) {
     await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
 }
@@ -158,4 +158,11 @@ async function editEventStatusMessage() {
 
 async function sendConfirmationMessage() {
     //TODO: Send message to somebody to confirm creating a new channel or whatever
+}
+
+export class DiscordCommandError extends Error {
+
+    constructor(message: string, where: string) {
+        super(message);
+    }
 }
