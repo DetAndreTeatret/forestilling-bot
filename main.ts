@@ -5,10 +5,10 @@ import dotenv from 'dotenv'
 import {Page} from "puppeteer";
 import {scrapeEvents} from "./scraper/pages/eventAssignement.js";
 import {parseArgs} from "util";
-import {DateRange} from "./common/date.js";
+import {DateRange, tomorrow} from "./common/date.js";
 import {DiscordCommandError, SuperClient} from "./discord/discord";
 import {ChatInputCommandInteraction} from "discord.js";
-import {read} from "fs";
+import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord";
 
 dotenv.config()
 
@@ -28,6 +28,8 @@ const {
         }
     }
 })
+
+//await startDaemon() TODO
 
 const browser = await startBrowser()
 const page= await createPage(browser)
@@ -50,8 +52,9 @@ export async function update(interaction: ChatInputCommandInteraction) {
 
     //Check if any running channels are old - TODO: start deletion process
     channels.forEach((channel, id) => {
+        const now = new Date()
         if(!events.find(e => e.id == id)) {
-            startDeletion(channel)
+            queChannelDeletion(channel, tomorrow())
         }
     })
 
@@ -69,4 +72,20 @@ export async function update(interaction: ChatInputCommandInteraction) {
             await (interaction.client as SuperClient).createNewChannelForEvent(interaction.guild, event)
         }
     }
+}
+
+async function startDaemon() {
+    setTimeout(function () {
+        getDeleteableChannels() //TODO: Delete these
+
+        /*
+        for each running channel
+
+        getRemovableUsers(channel)
+
+        remove them...
+        */
+
+    }, 1000 * 60 * 60) //One hour
+
 }
