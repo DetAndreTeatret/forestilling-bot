@@ -83,7 +83,7 @@ export async function checkDeletions()  {
     const channelIdsToDelete = await getDeleteableChannels()
     for (let channelsToDeleteElement of channelIdsToDelete) {
         const channel = await discordClient.channels.fetch(channelsToDeleteElement)
-        if(channel != null) channel.delete("Event related to this channel has ended")
+        if(channel != null) channel.delete("Event related to this channel has ended") //TODO: Remove deletion cue entry from database
     }
 
     //Skip the full #update cycle, just remove channels we've already deleted
@@ -96,7 +96,9 @@ export async function checkDeletions()  {
         const usersToRemove = await getRemovableUsers(channel)
         for (let userToRemove of usersToRemove) {
             const discordUser = await channel.guild.members.fetch(userToRemove)
-            await channel.permissionOverwrites.edit(discordUser, {SendMessages: false, ViewChannel: false}) //TODO: This should be in discord/discord.ts
+            //TODO: This should be in discord/discord.ts
+            await channel.permissionOverwrites.edit(discordUser, {SendMessages: false, ViewChannel: false}) //TODO: Remove deletion cue entry from database
+
         }
     }
 
