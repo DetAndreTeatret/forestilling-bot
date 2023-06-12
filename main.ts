@@ -2,11 +2,10 @@ import {createPage, startBrowser} from "./scraper/browser.js";
 import {loginSchedgeUp} from "./scraper/pages/login.js";
 import {getEventIds} from "./scraper/pages/schedule.js";
 import dotenv from 'dotenv'
-import {Page} from "puppeteer";
 import {scrapeEvents} from "./scraper/pages/eventAssignement.js";
 import {parseArgs} from "util";
 import {DateRange, tomorrow} from "./common/date.js";
-import {DiscordCommandError, SuperClient} from "./discord/discord";
+import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/discord";
 import {ChatInputCommandInteraction} from "discord.js";
 import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord";
 
@@ -38,6 +37,8 @@ await loginSchedgeUp(page)
 const ids = await getEventIds(page, new DateRange(dateFrom ? new Date(dateFrom) : new Date(), dateTo ? new Date(dateTo) : new Date()))
 const events = await scrapeEvents(page, ids)
 
+const discordClient = await startDiscordClient()
+
 console.log(JSON.stringify(events, null, 1))
 process.exit()
 
@@ -50,7 +51,7 @@ export async function update(interaction: ChatInputCommandInteraction) {
     if(interaction.guild == null) throw new DiscordCommandError("Guild is null", "update")
     const channels = await client.mapRunningChannels(interaction.guild)
 
-    //Check if any running channels are old - TODO: start deletion process
+    //Check if any running channels are old
     channels.forEach((channel, id) => {
         const now = new Date()
         if(!events.find(e => e.id == id)) {
@@ -58,7 +59,7 @@ export async function update(interaction: ChatInputCommandInteraction) {
         }
     })
 
-    //Check if any events this week has any changes compared to their running discord channel - Add members, TODO: start timer to remove old members?
+    //Check if any events this week has any changes compared to their running discord channel - Add/Remove members
     channels.forEach((channel, id) => {
         const event = events.find(e => e.id == id)
         if(event == undefined) return
@@ -75,17 +76,28 @@ export async function update(interaction: ChatInputCommandInteraction) {
 }
 
 async function startDaemon() {
-    setTimeout(function () {
-        getDeleteableChannels() //TODO: Delete these
+    setTimeout(checkDeletions, 1000 * 60 * 60) //One hour
+}
 
-        /*
-        for each running channel
+export async function checkDeletions()  {
+    const channelIdsToDelete = await getDeleteableChannels()
+    for (let channelsToDeleteElement of channelIdsToDelete) {
+        const channel = await discordClient.channels.fetch(channelsToDeleteElement)
+        if(channel != null) channel.delete("Event related to this channel has ended")
+    }
 
-        getRemovableUsers(channel)
+    //Skip the full #update cycle, just remove channels we've already deleted
+    discordClient.channelCache = discordClient.channelCache.filter((channel, string) => {
+        !channelIdsToDelete.includes(channel.id)
+    })
 
-        remove them...
-        */
-
-    }, 1000 * 60 * 60) //One hour
+    for (let channelCacheElement of discordClient.channelCache) {
+        const channel = channelCacheElement[1]
+        const usersToRemove = await getRemovableUsers(channel)
+        for (let userToRemove of usersToRemove) {
+            const discordUser = await channel.guild.members.fetch(userToRemove)
+            await channel.permissionOverwrites.edit(discordUser, {SendMessages: false, ViewChannel: false}) //TODO: This should be in discord/discord.ts
+        }
+    }
 
 }

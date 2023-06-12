@@ -5,12 +5,15 @@ import {
     Collection,
     ClientOptions,
     ChatInputCommandInteraction,
-    Guild, TextChannel, ChannelType, GuildMember, Snowflake
+    Guild, TextChannel, ChannelType, GuildMember
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
 import {Event} from "../scraper/pages/eventAssignement.js"
 import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
+import {cueUserRemovalFromDiscord} from "../database/discord.js"
+import {tomorrow} from "../common/date";
+import {run} from "node:test";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
@@ -21,6 +24,9 @@ const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:
 export class SuperClient extends Client {
     commands = new Collection()
     //TODO: Some object for accessing SchedgeUp Events so they can be reached in commands
+
+    //All channels currently managed by this bot
+    channelCache: Collection<string, TextChannel> = new Collection()
 
     constructor(options: ClientOptions) {
             super(options);
@@ -47,7 +53,9 @@ export class SuperClient extends Client {
             }
         }
 
-        return runningChannels
+        this.channelCache = runningChannels
+
+        return this.channelCache
     }
 
     async createNewChannelForEvent(guild: Guild, event: Event) {
@@ -84,8 +92,16 @@ export class SuperClient extends Client {
             return !usersFromDiscord.includes(value)
         })
 
+        const usersToRemove = usersFromDiscord.filter((value) => {
+            return !usersFromSchedgeUp.includes(value)
+        })
+
         for (let user of usersToAdd) {
             await addMemberToChannel(channel, user.discord.member)
+        }
+
+        for (let user of usersToRemove) {
+            await cueUserRemovalFromDiscord(user, channel, tomorrow()) //TODO: Longer?
         }
     }
 }
@@ -146,6 +162,10 @@ export async function startDiscordClient() {
 
 async function addMemberToChannel(channel: TextChannel, member: GuildMember) {
     await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
+}
+
+async function removeMemberFromChannel(channel: TextChannel, member: GuildMember) {
+    await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
 }
 
 async function postEventStatusMessage() {
