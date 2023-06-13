@@ -1,7 +1,13 @@
+#Environment files
 .env
+
+#TypeScript generated files
 *.js
 *.js.map
 
 .idea
 .DS_STORE
 node_modules
+
+#Default database file
+/database/database.db
