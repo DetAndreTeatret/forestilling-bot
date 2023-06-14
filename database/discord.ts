@@ -1,6 +1,6 @@
 import {GuildChannel, Snowflake} from "discord.js";
 import {User} from "./user.js";
-import {addEntry, selectEntries} from "./sqlite";
+import {addEntry, selectEntries} from "./sqlite.js";
 
 
 /**
@@ -13,12 +13,10 @@ export async function queChannelDeletion(channel: GuildChannel, when: Date) {
 /**
  * Get snowflakes of {@link GuildChannel}s that can be deleted. (System time newer than time stored in database)
  */
-export async function getDeleteableChannels() {
-    //Can we delete the given channel
-
-    const result: Snowflake[] = []
-
-    return result
+export async function getDeleteableChannels(): Promise<Snowflake[]> {
+    const columnName = "DiscordChannelSnowflake"
+    const result = await selectEntries("DiscordChannelDeletions", "UnixEpoch < " + new Date().getTime(), [columnName])
+    return result.map(value => value[columnName])
 }
 
 /**
@@ -33,9 +31,8 @@ export async function cueUserRemovalFromDiscord(user: User, channel: GuildChanne
  *
  * @return an array of member id snowflakes containing all members that can be deleted from the given channel
  */
-export async function getRemovableUsers(channel: GuildChannel) {
-    const result = selectEntries("DiscordUserRemovals", "DiscordChannelSnowflake...UnixEpoch > " + new Date().getTime(), ["DiscordChannelSnowflake, DiscordUserSnowflake"])
-    const result0: Snowflake[] = []
-
-    return result0
+export async function getRemovableUsers(channel: GuildChannel): Promise<Snowflake[]> {
+    const columnName = "DiscordUserSnowflake"
+    const result = await selectEntries("DiscordUserRemovals", "DiscordChannelSnowflake=\"" + channel.id + "\" AND UnixEpoch < " + new Date().getTime(), [columnName])
+    return result.map(value => value[columnName])
 }

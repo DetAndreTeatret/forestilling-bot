@@ -31,14 +31,19 @@ type DatabaseTables = "Users" | "DiscordChannelDeletions" | "DiscordUserRemovals
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified
  * @param table The table to insert an entry into
  * @param params The values of the entry, in the order specified in the Database Layout
- * @see createTables
  */
 export async function addEntry(table: DatabaseTables, ...params: string[]) {
     await db.exec("INSERT INTO " + table + " VALUES(" + params + ")")
 }
 
+/**
+ * Select some entries from a table.
+ * @param table where to select entries from
+ * @param condition the filter condition for choosing entries
+ * @param columns which columns to include. If undefined, all columns will be included
+ */
 export async function selectEntries(table: DatabaseTables, condition: string, columns?: string[]) {
     const columnString = columns == undefined ? "*" : "(" + columns + ")"
-    return await db.get("SELECT * FROM " + table + " WHERE " + condition)
+    return await db.all("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
 }
 
