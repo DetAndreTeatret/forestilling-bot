@@ -5,6 +5,6 @@ export class EventInfo {
 
 }
 
-export async function getEventInfo(name: string) {
+/**export function getEventInfo(name: string) {
 
-}
+}**/

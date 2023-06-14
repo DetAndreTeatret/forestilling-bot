@@ -2,7 +2,8 @@
     "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "sourceMap": true,
-    "module": "ES2022"
+    "module": "ES2022",
+    "outDir": "build"
   },
   "exclude": [
     "node_modules"

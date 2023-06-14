@@ -53,7 +53,6 @@ export async function update(interaction: ChatInputCommandInteraction) {
 
     //Check if any running channels are old
     channels.forEach((channel, id) => {
-        const now = new Date()
         if(!events.find(e => e.id == id)) {
             queChannelDeletion(channel, tomorrow())
         }
@@ -67,7 +66,7 @@ export async function update(interaction: ChatInputCommandInteraction) {
     })
 
     //Check if any events this week is not posted - TODO: Send requests to create channels
-    for (let event of events) {
+    for (const event of events) {
         if(!channels.find((channel, id) => id == event.id)) {
             console.log("Creating discord channel for event " + event)
             await (interaction.client as SuperClient).createNewChannelForEvent(interaction.guild, event)
@@ -81,20 +80,20 @@ async function startDaemon() {
 
 export async function checkDeletions()  {
     const channelIdsToDelete = await getDeleteableChannels()
-    for (let channelsToDeleteElement of channelIdsToDelete) {
+    for (const channelsToDeleteElement of channelIdsToDelete) {
         const channel = await discordClient.channels.fetch(channelsToDeleteElement)
         if(channel != null) channel.delete("Event related to this channel has ended") //TODO: Remove deletion cue entry from database
     }
 
     //Skip the full #update cycle, just remove channels we've already deleted
-    discordClient.channelCache = discordClient.channelCache.filter((channel, string) => {
+    discordClient.channelCache = discordClient.channelCache.filter((channel) => {
         !channelIdsToDelete.includes(channel.id)
     })
 
-    for (let channelCacheElement of discordClient.channelCache) {
+    for (const channelCacheElement of discordClient.channelCache) {
         const channel = channelCacheElement[1]
         const usersToRemove = await getRemovableUsers(channel)
-        for (let userToRemove of usersToRemove) {
+        for (const userToRemove of usersToRemove) {
             const discordUser = await channel.guild.members.fetch(userToRemove)
             //TODO: This should be in discord/discord.ts
             await channel.permissionOverwrites.edit(discordUser, {SendMessages: false, ViewChannel: false}) //TODO: Remove deletion cue entry from database

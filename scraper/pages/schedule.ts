@@ -13,19 +13,14 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
     const dateStrings: string[] = []
     if(!dateRange.isSingleMonth()) {
         console.log("Getting event ids for range " + dateRange.toString())
-        let fromMonth = dateRange.dateFrom.getMonth(), toMonth = dateRange.dateTo.getMonth(), fromYear = dateRange.dateFrom.getFullYear()
-        while(true) {
-            if(fromMonth > 13) {
-                fromMonth = 1
-            }
+        let fromMonth = dateRange.dateFrom.getMonth(), fromYear = dateRange.dateFrom.getFullYear()
+        while(fromMonth != dateRange.dateTo.getMonth() || fromYear != dateRange.dateTo.getFullYear()) {
 
             dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth + 1)))
 
-            if(fromMonth == toMonth) {
-                if (fromYear == dateRange.dateTo.getFullYear()) {
-                    break;
-                }
+            if(fromMonth == 11) {
                 fromYear++
+                fromMonth = 0
             }
             fromMonth++
         }
@@ -74,6 +69,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
 
 async function navigateToSchedule(page: Page, dateString?: string) {
     //Cant be static because the ID is from .env
-    const SCHEDULE_URL = `https://www.schedgeup.com/theatre/${process.env["THEATRE_ID"]!}/schedule`
+    const theatreId = process.env["THEATRE_ID"] //TODO: check that env variables are present before coming this far
+    const SCHEDULE_URL = "https://www.schedgeup.com/theatre/" + theatreId + "/schedule"
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
 }

@@ -13,7 +13,6 @@ import {Event} from "../scraper/pages/eventAssignement.js"
 import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date";
-import {run} from "node:test";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
@@ -41,7 +40,7 @@ export class SuperClient extends Client {
         const channels = await guild.channels.fetch()
         const runningChannels = new Collection<string, TextChannel>()
 
-        for (let channel of channels.values()) {
+        for (const channel of channels.values()) {
             if(channel === null || channel.type != ChannelType.GuildText) continue
 
             const textChannel = channel as TextChannel
@@ -78,12 +77,12 @@ export class SuperClient extends Client {
      */
     async updateMembersForChannel(channel: TextChannel, event: Event) {
         const usersFromDiscord: User[] = []
-        for (let member of channel.members.values()) {
+        for (const member of channel.members.values()) {
             usersFromDiscord.push(await getUserFromDiscord(member))
         }
 
         const usersFromSchedgeUp: User[] = []
-        for (let worker of event.workers) {
+        for (const worker of event.workers) {
             usersFromSchedgeUp.push(await getUserFromSchedgeUp(worker))
         }
 
@@ -96,11 +95,11 @@ export class SuperClient extends Client {
             return !usersFromSchedgeUp.includes(value)
         })
 
-        for (let user of usersToAdd) {
+        for (const user of usersToAdd) {
             await addMemberToChannel(channel, user.discord.member)
         }
 
-        for (let user of usersToRemove) {
+        for (const user of usersToRemove) {
             await cueUserRemovalFromDiscord(user, channel, tomorrow()) //TODO: Longer?
         }
     }
@@ -181,8 +180,10 @@ async function sendConfirmationMessage() {
 }
 
 export class DiscordCommandError extends Error {
+    private where: string;
 
     constructor(message: string, where: string) {
         super(message);
+        this.where = where;
     }
 }
