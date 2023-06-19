@@ -6,8 +6,8 @@ sqlite3.verbose() //TODO: enable on startup argument
 
 
 const db = await open({
-    filename: path.join(__dirname, "database.db"),
-    driver: sqlite3.cached.Database
+    filename: path.join("database.db"),
+    driver: sqlite3.cached.Database //TODO: check if this is necessary
 })
 
 /** Database layout (C="Column")
@@ -20,7 +20,7 @@ const db = await open({
  *
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS Users(DiscordUserSnowflake BIGINT UNSIGNED, SchedgeUpID INT, DisplayName varchar(255))")
+    await db.exec("CREATE TABLE IF NOT EXISTS Users(DiscordUserSnowflake BIGINT UNSIGNED, SchedgeUpID INT, DisplayName varchar(255))") //TODO: SU Roles&Groups
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordChannelDeletions(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED)")
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED, DiscordUserSnowflake BIGINT UNSIGNED)")
 }
@@ -42,8 +42,19 @@ export async function addEntry(table: DatabaseTables, ...params: string[]) {
  * @param condition the filter condition for choosing entries
  * @param columns which columns to include. If undefined, all columns will be included
  */
-export async function selectEntries(table: DatabaseTables, condition: string, columns?: string[]) {
+export async function selectEntries(table: DatabaseTables, condition: string, columns?: string[]/*TODO: Make this a type? prevent typos*/) {
     const columnString = columns == undefined ? "*" : "(" + columns + ")"
     return await db.all("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
+}
+
+/**
+ * Select an entry from a table.
+ * @param table where to select entries from
+ * @param condition the filter condition for choosing the entry
+ * @param columns which columns to include. If undefined, all columns will be included
+ */
+export async function selectEntry(table: DatabaseTables, condition: string, columns?: string[]) {
+    const columnString = columns == undefined ? "*" : "(" + columns + ")"
+    return await db.get("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
 }
 

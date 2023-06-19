@@ -5,9 +5,10 @@ import dotenv from 'dotenv'
 import {scrapeEvents} from "./scraper/pages/eventAssignement.js";
 import {parseArgs} from "util";
 import {DateRange, tomorrow} from "./common/date.js";
-import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/discord";
+import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/discord.js";
 import {ChatInputCommandInteraction} from "discord.js";
-import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord";
+import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord.js";
+import {scrapeUsers} from "./scraper/pages/users.js";
 
 dotenv.config()
 
@@ -33,6 +34,8 @@ const {
 const browser = await startBrowser()
 const page= await createPage(browser)
 await loginSchedgeUp(page)
+
+const users = await scrapeUsers(page)
 
 const ids = await getEventIds(page, new DateRange(dateFrom ? new Date(dateFrom) : new Date(), dateTo ? new Date(dateTo) : new Date()))
 const events = await scrapeEvents(page, ids)

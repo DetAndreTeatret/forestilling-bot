@@ -17,8 +17,8 @@ export async function loginSchedgeUp(page: Page) {
     console.log("Entering login info...")
     const schedgeUpEmail = process.env["SCHEDGEUP_EMAIL"]
     const schedgeUpPassword = process.env["SCHEDGEUP_PASS"]
-    await page.type(emailInput, schedgeUpEmail)
-    await page.type(passwordInput, schedgeUpPassword)
+    await page.type(emailInput, schedgeUpEmail!)
+    await page.type(passwordInput, schedgeUpPassword!)
     console.log("Submitting login info...")
     await page.click(loginBtn)
     console.log("Wait for navigation after login...")

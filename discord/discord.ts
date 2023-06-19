@@ -12,7 +12,7 @@ import fs from "node:fs";
 import {Event} from "../scraper/pages/eventAssignement.js"
 import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
-import {tomorrow} from "../common/date";
+import {tomorrow} from "../common/date.js";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
@@ -65,8 +65,8 @@ export class SuperClient extends Client {
         })
 
         for (const worker of event.workers) {
-            const user = await getUserFromSchedgeUp(worker)
-            await addMemberToChannel(channel, user.discord.member)
+            const user = await getUserFromSchedgeUp(worker, guild)
+            if (user != null) await addMemberToChannel(channel, user.discord.member)
         }
     }
 
@@ -83,7 +83,9 @@ export class SuperClient extends Client {
 
         const usersFromSchedgeUp: User[] = []
         for (const worker of event.workers) {
-            usersFromSchedgeUp.push(await getUserFromSchedgeUp(worker))
+            const user = await getUserFromSchedgeUp(worker, channel.guild)
+            if(user == null) continue //Guest...
+            usersFromSchedgeUp.push(user)
         }
 
         //Subtract users already in discord
