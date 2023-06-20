@@ -6,7 +6,7 @@ sqlite3.verbose() //TODO: enable on startup argument
 
 
 const db = await open({
-    filename: path.join("database.db"),
+    filename: path.join(__dirname, "database.db"),
     driver: sqlite3.cached.Database //TODO: check if this is necessary
 })
 

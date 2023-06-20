@@ -1,7 +1,6 @@
 import {createPage, startBrowser} from "./scraper/browser.js";
 import {loginSchedgeUp} from "./scraper/pages/login.js";
 import {getEventIds} from "./scraper/pages/schedule.js";
-import dotenv from 'dotenv'
 import {scrapeEvents} from "./scraper/pages/eventAssignement.js";
 import {parseArgs} from "util";
 import {DateRange, tomorrow} from "./common/date.js";
@@ -9,8 +8,6 @@ import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/di
 import {ChatInputCommandInteraction} from "discord.js";
 import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord.js";
 import {scrapeUsers} from "./scraper/pages/users.js";
-
-dotenv.config()
 
 const {
     values: {dateFrom, dateTo}

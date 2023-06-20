@@ -2,7 +2,6 @@ import {Guild, GuildMember} from "discord.js";
 import {Worker} from "../scraper/pages/eventAssignement.js"
 import {selectEntry} from "./sqlite.js";
 
-const userCache: [User, Date][] = []
 export class User {
     public discord: DiscordUser
     public schedgeUp: SchedgeUpUser

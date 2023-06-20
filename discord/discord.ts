@@ -13,6 +13,7 @@ import {Event} from "../scraper/pages/eventAssignement.js"
 import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
+import {needEnvVariable} from "../common/config.js";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
@@ -129,7 +130,7 @@ export async function startDiscordClient() {
     });
 
     // Log in to Discord with your client's token
-    client.login(process.env['BOT_TOKEN']).then();
+    client.login(needEnvVariable("BOT_TOKEN")).then();
 
     client.on(Events.InteractionCreate, async function(interaction) {
         if (!interaction.isChatInputCommand()) return;
