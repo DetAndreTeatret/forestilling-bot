@@ -1,6 +1,7 @@
-import {Guild, GuildMember} from "discord.js";
+import {Guild, GuildMember, Snowflake} from "discord.js";
 import {Worker} from "../scraper/pages/eventAssignement.js"
-import {selectEntry} from "./sqlite.js";
+import {addEntry, selectEntry} from "./sqlite.js";
+import {sendManagerMessage} from "../main.js"
 
 export class User {
     public discord: DiscordUser
@@ -58,34 +59,26 @@ export async function updateSchedgeUpUser() {
 /**
  * Returns {@code null} if given worker is a Guest
  */
-export async function getUserFromSchedgeUp(worker: Worker, guild: Guild) {
+export async function getLinkedDiscordUser(worker: Worker) {
     if(worker.id == null) return null
 
 
-    const result = await selectEntry("Users", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake", "DisplayName"])
+    const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
     if(result == undefined) {
-        //User is not cached
+        await sendManagerMessage({content: "SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account"}, null)
+        return null
     }
 
-    return new User(new DiscordUser(await guild.members.fetch(result["DiscordUserSnowflake"])), new SchedgeUpUser(worker.id, result["DisplayName"], [], [])) //TODO: Roles and groups
+    return result["DiscordUserSnowflake"] as string
 }
 
-export async function getUserFromDiscord(member: GuildMember) {
-    const result = await selectEntry("Users", "DiscordUserSnowflake=\"" + member.id + "\"", ["DisplayName", "SchedgeUpId"])
-    return new User(new DiscordUser(member), new SchedgeUpUser(result["SchedgeUpId"], result["DisplayName"], [], []))
+export async function getLinkedSchedgeUpUser(member: GuildMember) {
+    const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
+    return result["SchedgeUpId"]
      //TODO: Log if database does not have user
 }
 
 function isDateOld(date: Date) {
     return Date.now() - date.getTime() > 1000 * 60 * 60 * 24 * 3 // 3 days, TODO: make this configurable
-}
-
-/**
- * Register a new user based on their SchedgeUp info, queries administrator to give the discord user to link the new user to
- * @param worker
- */
-async function registerNewUser() {
-    //Database should always have updated list of user list, such that administrator could always link someone in the list to a discord user
-    //When new user is registered, somehow check that that user might need to be added to already created channels
 }

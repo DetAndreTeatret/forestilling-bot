@@ -20,12 +20,13 @@ const db = await open({
  *
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS Users(DiscordUserSnowflake BIGINT UNSIGNED, SchedgeUpID INT, DisplayName varchar(255))") //TODO: SU Roles&Groups
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordChannelDeletions(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED)")
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED, DiscordUserSnowflake BIGINT UNSIGNED)")
+    await db.exec("CREATE TABLE IF NOT EXISTS UserList(SchedgeUpID INT, DiscordUserSnowflake BIGINT UNSIGNED)")
+    await db.exec("CREATE TABLE IF NOT EXISTS SchedgeUpUsers(SchedgeUpID INT, DisplayName varchar(255))") //TODO: Roles, groups
 }
 
-type DatabaseTables = "Users" | "DiscordChannelDeletions" | "DiscordUserRemovals"
+type DatabaseTables = "UserList" | "DiscordChannelDeletions" | "DiscordUserRemovals"
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified

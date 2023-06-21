@@ -5,12 +5,21 @@ import {
     Collection,
     ClientOptions,
     ChatInputCommandInteraction,
-    Guild, TextChannel, ChannelType, GuildMember
+    Guild,
+    TextChannel,
+    ChannelType,
+    GuildMember,
+    Snowflake,
+    GuildChannel,
+    createChannel,
+    Message,
+    Component,
+    GuildBasedChannel, ButtonBuilder, ActionRowBuilder, ActionRow, MessageCreateOptions
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
 import {Event} from "../scraper/pages/eventAssignement.js"
-import {getUserFromDiscord, getUserFromSchedgeUp, User} from "../database/user.js";
+import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
@@ -28,9 +37,11 @@ export class SuperClient extends Client {
     //All channels currently managed by this bot
     channelCache: Collection<string, TextChannel> = new Collection()
 
+    managerChannel: TextChannel | undefined = undefined
+
     constructor(options: ClientOptions) {
             super(options);
-        }
+    }
 
     /**
      * Get all currently created channels that should be managed by this bot.
@@ -66,8 +77,11 @@ export class SuperClient extends Client {
         })
 
         for (const worker of event.workers) {
-            const user = await getUserFromSchedgeUp(worker, guild)
-            if (user != null) await addMemberToChannel(channel, user.discord.member)
+            const user = await getLinkedDiscordUser(worker)
+            if(user == undefined) {
+
+            } else if (user != null) await addMemberToChannel(channel, await guild.members.fetch(user))
+
         }
     }
 
@@ -77,14 +91,14 @@ export class SuperClient extends Client {
      * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
      */
     async updateMembersForChannel(channel: TextChannel, event: Event) {
-        const usersFromDiscord: User[] = []
+        const usersFromDiscord: Snowflake[] = []
         for (const member of channel.members.values()) {
-            usersFromDiscord.push(await getUserFromDiscord(member))
+            usersFromDiscord.push(member.id)
         }
 
-        const usersFromSchedgeUp: User[] = []
+        const usersFromSchedgeUp: Snowflake[] = []
         for (const worker of event.workers) {
-            const user = await getUserFromSchedgeUp(worker, channel.guild)
+            const user = await getLinkedDiscordUser(worker)
             if(user == null) continue //Guest...
             usersFromSchedgeUp.push(user)
         }
@@ -99,7 +113,7 @@ export class SuperClient extends Client {
         })
 
         for (const user of usersToAdd) {
-            await addMemberToChannel(channel, user.discord.member)
+            await addMemberToChannel(channel, await channel.guild.members.fetch(user))
         }
 
         for (const user of usersToRemove) {

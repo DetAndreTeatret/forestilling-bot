@@ -22,8 +22,8 @@ export async function getDeleteableChannels(): Promise<Snowflake[]> {
 /**
  * Store a time for when a {@link User} can be removed from a {@link GuildChannel}
  */
-export async function cueUserRemovalFromDiscord(user: User, channel: GuildChannel, when: Date) {
-    await addEntry("DiscordUserRemovals", String(when.getTime()), channel.id, user.discord.member.id)
+export async function cueUserRemovalFromDiscord(user: Snowflake, channel: GuildChannel, when: Date) {
+    await addEntry("DiscordUserRemovals", String(when.getTime()), channel.id, user)
 }
 
 /**
