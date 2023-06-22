@@ -17,6 +17,6 @@ module.exports = {
         await addEntry("UserList", schedgeUpId, discordUser.id)
         await interaction.followUp("User linked, queuing member update for active channels");
         await update(interaction) //TODO: this might be a little excessive?
-    }
+    } //TODO: Make this confirm your link("Are you sure you want to link X and Y?")
 
 }

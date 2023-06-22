@@ -5,7 +5,7 @@ import {scrapeEvents} from "./scraper/pages/eventAssignement.js";
 import {parseArgs} from "util";
 import {DateRange, tomorrow} from "./common/date.js";
 import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/discord.js";
-import {ChatInputCommandInteraction, Guild, MessageCreateOptions, TextChannel} from "discord.js";
+import {ChatInputCommandInteraction} from "discord.js";
 import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord.js";
 import {scrapeUsers} from "./scraper/pages/users.js";
 
@@ -101,17 +101,4 @@ export async function checkDeletions()  {
         }
     }
 
-}
-
-export async function sendManagerMessage(message: MessageCreateOptions, guild: Guild) {
-    if(this.managerChannel == undefined) {
-        const channel = await guild.channels.fetch("") as TextChannel
-        if(channel != null){
-            this.managerChannel = channel
-        } else {
-            throw new Error("Manager channel in Discord not found")
-        }
-    }
-
-    await this.managerChannel.send(message) //TODO: also log console
 }

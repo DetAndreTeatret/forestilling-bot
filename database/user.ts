@@ -1,7 +1,7 @@
-import {Guild, GuildMember, Snowflake} from "discord.js";
+import {Guild, GuildMember} from "discord.js";
 import {Worker} from "../scraper/pages/eventAssignement.js"
-import {addEntry, selectEntry} from "./sqlite.js";
-import {sendManagerMessage} from "../main.js"
+import {selectEntry} from "./sqlite.js";
+import {sendManagerMessage} from "../discord/discord.js"
 
 export class User {
     public discord: DiscordUser
@@ -52,21 +52,17 @@ export class SchedgeUpUser {
 }
 
 
-export async function updateSchedgeUpUser() {
-    //TODO: Change SchedgeUpUser??
-}
-
 /**
  * Returns {@code null} if given worker is a Guest
  */
-export async function getLinkedDiscordUser(worker: Worker) {
+export async function getLinkedDiscordUser(worker: Worker, guild: Guild) {
     if(worker.id == null) return null
 
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
     if(result == undefined) {
-        await sendManagerMessage({content: "SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account"}, null)
+        await sendManagerMessage({content: "SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account"}, guild)
         return null
     }
 

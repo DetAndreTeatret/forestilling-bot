@@ -23,6 +23,7 @@ import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
+import {selectEntry} from "../database/sqlite";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
 
@@ -77,10 +78,12 @@ export class SuperClient extends Client {
         })
 
         for (const worker of event.workers) {
-            const user = await getLinkedDiscordUser(worker)
-            if(user == undefined) {
-
-            } else if (user != null) await addMemberToChannel(channel, await guild.members.fetch(user))
+            const user = await getLinkedDiscordUser(worker, guild)
+            if (user != null) {
+                await addMemberToChannel(channel, await guild.members.fetch(user))
+            } else {
+                console.log("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+            }
 
         }
     }
@@ -98,7 +101,7 @@ export class SuperClient extends Client {
 
         const usersFromSchedgeUp: Snowflake[] = []
         for (const worker of event.workers) {
-            const user = await getLinkedDiscordUser(worker)
+            const user = await getLinkedDiscordUser(worker, channel.guild)
             if(user == null) continue //Guest...
             usersFromSchedgeUp.push(user)
         }
@@ -143,8 +146,7 @@ export async function startDiscordClient() {
         console.log(`Ready! Logged in as ${c.user.tag}`);
     });
 
-    // Log in to Discord with your client's token
-    client.login(needEnvVariable("BOT_TOKEN")).then();
+    await client.login(needEnvVariable("BOT_TOKEN"))
 
     client.on(Events.InteractionCreate, async function(interaction) {
         if (!interaction.isChatInputCommand()) return;
@@ -184,7 +186,10 @@ async function removeMemberFromChannel(channel: TextChannel, member: GuildMember
     await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
 }
 
-async function postEventStatusMessage() {
+/**
+ * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
+ */
+async function postEventStatusMessage(channel: TextChannel) {
     //TODO: Pin the message
 }
 
@@ -194,6 +199,33 @@ async function editEventStatusMessage() {
 
 async function sendConfirmationMessage() {
     //TODO: Send message to somebody to confirm creating a new channel or whatever
+}
+
+let managerChannel: TextChannel | undefined = undefined
+
+export async function sendManagerMessage(message: MessageCreateOptions, guild: Guild) {
+    if(managerChannel == undefined) {
+        const storedChannelId = await selectEntry("Settings", "SettingKey=\"manager-channel-id\"", ["SettingValue"])
+        let channel: TextChannel
+        if(storedChannelId == undefined) {
+            //No stored channel, create one please
+            channel = await guild.channels.create({
+                name: "manager-channel",
+                type: ChannelType.GuildText,
+                topic: "Used to manage the schedgeup-bot"
+            })
+        } else {
+            channel = await guild.channels.fetch(storedChannelId["SettingValue"]) as TextChannel
+        }
+        if(channel != null){
+            managerChannel = channel
+        } else {
+            throw new Error("Manager channel in Discord not found")
+        }
+    }
+
+    await managerChannel.send(message)
+    console.log("[ManagerMessage] " + message)
 }
 
 export class DiscordCommandError extends Error {

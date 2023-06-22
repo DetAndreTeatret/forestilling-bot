@@ -24,9 +24,10 @@ export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED, DiscordUserSnowflake BIGINT UNSIGNED)")
     await db.exec("CREATE TABLE IF NOT EXISTS UserList(SchedgeUpID INT, DiscordUserSnowflake BIGINT UNSIGNED)")
     await db.exec("CREATE TABLE IF NOT EXISTS SchedgeUpUsers(SchedgeUpID INT, DisplayName varchar(255))") //TODO: Roles, groups
+    await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
 }
 
-type DatabaseTables = "UserList" | "DiscordChannelDeletions" | "DiscordUserRemovals"
+type DatabaseTables = "UserList" | "DiscordChannelDeletions" | "DiscordUserRemovals" | "Settings"
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified
@@ -38,7 +39,7 @@ export async function addEntry(table: DatabaseTables, ...params: string[]) {
 }
 
 /**
- * Select some entries from a table.
+ * Select some entries from a table. Returns undefined if no entries match condition
  * @param table where to select entries from
  * @param condition the filter condition for choosing entries
  * @param columns which columns to include. If undefined, all columns will be included
@@ -49,7 +50,7 @@ export async function selectEntries(table: DatabaseTables, condition: string, co
 }
 
 /**
- * Select an entry from a table.
+ * Select an entry from a table. Returns undefined if no entries match condition
  * @param table where to select entries from
  * @param condition the filter condition for choosing the entry
  * @param columns which columns to include. If undefined, all columns will be included
