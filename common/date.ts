@@ -8,7 +8,7 @@ export class DateRange {
         this.dateFrom = dateFrom;
         this.dateTo = dateTo;
 
-        assert(dateFrom >= dateTo)
+        assert(dateFrom <= dateTo)
     }
 
     contains(date: Date) {
@@ -35,7 +35,7 @@ export function formatDateYYYYMM(date: Date) {
 export function tomorrow(date?: Date) { //TODO: check new years/new month logic
     const oldDate = date == undefined ? new Date() : date
     const newDate = new Date()
-    if(getMaxDays(oldDate.getMonth()) == oldDate.getDate()) {
+    if(getMaxDays(oldDate.getMonth() + 1) == oldDate.getDate()) {
         newDate.setDate(1)
         if(oldDate.getMonth() == 12) {
             //Happy new year!!
@@ -57,9 +57,18 @@ export function tomorrow(date?: Date) { //TODO: check new years/new month logic
 function getMaxDays(month: number) {
     if(month >= 13 || month <= 0) throw new Error("Month with number " + month + " does not exist")
     switch (month){
-        case 1 | 3 | 5 | 7 | 8 | 10 | 12: return 31
-        case 2 : return 28
-        case 4 | 6 | 9 | 11 : return 30
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+        case 8:
+        case 10:
+        case 12: return 31
+        case 2: return 28
+        case 4:
+        case 6:
+        case 9:
+        case 11: return 30
         default : throw new Error("Invalid state (#getMaxDays)")
     }
 }

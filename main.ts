@@ -8,6 +8,9 @@ import {DiscordCommandError, startDiscordClient, SuperClient} from "./discord/di
 import {ChatInputCommandInteraction} from "discord.js";
 import {getDeleteableChannels, getRemovableUsers, queChannelDeletion} from "./database/discord.js";
 import {scrapeUsers} from "./scraper/pages/users.js";
+import dotenv from "dotenv";
+import {Page} from "puppeteer";
+import {createTables} from "./database/sqlite.js";
 
 const {
     values: {dateFrom, dateTo}
@@ -25,28 +28,34 @@ const {
         }
     }
 })
+dotenv.config()
 
 //await startDaemon() TODO
+let discordClient: SuperClient
+let page: Page
+export async function letsGo() {
+    discordClient = await startDiscordClient()
+    const browser = await startBrowser()
+    page= await createPage(browser)
+    await loginSchedgeUp(page)
+    await createTables()
 
-const browser = await startBrowser()
-const page= await createPage(browser)
-await loginSchedgeUp(page)
+    //const users = await scrapeUsers(page)
 
-const users = await scrapeUsers(page)
+    //const ids = await getEventIds(page, new DateRange(dateFrom ? new Date(dateFrom) : new Date(), dateTo ? new Date(dateTo) : tomorrow()))
+    //const events = await scrapeEvents(page, ids)
 
-const ids = await getEventIds(page, new DateRange(dateFrom ? new Date(dateFrom) : new Date(), dateTo ? new Date(dateTo) : new Date()))
-const events = await scrapeEvents(page, ids)
+    //console.log(JSON.stringify(events, null, 1))
+}
 
-const discordClient = await startDiscordClient()
 
-console.log(JSON.stringify(events, null, 1))
-process.exit()
+
+
 
 export async function update(interaction: ChatInputCommandInteraction) {
     //Its important that this only includes events for the current week!
     //Any running channels belonging to events not fetched here will be deleted after some time
-    const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), new Date()))) //TODO: Fetch for current week only!
-
+    const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), tomorrow()))) //TODO: Fetch for current week only!
     const client = interaction.client as SuperClient
     if(interaction.guild == null) throw new DiscordCommandError("Guild is null", "update")
     const channels = await client.mapRunningChannels(interaction.guild)
@@ -68,7 +77,7 @@ export async function update(interaction: ChatInputCommandInteraction) {
     //Check if any events this week is not posted - TODO: Send requests to create channels
     for (const event of events) {
         if(!channels.find((channel, id) => id == event.id)) {
-            console.log("Creating discord channel for event " + event)
+            console.log("Creating discord channel for event " + event.title)
             await (interaction.client as SuperClient).createNewChannelForEvent(interaction.guild, event)
         }
     }

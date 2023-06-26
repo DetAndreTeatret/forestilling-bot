@@ -1,6 +1,3 @@
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 /**
  * See .env.dist for possible keys

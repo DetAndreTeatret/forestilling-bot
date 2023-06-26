@@ -33,7 +33,7 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
     const ids: string[] = []
     for (const date of dateStrings) {
         await navigateToSchedule(page, date)
-        for (const id of await scrapeSchedule(page)) {
+        for (const id of await scrapeSchedule(page, dateRange)) {
             ids.push(id)
         }
     }

@@ -10,11 +10,7 @@ import {
     ChannelType,
     GuildMember,
     Snowflake,
-    GuildChannel,
-    createChannel,
-    Message,
-    Component,
-    GuildBasedChannel, ButtonBuilder, ActionRowBuilder, ActionRow, MessageCreateOptions
+    MessageCreateOptions
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
@@ -23,9 +19,13 @@ import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
-import {selectEntry} from "../database/sqlite";
+import {addEntry, selectEntry} from "../database/sqlite.js";
+import {fileURLToPath} from "url";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 
@@ -128,15 +128,21 @@ export class SuperClient extends Client {
 export async function startDiscordClient() {
     const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers] });
 
-    const commandsPath = path.join(__dirname, "commands");
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".ts"));
+    const commandsPath = path.join(__dirname, 'commands');
+    let commandFiles: string[] = []
+    try {
+        commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+    } catch (e) {
+        console.error(e + " WEEE")
+    }
 
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
+        const command = await import(filePath);
 
         if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
+            console.log("Found Discord command " + command.data.name)
         } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
@@ -210,10 +216,12 @@ export async function sendManagerMessage(message: MessageCreateOptions, guild: G
         if(storedChannelId == undefined) {
             //No stored channel, create one please
             channel = await guild.channels.create({
-                name: "manager-channel",
+                name: "schedgeup-manager-channel",
                 type: ChannelType.GuildText,
-                topic: "Used to manage the schedgeup-bot"
+                topic: "Used to manage the schedgeup-bot",
+                parent: "shows"
             })
+            await addEntry("UserList", "manager-channel-id", channel.id)
         } else {
             channel = await guild.channels.fetch(storedChannelId["SettingValue"]) as TextChannel
         }
@@ -225,7 +233,7 @@ export async function sendManagerMessage(message: MessageCreateOptions, guild: G
     }
 
     await managerChannel.send(message)
-    console.log("[ManagerMessage] " + message)
+    console.log("[ManagerMessage] " + message.content)
 }
 
 export class DiscordCommandError extends Error {

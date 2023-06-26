@@ -1,12 +1,14 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js";
-import {update} from "../../main"
+import {update} from "../../main.js"
 
 
-module.exports = {
-    data: new SlashCommandBuilder().setName("update").setDescription("Updates SchedgeUp Channels in Discord, creating new ones, queuing old ones for removal or updating members in existing ones"),
-    async execute(interaction: ChatInputCommandInteraction) {
+export const data = new SlashCommandBuilder()
+    .setName("update")
+    .setDescription("Update show channels in Discord(delete/create/update")
+
+export async function execute(interaction: ChatInputCommandInteraction) {
+        await interaction.reply("Updating!")
         await update(interaction)
-        await interaction.followUp("Updated!")
-    }
-
+        //await interaction.followUp("Updated!") //TODO: update followup during update
 }
+
