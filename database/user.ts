@@ -1,4 +1,4 @@
-import {Guild, GuildMember} from "discord.js";
+import {Guild, GuildMember, Snowflake} from "discord.js";
 import {Worker} from "../scraper/pages/eventAssignement.js"
 import {selectEntry} from "./sqlite.js";
 import {sendManagerMessage} from "../discord/discord.js"
@@ -55,7 +55,7 @@ export class SchedgeUpUser {
 /**
  * Returns {@code null} if given worker is a Guest
  */
-export async function getLinkedDiscordUser(worker: Worker, guild: Guild) {
+export async function getLinkedDiscordUser(worker: Worker, guild: Guild): Promise<Snowflake | null> {
     if(worker.id == null) return null
 
 

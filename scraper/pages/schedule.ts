@@ -12,7 +12,10 @@ const eventFields = "[class^='eventBlurb']"
 
 export async function getEventIds(page: Page, dateRange: DateRange) {
     const dateStrings: string[] = []
-    if(!dateRange.isSingleMonth()) {
+    if(dateRange.isSingleMonth()) { //TODO: does this work?
+        await navigateToSchedule(page)
+        return await scrapeSchedule(page, dateRange)
+    } else {
         console.log("Getting event ids for range " + dateRange.toString())
         let fromMonth = dateRange.dateFrom.getMonth(), fromYear = dateRange.dateFrom.getFullYear()
         while(fromMonth != dateRange.dateTo.getMonth() || fromYear != dateRange.dateTo.getFullYear()) {
@@ -25,15 +28,12 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
             }
             fromMonth++
         }
-    } else {
-        await navigateToSchedule(page)
-        return await scrapeSchedule(page)
     }
 
     const ids: string[] = []
-    for (const date of dateStrings) {
+    for await (const date of dateStrings) {
         await navigateToSchedule(page, date)
-        for (const id of await scrapeSchedule(page, dateRange)) {
+        for await (const id of await scrapeSchedule(page, dateRange)) {
             ids.push(id)
         }
     }
@@ -42,16 +42,21 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
 }
 
 async function scrapeSchedule(page: Page, dateRange?: DateRange) {
-    return await page.$$eval(eventFields, (events, dateRange) => {
+    return await page.$$eval(eventFields, (events, dateFrom, dateTo) => {
         const readEvents: string[] = []
+
         events.forEach(element => {
-
-            //@ts-ignore
-            const dateString = element.innerText.split(" ")[1].split("/")
-            const date = new Date(dateString[2], dateString[1], dateString[0])
-
-            if(dateRange !== undefined && !dateRange.contains(date)) {
-                return
+            if(dateFrom && dateTo) {
+                const dateFromParsed = new Date(dateFrom)
+                const dateToParsed = new Date(dateTo)
+                //@ts-ignore
+                const dateString = element.innerText.split(" ")[1].split("/")
+                const date = new Date(20 + dateString[2], dateString[1] - 1, dateString[0])
+                if(!(dateFromParsed <= date && date <= dateToParsed)) {
+                    console.info("Date: " + date + "," + "dateFrom <= date = " + (dateFromParsed <= date) + ", date <= dateTo = " + (date <= dateToParsed))
+                    //console.info("Date: " + date + " is not inside date range!" + date)
+                    return
+                }
             }
             //TODO how to remove this error? The element in question does in fact have a href
             //@ts-ignore
@@ -65,7 +70,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
             }
         })
         return readEvents
-    }, dateRange)
+    }, dateRange?.dateFrom, dateRange?.dateTo)
 }
 
 async function navigateToSchedule(page: Page, dateString?: string) {

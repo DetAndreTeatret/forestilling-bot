@@ -10,7 +10,7 @@ const commandsPath = path.join(__dirname, 'commands');
 
     //@ts-ignore
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-    for (const file of commandFiles) {
+    for await (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = await import(filePath);
         if ('data' in command && 'execute' in command) {
@@ -20,14 +20,14 @@ const commandsPath = path.join(__dirname, 'commands');
         }
     }
 
-const rest = new REST().setToken("MTEyMTQ2MzIzNjgzMTc0NDAzNA.GMDGnc.mMVEyG7rb2EB_3Ek14j2iemw6Q88XKiDTgQIrY");
+const rest = new REST().setToken("MTEyMTQ2MzIzNjgzMTc0NDAzNA.GMDGnc.mMVEyG7rb2EB_3Ek14j2iemw6Q88XKiDTgQIrY"); //TODO: change tokens lol, or remove commit history
 
 (async () => {
     try {
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
         const data = await rest.put(
-            Routes.applicationGuildCommands("1121463236831744034", "710910567958970409"),
+            Routes.applicationGuildCommands("1121463236831744034", "710910567958970409"), //TODO: Here also
             { body: commands },
         );
         //@ts-ignore

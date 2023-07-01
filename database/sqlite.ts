@@ -42,6 +42,10 @@ export async function addEntry(table: DatabaseTables, ...params: string[]) {
     await db.exec("INSERT INTO " + table + " VALUES(" + params + ")")
 }
 
+export async function addEntryNew(table: DatabaseTables, columns: string[], params: string[]) {
+    await db.exec("INSERT INTO " + table + " (" + columns + ") VALUES(" + params + ")")
+}
+
 /**
  * Select some entries from a table. Returns undefined if no entries match condition
  * @param table where to select entries from
@@ -62,5 +66,15 @@ export async function selectEntries(table: DatabaseTables, condition: string, co
 export async function selectEntry(table: DatabaseTables, condition: string, columns?: string[]) {
     const columnString = columns == undefined ? "*" : "(" + columns + ")"
     return await db.get("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
+}
+
+export async function fetchSetting(key: string) {
+    const result = selectEntry("Settings", "SettingKey=\"" + key + "\"", ["SettingValue"])
+    if(result == undefined) return undefined
+    else return result
+}
+
+export async function updateSetting(key: string, value: string) {
+    await addEntryNew("Settings", ["SettingKey", "SettingValue"], ["'" + key + "'", "'" + value + "'"])
 }
 

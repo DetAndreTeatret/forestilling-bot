@@ -12,7 +12,7 @@ export class DateRange {
     }
 
     contains(date: Date) {
-        return this.dateFrom <= date || date <= this.dateTo
+        return this.dateFrom <= date && date <= this.dateTo
     }
 
     isSingleMonth() {

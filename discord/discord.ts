@@ -10,7 +10,7 @@ import {
     ChannelType,
     GuildMember,
     Snowflake,
-    MessageCreateOptions
+    MessageCreateOptions, CategoryChannel, User
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
@@ -19,7 +19,7 @@ import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
-import {addEntry, selectEntry} from "../database/sqlite.js";
+import {addEntry, selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
@@ -53,7 +53,7 @@ export class SuperClient extends Client {
         const channels = await guild.channels.fetch()
         const runningChannels = new Collection<string, TextChannel>()
 
-        for (const channel of channels.values()) {
+        for await (const channel of channels.values()) {
             if(channel === null || channel.type != ChannelType.GuildText) continue
 
             const textChannel = channel as TextChannel
@@ -74,13 +74,15 @@ export class SuperClient extends Client {
         const channel = await guild.channels.create({
             name: event.title,
             type: ChannelType.GuildText,
-            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id)
+            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
+            parent: (await getCategory(guild)).id
         })
 
-        for (const worker of event.workers) {
+        for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, guild)
-            if (user != null) {
-                await addMemberToChannel(channel, await guild.members.fetch(user))
+            if (user) {
+                const fetchedMember = await guild.client.users.fetch(String(user)) //Why javascript :'(
+                await addMemberToChannel(channel, fetchedMember)
             } else {
                 console.log("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
@@ -95,14 +97,14 @@ export class SuperClient extends Client {
      */
     async updateMembersForChannel(channel: TextChannel, event: Event) {
         const usersFromDiscord: Snowflake[] = []
-        for (const member of channel.members.values()) {
+        for await (const member of channel.members.values()) {
             usersFromDiscord.push(member.id)
         }
 
         const usersFromSchedgeUp: Snowflake[] = []
-        for (const worker of event.workers) {
+        for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, channel.guild)
-            if(user == null) continue //Guest...
+            if(!user) continue //Guest or not linked...
             usersFromSchedgeUp.push(user)
         }
 
@@ -115,18 +117,20 @@ export class SuperClient extends Client {
             return !usersFromSchedgeUp.includes(value)
         })
 
-        for (const user of usersToAdd) {
-            await addMemberToChannel(channel, await channel.guild.members.fetch(user))
+        for (let i = 0; i < usersToAdd.length; i++) {
+            const user = usersToAdd[i]
+            const fetchedMember = await channel.client.users.fetch(String(user)) //Why javascript :'(
+            await addMemberToChannel(channel, fetchedMember)
         }
 
-        for (const user of usersToRemove) {
+        for await (const user of usersToRemove) {
             await cueUserRemovalFromDiscord(user, channel, tomorrow()) //TODO: Longer?
         }
     }
 }
 
 export async function startDiscordClient() {
-    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers] });
+    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers] });
 
     const commandsPath = path.join(__dirname, 'commands');
     let commandFiles: string[] = []
@@ -136,7 +140,7 @@ export async function startDiscordClient() {
         console.error(e + " WEEE")
     }
 
-    for (const file of commandFiles) {
+    for await (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = await import(filePath);
 
@@ -184,8 +188,26 @@ export async function startDiscordClient() {
     return client
 }
 
-async function addMemberToChannel(channel: TextChannel, member: GuildMember) {
-    await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
+async function getCategory(guild: Guild) {
+    const storedCategoryId = await selectEntry("Settings", "SettingKey=\"category_id\"", ["SettingValue"])
+
+    let category: CategoryChannel
+    if(storedCategoryId == undefined) {
+        //No category yet, create one please
+        category = await guild.channels.create({
+            name: needEnvVariable("CHANNEL_CATEGORY_NAME"),
+            type: ChannelType.GuildCategory
+        })
+        await updateSetting("category_id", category.id)
+    } else {
+        category = await guild.channels.fetch(storedCategoryId["SettingValue"]) as CategoryChannel
+    }
+
+    return category
+}
+
+async function addMemberToChannel(channel: TextChannel, user: User) {
+    await channel.permissionOverwrites.edit(user, {SendMessages: true, ViewChannel: true})
 }
 
 async function removeMemberFromChannel(channel: TextChannel, member: GuildMember) {
@@ -211,17 +233,18 @@ let managerChannel: TextChannel | undefined = undefined
 
 export async function sendManagerMessage(message: MessageCreateOptions, guild: Guild) {
     if(managerChannel == undefined) {
-        const storedChannelId = await selectEntry("Settings", "SettingKey=\"manager-channel-id\"", ["SettingValue"])
+        const storedChannelId = await selectEntry("Settings", "SettingKey=\"manager_channel_id\"", ["SettingValue"])
         let channel: TextChannel
+
         if(storedChannelId == undefined) {
             //No stored channel, create one please
             channel = await guild.channels.create({
                 name: "schedgeup-manager-channel",
                 type: ChannelType.GuildText,
                 topic: "Used to manage the schedgeup-bot",
-                parent: "shows"
+                parent: (await getCategory(guild)).id //TODO: give read permissions to admins
             })
-            await addEntry("UserList", "manager-channel-id", channel.id)
+            await updateSetting("manager_channel_id", channel.id)
         } else {
             channel = await guild.channels.fetch(storedChannelId["SettingValue"]) as TextChannel
         }

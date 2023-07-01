@@ -55,7 +55,7 @@ export async function letsGo() {
 export async function update(interaction: ChatInputCommandInteraction) {
     //Its important that this only includes events for the current week!
     //Any running channels belonging to events not fetched here will be deleted after some time
-    const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), tomorrow()))) //TODO: Fetch for current week only!
+    const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), new Date("2023-07-12")))) //TODO: Fetch for current week only!
     const client = interaction.client as SuperClient
     if(interaction.guild == null) throw new DiscordCommandError("Guild is null", "update")
     const channels = await client.mapRunningChannels(interaction.guild)
@@ -68,14 +68,14 @@ export async function update(interaction: ChatInputCommandInteraction) {
     })
 
     //Check if any events this week has any changes compared to their running discord channel - Add/Remove members
-    channels.forEach((channel, id) => {
+    channels.forEach(await async function (channel, id)  {
         const event = events.find(e => e.id == id)
         if(event == undefined) return
-        (interaction.client as SuperClient).updateMembersForChannel(channel, event)
+        await (interaction.client as SuperClient).updateMembersForChannel(channel, event)
     })
 
     //Check if any events this week is not posted - TODO: Send requests to create channels
-    for (const event of events) {
+    for await (const event of events) {
         if(!channels.find((channel, id) => id == event.id)) {
             console.log("Creating discord channel for event " + event.title)
             await (interaction.client as SuperClient).createNewChannelForEvent(interaction.guild, event)
@@ -89,7 +89,7 @@ async function startDaemon() {
 
 export async function checkDeletions()  {
     const channelIdsToDelete = await getDeleteableChannels()
-    for (const channelsToDeleteElement of channelIdsToDelete) {
+    for await (const channelsToDeleteElement of channelIdsToDelete) {
         const channel = await discordClient.channels.fetch(channelsToDeleteElement)
         if(channel != null) channel.delete("Event related to this channel has ended") //TODO: Remove deletion cue entry from database
     }
@@ -99,10 +99,10 @@ export async function checkDeletions()  {
         !channelIdsToDelete.includes(channel.id)
     })
 
-    for (const channelCacheElement of discordClient.channelCache) {
+    for await (const channelCacheElement of discordClient.channelCache) {
         const channel = channelCacheElement[1]
         const usersToRemove = await getRemovableUsers(channel)
-        for (const userToRemove of usersToRemove) {
+        for await (const userToRemove of usersToRemove) {
             const discordUser = await channel.guild.members.fetch(userToRemove)
             //TODO: This should be in discord/discord.ts
             await channel.permissionOverwrites.edit(discordUser, {SendMessages: false, ViewChannel: false}) //TODO: Remove deletion cue entry from database

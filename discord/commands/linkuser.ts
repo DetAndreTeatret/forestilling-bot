@@ -12,7 +12,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const schedgeUpId = interaction.options.getString("schedgeup-id", true)
         const discordUser = interaction.options.getUser("discord-user", true)
         const entry = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUser.id + "\"")
-        if(entry == undefined) {
+        if(entry != undefined) {
             await interaction.reply("User already linked") //TODO: select entries, if SU id and Discord ID is two entries
             return
         }
