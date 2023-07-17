@@ -10,16 +10,16 @@ import {
     ChannelType,
     GuildMember,
     Snowflake,
-    MessageCreateOptions, CategoryChannel, User, PermissionOverwrites, PermissionsBitField
+    MessageCreateOptions, CategoryChannel, User, PermissionsBitField
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
 import {Event} from "../scraper/pages/eventAssignement.js"
 import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
-import {oneMinute, tomorrow} from "../common/date.js";
+import {tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
-import {addEntry, selectEntry, updateSetting} from "../database/sqlite.js";
+import {selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
 
 const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
@@ -151,7 +151,11 @@ export async function startDiscordClient() {
         } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
+
     }
+    /*let commands = ""
+    client.commands.forEach(name => commands = commands + name + ",")
+    console.log("Parsed " + client.commands.size + " Discord commands [" + commands + "]")*/ //TODO
 
     client.once(Events.ClientReady, c => {
         console.log(`Ready! Logged in as ${c.user.tag}`);
