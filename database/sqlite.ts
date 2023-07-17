@@ -23,9 +23,9 @@ const db = await open({
  *
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS DiscordChannelDeletions(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED)")
-    await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UnixEpoch TIMESTAMP, DiscordChannelSnowflake BIGINT UNSIGNED, DiscordUserSnowflake BIGINT UNSIGNED)")
-    await db.exec("CREATE TABLE IF NOT EXISTS UserList(SchedgeUpID INT, DiscordUserSnowflake BIGINT UNSIGNED)")
+    await db.exec("CREATE TABLE IF NOT EXISTS DiscordChannelDeletions(UnixEpoch TIMESTAMP, DiscordChannelSnowflake varchar(64))")
+    await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UnixEpoch TIMESTAMP, DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))")
+    await db.exec("CREATE TABLE IF NOT EXISTS UserList(SchedgeUpID INT, DiscordUserSnowflake varchar(64))")
     await db.exec("CREATE TABLE IF NOT EXISTS SchedgeUpUsers(SchedgeUpID INT, DisplayName varchar(255))") //TODO: Roles, groups
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     console.log("Database tables up and running")
@@ -44,7 +44,7 @@ export async function addEntry(table: DatabaseTables, ...params: string[]) {
 
 export async function addEntryNew(table: DatabaseTables, columns: string[], params: string[]) {
     await db.exec("INSERT INTO " + table + " (" + columns + ") VALUES(" + params + ")")
-}
+} //TODO: Revert the usage of this for settings?
 
 /**
  * Select some entries from a table. Returns undefined if no entries match condition
@@ -66,6 +66,10 @@ export async function selectEntries(table: DatabaseTables, condition: string, co
 export async function selectEntry(table: DatabaseTables, condition: string, columns?: string[]) {
     const columnString = columns == undefined ? "*" : "(" + columns + ")"
     return await db.get("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
+}
+
+export async function deleteEntries(table: DatabaseTables, condition: string) {
+    return await db.exec("DELETE FROM " + table + " WHERE " + condition)
 }
 
 export async function fetchSetting(key: string) {

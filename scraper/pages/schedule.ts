@@ -18,7 +18,7 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
     } else {
         console.log("Getting event ids for range " + dateRange.toString())
         let fromMonth = dateRange.dateFrom.getMonth(), fromYear = dateRange.dateFrom.getFullYear()
-        while(fromMonth != dateRange.dateTo.getMonth() || fromYear != dateRange.dateTo.getFullYear()) {
+        while(fromMonth != dateRange.dateTo.getMonth() + 1 /*Any events in the dateTo.month is on the next page*/ || fromYear != dateRange.dateTo.getFullYear()) {
 
             dateStrings.push(SCHEDULE_DATE_FORMAT.replace("%y", String(fromYear)).replace("%m", String(fromMonth + 1)))
 
@@ -53,12 +53,9 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
                 const dateString = element.innerText.split(" ")[1].split("/")
                 const date = new Date(20 + dateString[2], dateString[1] - 1, dateString[0])
                 if(!(dateFromParsed <= date && date <= dateToParsed)) {
-                    console.info("Date: " + date + "," + "dateFrom <= date = " + (dateFromParsed <= date) + ", date <= dateTo = " + (date <= dateToParsed))
-                    //console.info("Date: " + date + " is not inside date range!" + date)
                     return
                 }
             }
-            //TODO how to remove this error? The element in question does in fact have a href
             //@ts-ignore
             const href: string = element.href
             const id = href.match("\\d+")

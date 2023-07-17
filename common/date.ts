@@ -51,6 +51,14 @@ export function tomorrow(date?: Date) { //TODO: check new years/new month logic
     return newDate
 }
 
+export function oneMinute(date?: Date) {
+    const oldDate = date == undefined ? new Date() : date
+    const newDate = new Date()
+    newDate.setMinutes(oldDate.getMinutes() + 1)
+
+    return newDate
+}
+
 /**
  * DOES NOT ACCOUNT FOR LEAP YEARS
  */

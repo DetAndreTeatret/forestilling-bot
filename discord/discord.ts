@@ -10,14 +10,14 @@ import {
     ChannelType,
     GuildMember,
     Snowflake,
-    MessageCreateOptions, CategoryChannel, User
+    MessageCreateOptions, CategoryChannel, User, PermissionOverwrites, PermissionsBitField
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
 import {Event} from "../scraper/pages/eventAssignement.js"
 import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
-import {tomorrow} from "../common/date.js";
+import {oneMinute, tomorrow} from "../common/date.js";
 import {needEnvVariable} from "../common/config.js";
 import {addEntry, selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
@@ -75,7 +75,7 @@ export class SuperClient extends Client {
             name: event.title,
             type: ChannelType.GuildText,
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
-            parent: (await getCategory(guild)).id
+            parent: (await getCategory(guild)).id,
         })
 
         for await (const worker of event.workers) {
@@ -96,9 +96,9 @@ export class SuperClient extends Client {
      * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
      */
     async updateMembersForChannel(channel: TextChannel, event: Event) {
-        const usersFromDiscord: Snowflake[] = []
+        const usersFromDiscord: GuildMember[] = []
         for await (const member of channel.members.values()) {
-            usersFromDiscord.push(member.id)
+            usersFromDiscord.push(member)
         }
 
         const usersFromSchedgeUp: Snowflake[] = []
@@ -110,11 +110,11 @@ export class SuperClient extends Client {
 
         //Subtract users already in discord
         const usersToAdd = usersFromSchedgeUp.filter((value) => {
-            return !usersFromDiscord.includes(value)
+            return !usersFromDiscord.some(member => member.id == value)
         })
 
         const usersToRemove = usersFromDiscord.filter((value) => {
-            return !usersFromSchedgeUp.includes(value)
+            return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
         })
 
         for (let i = 0; i < usersToAdd.length; i++) {
@@ -124,13 +124,14 @@ export class SuperClient extends Client {
         }
 
         for await (const user of usersToRemove) {
-            await cueUserRemovalFromDiscord(user, channel, tomorrow()) //TODO: Longer?
+            if(user.permissions.has("Administrator") || user.user.bot) continue //TODO: add special admin role for this bot, add to channels and dont remove them
+            await cueUserRemovalFromDiscord(user.id, channel, tomorrow()) //TODO: Longer?
         }
     }
 }
 
 export async function startDiscordClient() {
-    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers] });
+    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences] });
 
     const commandsPath = path.join(__dirname, 'commands');
     let commandFiles: string[] = []
@@ -196,8 +197,16 @@ async function getCategory(guild: Guild) {
         //No category yet, create one please
         category = await guild.channels.create({
             name: needEnvVariable("CHANNEL_CATEGORY_NAME"),
-            type: ChannelType.GuildCategory
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: [{
+                id: guild.roles.everyone,
+                deny: [PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ViewChannel]
+            }, {
+                id: guild.client.user.id,
+                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+            }]
         })
+
         await updateSetting("category_id", category.id)
     } else {
         category = await guild.channels.fetch(storedCategoryId["SettingValue"]) as CategoryChannel
@@ -207,11 +216,13 @@ async function getCategory(guild: Guild) {
 }
 
 async function addMemberToChannel(channel: TextChannel, user: User) {
+    console.log("Adding member " + user.tag + " to channel " + channel.name)
     await channel.permissionOverwrites.edit(user, {SendMessages: true, ViewChannel: true})
 }
 
-async function removeMemberFromChannel(channel: TextChannel, member: GuildMember) {
-    await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
+export async function removeMemberFromChannel(channel: TextChannel, user: User) {
+    console.log("Removing member " + user.tag + " from channel " + channel.name)
+    await channel.permissionOverwrites.edit(user, {SendMessages: false, ViewChannel: false})
 }
 
 /**
