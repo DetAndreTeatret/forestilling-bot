@@ -3,14 +3,14 @@ import {deleteEntries} from "../database/sqlite.js";
 import {removeMemberFromChannel} from "./discord.js";
 import {discordClient} from "../main.js";
 import {Guild} from "discord.js";
-import {update} from "./commands/update";
+import {update} from "./commands/update.js";
 
 
 let daemonStarted = false
 export function startDaemon() {
     if(daemonStarted) return
     daemonStarted = true
-    const interval = 1000 * 60 * 60 * 60 //One hour //TODO - configurable
+    const interval = 1000 * 60 * 60 //One hour //TODO - configurable
     console.info("Starting deletion daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
     setInterval(tickDaemon, interval)
 }
