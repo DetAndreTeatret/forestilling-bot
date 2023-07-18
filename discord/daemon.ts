@@ -1,5 +1,5 @@
 import {getDeleteableChannels, getRemovableUsers} from "../database/discord.js";
-import {deleteEntries} from "../database/sqlite.js";
+import {deleteEntries, fetchSetting, updateSetting} from "../database/sqlite.js";
 import {removeMemberFromChannel} from "./discord.js";
 import {discordClient} from "../main.js";
 import {Guild} from "discord.js";
@@ -7,12 +7,15 @@ import {update} from "./commands/update.js";
 
 
 let daemonStarted = false
-export function startDaemon() {
+export async function startDaemon() {
     if(daemonStarted) return
     daemonStarted = true
-    const interval = 1000 * 60 * 60 //One hour //TODO - configurable
-    console.info("Starting deletion daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
-    setInterval(tickDaemon, interval)
+    const interval = await fetchSetting("daemon-interval") //Stored in ms
+    if(interval == undefined) {
+        await updateSetting("daemon-interval", String(1000 * 60 * 60)) //One hour
+    }
+    console.info("Starting deletion daemon!(Interval: " + (Number(interval) / 1000 / 60) + " minutes)")
+    setTimeout(tickDaemon, Number(interval))
 }
 
 const guildsToUpdate: Guild[] = []
@@ -27,6 +30,7 @@ async function tickDaemon() {
     }
 
     await checkDeletions()
+
 }
 
 export async function checkDeletions()  {

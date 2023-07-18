@@ -72,7 +72,7 @@ export async function deleteEntries(table: DatabaseTables, condition: string) {
     return await db.exec("DELETE FROM " + table + " WHERE " + condition)
 }
 
-export async function fetchSetting(key: string) {
+export async function fetchSetting(key: string): Promise<string | undefined> {
     const result = selectEntry("Settings", "SettingKey=\"" + key + "\"", ["SettingValue"])
     if(result == undefined) return undefined
     else return result
