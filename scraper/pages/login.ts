@@ -2,7 +2,7 @@
 
 import {navigateToUrl} from "../browser.js";
 import {Page} from 'puppeteer'
-import {needEnvVariable} from "../../common/config.js";
+import {EnvironmentVariable, needEnvVariable} from "../../common/config.js";
 
 const LOGIN_URL = "https://www.schedgeup.com/login"
 
@@ -16,8 +16,8 @@ export async function loginSchedgeUp(page: Page) {
     await navigateToUrl(page, LOGIN_URL)
 
     console.log("Entering login info...")
-    await page.type(emailInput, needEnvVariable("SCHEDGEUP_EMAIL"))
-    await page.type(passwordInput, needEnvVariable("SCHEDGEUP_PASS"))
+    await page.type(emailInput, needEnvVariable(EnvironmentVariable.SCHEDGEUP_EMAIL))
+    await page.type(passwordInput, needEnvVariable(EnvironmentVariable.SCHEDGEUP_PASS))
     console.log("Submitting login info...")
     await page.click(loginBtn)
     console.log("Wait for navigation after login...")

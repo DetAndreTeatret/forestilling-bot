@@ -1,16 +1,20 @@
 import {
-    GatewayIntentBits,
-    Client,
-    Events,
-    Collection,
-    ClientOptions,
-    ChatInputCommandInteraction,
-    Guild,
-    TextChannel,
+    CategoryChannel,
     ChannelType,
+    ChatInputCommandInteraction,
+    Client,
+    ClientOptions,
+    Collection,
+    EmbedBuilder,
+    Events,
+    GatewayIntentBits,
+    Guild,
     GuildMember,
+    MessageCreateOptions,
+    PermissionsBitField,
     Snowflake,
-    MessageCreateOptions, CategoryChannel, User, PermissionsBitField, EmbedBuilder
+    TextChannel,
+    User
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
@@ -18,7 +22,7 @@ import {Event} from "../scraper/pages/eventAssignement.js"
 import {getLinkedDiscordUser} from "../database/user.js";
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js";
-import {needEnvVariable} from "../common/config.js";
+import {EnvironmentVariable, needEnvVariable} from "../common/config.js";
 import {selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
 
@@ -158,7 +162,7 @@ export async function startDiscordClient() {
         console.log(`Ready! Logged in as ${c.user.tag}`);
     });
 
-    await client.login(needEnvVariable("BOT_TOKEN"))
+    await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
     client.on(Events.InteractionCreate, async function(interaction) {
         if (!interaction.isChatInputCommand()) return;
@@ -197,7 +201,7 @@ async function getCategory(guild: Guild) {
     if(storedCategoryId == undefined) {
         //No category yet, create one please
         category = await guild.channels.create({
-            name: needEnvVariable("CHANNEL_CATEGORY_NAME"),
+            name: needEnvVariable(EnvironmentVariable.CHANNEL_CATEGORY_NAME),
             type: ChannelType.GuildCategory,
             permissionOverwrites: [{
                 id: guild.roles.everyone,

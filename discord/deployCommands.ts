@@ -1,5 +1,5 @@
 import {fileURLToPath} from "url";
-import {CacheType, ChatInputCommandInteraction, REST, Routes, SlashCommandBuilder} from 'discord.js'
+import {REST, Routes} from 'discord.js'
 import fs from 'node:fs'
 import path from 'node:path'
 

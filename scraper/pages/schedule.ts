@@ -1,7 +1,7 @@
 import {Page} from "puppeteer";
 import {DateRange} from "../../common/date.js";
 import {navigateToUrl} from "../browser.js";
-import {needEnvVariable} from "../../common/config.js";
+import {EnvironmentVariable, needEnvVariable} from "../../common/config.js";
 
 //YYYY-MM-DD
 //DD is irrelevant
@@ -72,7 +72,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
 
 async function navigateToSchedule(page: Page, dateString?: string) {
     //Cant be static because the ID is from .env
-    const theatreId = needEnvVariable("THEATRE_ID") //TODO: check that env variables are present before coming this far
+    const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID) //TODO: check that env variables are present before coming this far
     const SCHEDULE_URL = "https://www.schedgeup.com/theatre/" + theatreId + "/schedule"
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
 }

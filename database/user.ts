@@ -74,7 +74,3 @@ export async function getLinkedSchedgeUpUser(member: GuildMember) {
     return result["SchedgeUpId"]
      //TODO: Log if database does not have user
 }
-
-function isDateOld(date: Date) {
-    return Date.now() - date.getTime() > 1000 * 60 * 60 * 24 * 3 // 3 days, TODO: make this configurable
-}
