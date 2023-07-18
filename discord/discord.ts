@@ -159,7 +159,7 @@ export async function startDiscordClient() {
     console.log("Parsed " + client.commands.size + " Discord commands [" + commands + "]")*/ //TODO
 
     client.once(Events.ClientReady, c => {
-        console.log(`Ready! Logged in as ${c.user.tag}`);
+        console.log(`Discord client ready! Logged in as ${c.user.tag}`);
     });
 
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))

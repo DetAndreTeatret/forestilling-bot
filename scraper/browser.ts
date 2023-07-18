@@ -1,7 +1,7 @@
 import puppeteer, {Browser, Page} from 'puppeteer'
 
 export async function startBrowser() {
-    console.log("Starting browser...")
+    console.log("Starting puppeteer browser...")
     return puppeteer.launch({
         headless: true,
         args: ['--disable-setuid-sandbox'],

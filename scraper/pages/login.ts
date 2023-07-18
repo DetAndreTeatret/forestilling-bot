@@ -12,7 +12,7 @@ const emailInput = "#session_email"
 const passwordInput = "#session_password"
 const loginBtn = "input[type=\"submit\"]"
 export async function loginSchedgeUp(page: Page) {
-    console.log("Starting login process...")
+    console.log("Starting SchedgeUp login process...")
     await navigateToUrl(page, LOGIN_URL)
 
     console.log("Entering login info...")
