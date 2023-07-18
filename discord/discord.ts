@@ -10,7 +10,7 @@ import {
     ChannelType,
     GuildMember,
     Snowflake,
-    MessageCreateOptions, CategoryChannel, User, PermissionsBitField
+    MessageCreateOptions, CategoryChannel, User, PermissionsBitField, EmbedBuilder
 } from 'discord.js'
 import path from "node:path";
 import fs from "node:fs";
@@ -22,8 +22,6 @@ import {needEnvVariable} from "../common/config.js";
 import {selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
 
-const MAX_CHAR_DISCORD_CHANNEL_NAME = 20
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,12 +31,9 @@ const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:
 
 export class SuperClient extends Client {
     commands = new Collection()
-    //TODO: Some object for accessing SchedgeUp Events so they can be reached in commands
 
     //All channels currently managed by this bot
     channelCache: Collection<string, TextChannel> = new Collection()
-
-    managerChannel: TextChannel | undefined = undefined
 
     constructor(options: ClientOptions) {
             super(options);
@@ -77,6 +72,8 @@ export class SuperClient extends Client {
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
             parent: (await getCategory(guild)).id,
         })
+
+        await postEventStatusMessage(channel, event)
 
         for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, guild)
@@ -219,7 +216,7 @@ async function getCategory(guild: Guild) {
     return category
 }
 
-async function addMemberToChannel(channel: TextChannel, user: User) {
+export async function addMemberToChannel(channel: TextChannel, user: User) {
     console.log("Adding member " + user.tag + " to channel " + channel.name)
     await channel.permissionOverwrites.edit(user, {SendMessages: true, ViewChannel: true})
 }
@@ -232,12 +229,13 @@ export async function removeMemberFromChannel(channel: TextChannel, user: User) 
 /**
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
  */
-async function postEventStatusMessage(channel: TextChannel) {
-    //TODO: Pin the message
-}
-
-async function editEventStatusMessage() {
-    //TODO: Ensure the status message always being the first one sent(before adding users first time?)
+async function postEventStatusMessage(channel: TextChannel, event: Event) {
+    const embedBuilder = new EmbedBuilder()
+    embedBuilder.setTitle("Kanal for " + event.title)
+    embedBuilder.setDescription("Event info")
+    const sentMessage = await channel.send({embeds: [embedBuilder]})
+    await channel.messages.pin(sentMessage)
+    //await channel.messages.react() //TODO set up reactions for food ordering
 }
 
 async function sendConfirmationMessage() {

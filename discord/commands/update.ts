@@ -52,7 +52,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         startDaemon() //Only start daemon after first update to ensure local channelCache is updated
 }
 
-async function editMessage(this:[string, InteractionResponse], newPart: string) {
+async function editMessage(this: [string, InteractionResponse], newPart: string) {
         this[0] = this[0] + "\n" + newPart
         await this[1].edit(this[0])
 }
