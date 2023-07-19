@@ -16,20 +16,20 @@ import {
     TextChannel,
     User
 } from 'discord.js'
-import path from "node:path";
-import fs from "node:fs";
+import path from "node:path"
+import fs from "node:fs"
 import {Event} from "../scraper/pages/eventAssignement.js"
-import {getLinkedDiscordUser} from "../database/user.js";
+import {getLinkedDiscordUser} from "../database/user.js"
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
-import {tomorrow} from "../common/date.js";
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js";
-import {selectEntry, updateSetting} from "../database/sqlite.js";
-import {fileURLToPath} from "url";
+import {tomorrow} from "../common/date.js"
+import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
+import {selectEntry, updateSetting} from "../database/sqlite.js"
+import {fileURLToPath} from "url"
 
 export let discordClient: SuperClient
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 
@@ -42,7 +42,7 @@ export class SuperClient extends Client {
     channelCache: Collection<string, TextChannel> = new Collection()
 
     constructor(options: ClientOptions) {
-            super(options);
+            super(options)
     }
 
     /**
@@ -134,25 +134,25 @@ export class SuperClient extends Client {
 }
 
 export async function startDiscordClient() {
-    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences] });
+    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences] })
 
-    const commandsPath = path.join(__dirname, 'commands');
+    const commandsPath = path.join(__dirname, 'commands')
     let commandFiles: string[] = []
     try {
-        commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+        commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"))
     } catch (e) {
         console.error(e + " WEEE")
     }
 
     for await (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = await import(filePath);
+        const filePath = path.join(commandsPath, file)
+        const command = await import(filePath)
 
         if ('data' in command && 'execute' in command) {
-            client.commands.set(command.data.name, command);
+            client.commands.set(command.data.name, command)
             console.log("Found Discord command " + command.data.name)
         } else {
-            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`)
         }
 
     }
@@ -161,34 +161,34 @@ export async function startDiscordClient() {
     console.log("Parsed " + client.commands.size + " Discord commands [" + commands + "]")*/ //TODO
 
     client.once(Events.ClientReady, c => {
-        console.log(`Discord client ready! Logged in as ${c.user.tag}`);
-    });
+        console.log(`Discord client ready! Logged in as ${c.user.tag}`)
+    })
 
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
     client.on(Events.InteractionCreate, async function(interaction) {
-        if (!interaction.isChatInputCommand()) return;
+        if (!interaction.isChatInputCommand()) return
 
-        const command = (interaction.client as SuperClient).commands.get(interaction.commandName);
+        const command = (interaction.client as SuperClient).commands.get(interaction.commandName)
 
         if (!command) {
-            console.error(`No command matching ${interaction.commandName} was found.`);
-            return;
+            console.error(`No command matching ${interaction.commandName} was found.`)
+            return
         }
 
         try {
             //We know the type from #isChatInputCommand further up
             // @ts-ignore the execute function does exist >:(
-            await command.execute(interaction as ChatInputCommandInteraction);
+            await command.execute(interaction as ChatInputCommandInteraction)
         } catch (error) {
-            console.error(error);
+            console.error(error)
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({
                     content: 'There was an error while executing this command!',
                     ephemeral: true
-                });
+                })
             } else {
-                await interaction.reply({content: 'There was an error while executing this command!', ephemeral: true});
+                await interaction.reply({content: 'There was an error while executing this command!', ephemeral: true})
             }
         }
     })
@@ -280,10 +280,10 @@ export async function sendManagerMessage(message: MessageCreateOptions, guild: G
 }
 
 export class DiscordCommandError extends Error {
-    private where: string;
+    private where: string
 
     constructor(message: string, where: string) {
-        super(message);
-        this.where = where;
+        super(message)
+        this.where = where
     }
 }

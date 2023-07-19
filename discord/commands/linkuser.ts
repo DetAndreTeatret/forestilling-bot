@@ -1,5 +1,5 @@
-import {addEntry, selectEntry} from "../../database/sqlite.js";
-import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js";
+import {addEntry, selectEntry} from "../../database/sqlite.js"
+import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
 
 export const data =  new SlashCommandBuilder()
         .setName("linkuser")
@@ -17,5 +17,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return
         }
         await addEntry("UserList", schedgeUpId, discordUser.id)
-        await interaction.reply("User linked!"); //TODO get display name from SU cache?
+        await interaction.reply("User linked!") //TODO get display name from SU cache?
     }

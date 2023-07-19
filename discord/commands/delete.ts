@@ -1,5 +1,5 @@
-import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js";
-import {checkDeletions} from "../daemon.js";
+import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
+import {checkDeletions} from "../daemon.js"
 
 
 

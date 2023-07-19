@@ -1,7 +1,7 @@
-import {Page} from "puppeteer";
-import {DateRange} from "../../common/date.js";
-import {navigateToUrl} from "../browser.js";
-import {EnvironmentVariable, needEnvVariable} from "../../common/config.js";
+import {Page} from "puppeteer"
+import {DateRange} from "../../common/date.js"
+import {navigateToUrl} from "../browser.js"
+import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
 
 //YYYY-MM-DD
 //DD is irrelevant

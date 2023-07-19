@@ -1,4 +1,4 @@
-import {Page} from "puppeteer";
+import {Page} from "puppeteer"
 
 const DASHBOARD_URL_FORMAT = "https://www.schedgeup.com/users/%s/dashboard"
 

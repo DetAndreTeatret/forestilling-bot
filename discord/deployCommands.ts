@@ -2,7 +2,7 @@ import {fileURLToPath} from "url"
 import {REST, Routes} from 'discord.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import {EnvironmentVariable, needEnvVariable, setupConfig} from "../common/config";
+import {EnvironmentVariable, needEnvVariable, setupConfig} from "../common/config"
 
 setupConfig()
 

@@ -1,5 +1,5 @@
-import {GuildChannel, Snowflake} from "discord.js";
-import {addEntry, selectEntries} from "./sqlite.js";
+import {GuildChannel, Snowflake} from "discord.js"
+import {addEntry, selectEntries} from "./sqlite.js"
 
 
 /**

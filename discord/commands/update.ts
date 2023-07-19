@@ -1,11 +1,11 @@
-import {ChatInputCommandInteraction, Guild, InteractionResponse, SlashCommandBuilder} from "discord.js";
-import {DiscordCommandError, SuperClient} from "../discord.js";
-import {DateRange, tomorrow} from "../../common/date.js";
-import {queChannelDeletion} from "../../database/discord.js";
-import {getEventIds} from "../../scraper/pages/schedule.js";
-import {scrapeEvents} from "../../scraper/pages/eventAssignement.js";
-import {addGuildToUpdate, startDaemon} from "../daemon.js";
-import {page} from "../../scraper/browser.js";
+import {ChatInputCommandInteraction, Guild, InteractionResponse, SlashCommandBuilder} from "discord.js"
+import {DiscordCommandError, SuperClient} from "../discord.js"
+import {DateRange, tomorrow} from "../../common/date.js"
+import {queChannelDeletion} from "../../database/discord.js"
+import {getEventIds} from "../../scraper/pages/schedule.js"
+import {scrapeEvents} from "../../scraper/pages/eventAssignement.js"
+import {addGuildToUpdate, startDaemon} from "../daemon.js"
+import {page} from "../../scraper/browser.js"
 
 
 export const data = new SlashCommandBuilder()

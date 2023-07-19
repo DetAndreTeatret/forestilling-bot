@@ -1,12 +1,12 @@
-import sqlite3 from "sqlite3";
+import sqlite3 from "sqlite3"
 import {open} from 'sqlite'
 import path from "node:path"
-import {fileURLToPath} from "url";
+import {fileURLToPath} from "url"
 
 sqlite3.verbose() //TODO: enable on startup argument
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const db = await open({
     filename: path.join(__dirname, "database.db"),

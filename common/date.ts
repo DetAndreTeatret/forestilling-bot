@@ -1,12 +1,12 @@
-import assert from "assert";
+import assert from "assert"
 
 export class DateRange {
     public dateFrom
     public dateTo
 
     constructor(dateFrom: Date, dateTo: Date) {
-        this.dateFrom = dateFrom;
-        this.dateTo = dateTo;
+        this.dateFrom = dateFrom
+        this.dateTo = dateTo
 
         assert(dateFrom <= dateTo)
     }

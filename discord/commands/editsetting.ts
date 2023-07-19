@@ -1,5 +1,5 @@
-import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js";
-import {fetchSetting, updateSetting} from "../../database/sqlite.js";
+import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
+import {fetchSetting, updateSetting} from "../../database/sqlite.js"
 
 
 export const data = new SlashCommandBuilder()

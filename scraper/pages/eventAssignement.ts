@@ -1,5 +1,5 @@
-import {Page} from "puppeteer";
-import {navigateToUrl} from "../browser.js";
+import {Page} from "puppeteer"
+import {navigateToUrl} from "../browser.js"
 
 const EVENT_ASSIGN_FORMAT = "https://www.schedgeup.com/assignments/%s/edit"
 
@@ -8,9 +8,9 @@ export class Worker {
     role: string
     who: string
     constructor(id: string | null, role: string, who: string) {
-        this.id = id;
-        this.role = role;
-        this.who = who;
+        this.id = id
+        this.role = role
+        this.who = who
     }
 }
 
@@ -20,9 +20,9 @@ export class Event {
     workers: Worker[]
 
     constructor(id: string, title: string, workers: Worker[]) {
-        this.id = id;
-        this.title = title;
-        this.workers = workers;
+        this.id = id
+        this.title = title
+        this.workers = workers
     }
 }
 
@@ -43,9 +43,9 @@ export async function scrapeEvents(page: Page, ids: string[]) {
                 role: string
                 who: string
                 constructor(id: string | null, role: string, who: string) {
-                    this.id = id;
-                    this.role = role;
-                    this.who = who;
+                    this.id = id
+                    this.role = role
+                    this.who = who
                 }
             }
 
@@ -64,7 +64,7 @@ export async function scrapeEvents(page: Page, ids: string[]) {
                         }
                     })
                 }
-            });
+            })
 
             return JSON.stringify(workers)
         })

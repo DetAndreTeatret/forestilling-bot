@@ -1,6 +1,6 @@
-import {Guild, GuildMember, Snowflake} from "discord.js";
+import {Guild, GuildMember, Snowflake} from "discord.js"
 import {Worker} from "../scraper/pages/eventAssignement.js"
-import {selectEntry} from "./sqlite.js";
+import {selectEntry} from "./sqlite.js"
 import {sendManagerMessage} from "../discord/discord.js"
 
 export class User {
@@ -9,8 +9,8 @@ export class User {
 
 
     constructor(discord: DiscordUser, schedgeUp: SchedgeUpUser) {
-        this.discord = discord;
-        this.schedgeUp = schedgeUp;
+        this.discord = discord
+        this.schedgeUp = schedgeUp
     }
 
     public equals(user: DiscordUser | SchedgeUpUser | User) {
@@ -33,7 +33,7 @@ export class DiscordUser {
     member: GuildMember
 
     constructor(member: GuildMember) {
-        this.member = member;
+        this.member = member
     }
 }
 
@@ -44,10 +44,10 @@ export class SchedgeUpUser {
     groups: string[]
 
     constructor(userId: string, displayName: string, roles: string[], groups: string[]) {
-        this.userId = userId;
-        this.displayName = displayName;
-        this.roles = roles;
-        this.groups = groups;
+        this.userId = userId
+        this.displayName = displayName
+        this.roles = roles
+        this.groups = groups
     }
 }
 
