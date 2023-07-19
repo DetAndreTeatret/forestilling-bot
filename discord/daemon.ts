@@ -1,7 +1,6 @@
 import {getDeleteableChannels, getRemovableUsers} from "../database/discord.js";
 import {deleteEntries, fetchSetting, updateSetting} from "../database/sqlite.js";
-import {removeMemberFromChannel} from "./discord.js";
-import {discordClient} from "../main.js";
+import {discordClient, removeMemberFromChannel} from "./discord.js";
 import {Guild} from "discord.js";
 import {update} from "./commands/update.js";
 

@@ -1,5 +1,7 @@
 import puppeteer, {Browser, Page} from 'puppeteer'
 
+export let page: Page
+
 export async function startBrowser() {
     console.log("Starting puppeteer browser...")
     return puppeteer.launch({
@@ -11,10 +13,10 @@ export async function startBrowser() {
 }
 
 export async function createPage(browser: Browser) {
-    const page = await browser.newPage()
+    const page0 = await browser.newPage()
     // Stop images/css/fonts from loading
-    await page.setRequestInterception(true)
-    page.on('request', (req) => {
+    await page0.setRequestInterception(true)
+    page0.on('request', (req) => {
         if (
             req.resourceType() === 'image' ||
             req.resourceType() === 'font' ||
@@ -27,19 +29,20 @@ export async function createPage(browser: Browser) {
     })
 
     //Forward relevant console info from browser console to node console
-    page.on('console', message => {
+    page0.on('console', message => {
         if(message.type() == "info") {
             console.info("[Puppeteer INFO]" + message.text())
         }
     })
 
     //Minimize display size
-    await page.setViewport({
+    await page0.setViewport({
         width: 640,
         height: 480,
     })
 
-    return page
+    page = page0
+    return page0
 }
 
 export async function navigateToUrl(page: Page, url: string) {

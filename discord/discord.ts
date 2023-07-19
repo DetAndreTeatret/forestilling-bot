@@ -26,6 +26,8 @@ import {EnvironmentVariable, needEnvVariable} from "../common/config.js";
 import {selectEntry, updateSetting} from "../database/sqlite.js";
 import {fileURLToPath} from "url";
 
+export let discordClient: SuperClient
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -191,6 +193,7 @@ export async function startDiscordClient() {
         }
     })
 
+    discordClient = client
     return client
 }
 
