@@ -2,11 +2,11 @@
   "name": "schedgeup-bot",
   "version": "1.0.0",
   "description": "Bot for å lese av informasjon fra SchedgeUp",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node build/main.js",
-    "lint": "eslint . --ext .ts"
+    "start": "npm run lint && tsc && node build/main.js",
+    "lint": "eslint . --ext .ts",
+    "lintFix" : "eslint . --ext .ts --fix"
   },
   "type": "module",
   "keywords": [],
