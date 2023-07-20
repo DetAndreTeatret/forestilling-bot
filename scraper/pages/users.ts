@@ -79,7 +79,7 @@ export async function scrapeUsers(page: Page): Promise<SchedgeUpUser[]> {
 
 async function navigateToUsers(page: Page) {
     //Cant be static because the ID is from .env
-    const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID) //TODO: check that env variables are present before coming this far
+    const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID)
     const usersUrl = "https://www.schedgeup.com/theatre/" + theatreId + "/users"
     await navigateToUrl(page, usersUrl)
 }

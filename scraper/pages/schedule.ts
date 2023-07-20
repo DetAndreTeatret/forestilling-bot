@@ -12,7 +12,7 @@ const eventFields = "[class^='eventBlurb']"
 
 export async function getEventIds(page: Page, dateRange: DateRange) {
     const dateStrings: string[] = []
-    if(dateRange.isSingleMonth()) { //TODO: does this work?
+    if(dateRange.isSingleMonth()) {
         await navigateToSchedule(page)
         return await scrapeSchedule(page, dateRange)
     } else {
@@ -72,7 +72,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
 
 async function navigateToSchedule(page: Page, dateString?: string) {
     //Cant be static because the ID is from .env
-    const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID) //TODO: check that env variables are present before coming this far
+    const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID)
     const SCHEDULE_URL = "https://www.schedgeup.com/theatre/" + theatreId + "/schedule"
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
 }

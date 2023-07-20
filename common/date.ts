@@ -32,37 +32,41 @@ export function formatDateYYYYMM(date: Date) {
     return "" + date.getFullYear() + "-" + (date.getMonth() + 1)
 }
 
-export function tomorrow(date?: Date) { //TODO: check new years/new month logic
-    const oldDate = date == undefined ? new Date() : date
-    const newDate = new Date()
-    if(getMaxDays(oldDate.getMonth() + 1) == oldDate.getDate()) {
-        newDate.setDate(1)
-        if(oldDate.getMonth() == 12) {
-            //Happy new year!!
-            newDate.setMonth(1)
-            newDate.setFullYear(oldDate.getFullYear() + 1)
-        } else {
-            newDate.setMonth(oldDate.getMonth() + 1)
-        }
-    } else {
-        newDate.setDate(oldDate.getDate() + 1)
-    }
-
-    return newDate
+export function tomorrow(date?: Date) {
+    return afterDays(1, date)
 }
 
-export function oneMinute(date?: Date) {
-    const oldDate = date == undefined ? new Date() : date
-    const newDate = new Date()
-    newDate.setMinutes(oldDate.getMinutes() + 1)
-
-    return newDate
+export function afterDays(days: number, from?: Date) {
+    const fromDate = from == undefined ? new Date() : from
+    return incrementDate(fromDate.getFullYear(), fromDate.getMonth() + 1, fromDate.getDay(), days)
 }
 
 /**
- * DOES NOT ACCOUNT FOR LEAP YEARS
+ * All values NON-ZERO INDEXED(Looking at you JavaScript month)
  */
-function getMaxDays(month: number) {
+function incrementDate(year: number, month: number, days: number, daysToIncrement: number) {
+    for (let i = 0; i < daysToIncrement; i++) {
+        if(getMaxDays(month, year) == days) {
+            days = 1
+            if(month == 12) {
+                //Happy new year!
+                month = 1
+                year++
+            } else {
+                month++
+            }
+        } else {
+            days++
+        }
+    }
+
+    return new Date(year, month - 1, days)
+}
+
+/**
+ * DOES NOT ACCOUNT FOR LEAP YEARS, EXPECTS MONTHS NON-ZERO INDEXED
+ */
+function getMaxDays(month: number, year: number) {
     if(month >= 13 || month <= 0) throw new Error("Month with number " + month + " does not exist")
     switch (month){
         case 1:
@@ -72,11 +76,19 @@ function getMaxDays(month: number) {
         case 8:
         case 10:
         case 12: return 31
-        case 2: return 28
         case 4:
         case 6:
         case 9:
         case 11: return 30
+        case 2: {
+            if(year % 4 == 0) {
+                if(year % 100 == 0) {
+                    if(year % 400 == 0) {
+                        return 29
+                    } else return 28
+                } else return 29
+            } else return 28
+        }
         default : throw new Error("Invalid state (#getMaxDays)")
     }
 }

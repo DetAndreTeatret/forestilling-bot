@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, Guild, InteractionResponse, SlashCommandBuilder} from "discord.js"
 import {DiscordCommandError, SuperClient} from "../discord.js"
-import {DateRange, tomorrow} from "../../common/date.js"
+import {afterDays, DateRange, tomorrow} from "../../common/date.js"
 import {queChannelDeletion} from "../../database/discord.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
 import {scrapeEvents} from "../../scraper/pages/eventAssignement.js"
@@ -31,7 +31,7 @@ export async function update(guild: Guild | null, logger: (newPart: string) => P
 
         //Its important that this only includes events for the current week!
         //Any running channels belonging to events not fetched here will be deleted after some time
-        const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), new Date("2023-08-01")))) //TODO: Fetch for current week only!
+        const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), afterDays(7))))
         if(guild == null) throw new DiscordCommandError("Guild is null", "update")
         const client = guild.client as SuperClient
         await logger("Mapping currently running Discord channels...")

@@ -128,7 +128,7 @@ export class SuperClient extends Client {
 
         for await (const user of usersToRemove) {
             if(user.permissions.has("Administrator") || user.user.bot) continue //TODO: add special admin role for this bot, add to channels and dont remove them
-            await cueUserRemovalFromDiscord(user.id, channel, tomorrow()) //TODO: Longer?
+            await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
         }
     }
 }
