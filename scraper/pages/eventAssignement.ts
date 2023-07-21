@@ -18,18 +18,20 @@ export class Event {
     id: string
     title: string
     workers: Worker[]
+    showTemplateId: string | undefined
 
-    constructor(id: string, title: string, workers: Worker[]) {
+    constructor(id: string, title: string, workers: Worker[], showTemplateId: string | undefined) {
         this.id = id
         this.title = title
         this.workers = workers
+        this.showTemplateId = showTemplateId
     }
 }
 
-export async function scrapeEvents(page: Page, ids: string[]) {
+export async function scrapeEvents(page: Page, ids: [string, string | undefined][]) {
     const events: Event[] = []
     for (let i = 0; i < ids.length; i++) {
-        const id = ids[i]
+        const id = ids[i][0]
         const usersSelector = ".assignedUsers"
         console.log("Extracting users from " + id)
         await navigateToUrl(page, EVENT_ASSIGN_FORMAT.replace("%s", id))
@@ -76,7 +78,7 @@ export async function scrapeEvents(page: Page, ids: string[]) {
             return subtitle == null ? "null" : subtitle.innerText.split(" • ")[0]
         })
 
-        events.push(new Event(id, title, JSON.parse(workers)))
+        events.push(new Event(id, title, JSON.parse(workers), ids[i][1]))
     }
 
     return events

@@ -30,7 +30,7 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
         }
     }
 
-    const ids: string[] = []
+    const ids: [string, string | undefined][] = []
     for await (const date of dateStrings) {
         await navigateToSchedule(page, date)
         for await (const id of await scrapeSchedule(page, dateRange)) {
@@ -41,9 +41,15 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
     return ids
 }
 
+/**
+ * string 0 - event id
+ * string 1 - show template id, can be undefined
+ * @param page
+ * @param dateRange
+ */
 async function scrapeSchedule(page: Page, dateRange?: DateRange) {
     return await page.$$eval(eventFields, (events, dateFrom, dateTo) => {
-        const readEvents: string[] = []
+        const readEvents: [string, string | undefined][] = []
 
         events.forEach(element => {
             if(dateFrom && dateTo) {
@@ -56,6 +62,13 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
                     return
                 }
             }
+
+            let showTemplateId
+            element.classList.forEach(className => {
+                if(className.startsWith("show_template_")) {
+                    showTemplateId = className.split("show_template_")[1]
+                }
+            })
             //@ts-ignore
             const href: string = element.href
             const id = href.match("\\d+")
@@ -63,7 +76,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
                 throw new Error("Regex matched wrongly for event href")
             } else {
                 console.info("Found new event " + id[0])
-                readEvents.push(id[0])
+                readEvents.push([id[0], showTemplateId])
             }
         })
         return readEvents

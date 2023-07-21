@@ -31,7 +31,8 @@ export async function update(guild: Guild | null, logger: (newPart: string) => P
 
         //Its important that this only includes events for the current week!
         //Any running channels belonging to events not fetched here will be deleted after some time
-        const events = await scrapeEvents(page, await getEventIds(page, new DateRange(new Date(), afterDays(7))))
+        const eventIds = await getEventIds(page, new DateRange(new Date(), afterDays(31)))
+        const events = await scrapeEvents(page, eventIds)
         if(guild == null) throw new DiscordCommandError("Guild is null", "update")
         const client = guild.client as SuperClient
         await logger("Mapping currently running Discord channels...")
