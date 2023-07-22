@@ -72,7 +72,7 @@ export class SuperClient extends Client {
         return this.channelCache
     }
 
-    async createNewChannelForEvent(guild: Guild, event: Event, run: boolean) { //TODO implement runs
+    async createNewChannelForEvent(guild: Guild, event: Event, run: boolean) {
         const channel = await guild.channels.create({
             name: event.title,
             type: ChannelType.GuildText,
