@@ -33,7 +33,7 @@ const __dirname = path.dirname(__filename)
 
 const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 
-const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+$")
+const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+R?$")
 
 export class SuperClient extends Client {
     commands = new Collection()
@@ -47,7 +47,8 @@ export class SuperClient extends Client {
 
     /**
      * Get all currently created channels that should be managed by this bot.
-     * The keys in the returned collections are the SchedgeUp event id the channel was created for.
+     * The keys in the returned collections are the SchedgeUp event id the channel was created for. If
+     * the channel is for a run of events the key is the show template id with an "R" appended.
      * @param guild The guild to search for running channels
      */
     public async mapRunningChannels(guild: Guild) {
@@ -71,11 +72,11 @@ export class SuperClient extends Client {
         return this.channelCache
     }
 
-    async createNewChannelForEvent(guild: Guild, event: Event) {
+    async createNewChannelForEvent(guild: Guild, event: Event, run: boolean) { //TODO implement runs
         const channel = await guild.channels.create({
             name: event.title,
             type: ChannelType.GuildText,
-            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
+            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", run ? event.showTemplateId + "R" : event.id),
             parent: (await getCategory(guild)).id,
         })
 
@@ -91,14 +92,17 @@ export class SuperClient extends Client {
             }
 
         }
+
+        return channel
     }
 
     /**
      *
      * @param channel
-     * @param event The current event to check against, will add users not found in current channel. //TODO: should remove users not found anymore in event?
+     * @param event The current event to check against, will add users not found in current channel.
+     * @param run does the channel belong to a run
      */
-    async updateMembersForChannel(channel: TextChannel, event: Event) {
+    async updateMembersForChannel(channel: TextChannel, event: Event, run: boolean) {
         const usersFromDiscord: GuildMember[] = []
         for await (const member of channel.members.values()) {
             usersFromDiscord.push(member)
@@ -116,19 +120,21 @@ export class SuperClient extends Client {
             return !usersFromDiscord.some(member => member.id == value)
         })
 
-        const usersToRemove = usersFromDiscord.filter((value) => {
-            return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
-        })
-
         for (let i = 0; i < usersToAdd.length; i++) {
             const user = usersToAdd[i]
             const fetchedMember = await channel.client.users.fetch(String(user)) //Why javascript :'(
             await addMemberToChannel(channel, fetchedMember)
         }
 
-        for await (const user of usersToRemove) {
-            if(user.permissions.has("Administrator") || user.user.bot) continue //TODO: add special admin role for this bot, add to channels and dont remove them
-            await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
+        if(!run) {
+            const usersToRemove = usersFromDiscord.filter((value) => {
+                return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
+            })
+
+            for await (const user of usersToRemove) {
+                if (user.permissions.has("Administrator") || user.user.bot) continue //TODO: add special admin role for this bot, add to channels and dont remove them
+                await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
+            }
         }
     }
 }

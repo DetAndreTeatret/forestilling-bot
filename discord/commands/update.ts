@@ -29,10 +29,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 export async function update(guild: Guild | null, logger: (newPart: string) => Promise<void>) {
         await logger("Fetching SchedgeUp Events...")
 
-        //Its important that this only includes events for the current week!
+        //Its important that this only includes events for the current week!!!!!!
         //Any running channels belonging to events not fetched here will be deleted after some time
-        const eventIds = await getEventIds(page, new DateRange(new Date(), afterDays(31)))
-        const events = await scrapeEvents(page, eventIds)
+        const today = new Date()
+        //Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
+        const eventIds = await getEventIds(page, new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
+        let events = await scrapeEvents(page, eventIds)
         if(guild == null) throw new DiscordCommandError("Guild is null", "update")
         const client = guild.client as SuperClient
         await logger("Mapping currently running Discord channels...")
@@ -49,15 +51,37 @@ export async function update(guild: Guild | null, logger: (newPart: string) => P
         channels.forEach(await async function (channel, id)  {
                 const event = events.find(e => e.id == id)
                 if(event == undefined) return
-                await client.updateMembersForChannel(channel, event)
+                await client.updateMembersForChannel(channel, event, false)
         })
+
+        const eventsCopy = Array.from(events)
+
+        for (let i = 0; i < eventsCopy.length; i++) {
+                const event = eventsCopy[i]
+                const result = events.filter(e => e.showTemplateId = event.showTemplateId)
+                if(result.length > 1) {
+                    events = events.filter(e => !(e.showTemplateId == event.showTemplateId))
+
+                    let channel
+
+                    //Does a channel for the run exist?
+                    channel = channels.get(result[0].showTemplateId + "R")
+                    //If not, create a channel for the run
+                    if(channel == undefined) channel = await client.createNewChannelForEvent(guild, result[0], true)
+
+                    //Add the rest of workers not present in the first event
+                    for (let j = 1; j < result.length; j++) {
+                        await client.updateMembersForChannel(channel, result[i], true)
+                    }
+                }
+        }
 
         //TODO: Send requests to create channels
         await logger("Checking if any events this week needs to be posted...")
         for await (const event of events) {
                 if(!channels.find((channel, id) => id == event.id)) {
                         console.log("Creating discord channel for event " + event.title)
-                        await client.createNewChannelForEvent(guild, event)
+                        await client.createNewChannelForEvent(guild, event, false)
                 }
         }
 

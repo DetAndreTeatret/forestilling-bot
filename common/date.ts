@@ -4,9 +4,12 @@ export class DateRange {
     public dateFrom
     public dateTo
 
+    /**
+     * Discards anything lower than dates(hours etc..)
+     **/
     constructor(dateFrom: Date, dateTo: Date) {
-        this.dateFrom = dateFrom
-        this.dateTo = dateTo
+        this.dateFrom = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate())
+        this.dateTo = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate())
 
         assert(dateFrom <= dateTo)
     }
@@ -38,7 +41,7 @@ export function tomorrow(date?: Date) {
 
 export function afterDays(days: number, from?: Date) {
     const fromDate = from == undefined ? new Date() : from
-    return incrementDate(fromDate.getFullYear(), fromDate.getMonth() + 1, fromDate.getDay(), days)
+    return incrementDate(fromDate.getFullYear(), fromDate.getMonth() + 1, fromDate.getDate(), days)
 }
 
 /**
@@ -64,7 +67,7 @@ function incrementDate(year: number, month: number, days: number, daysToIncremen
 }
 
 /**
- * DOES NOT ACCOUNT FOR LEAP YEARS, EXPECTS MONTHS NON-ZERO INDEXED
+ * EXPECTS MONTHS NON-ZERO INDEXED
  */
 function getMaxDays(month: number, year: number) {
     if(month >= 13 || month <= 0) throw new Error("Month with number " + month + " does not exist")
@@ -91,4 +94,23 @@ function getMaxDays(month: number, year: number) {
         }
         default : throw new Error("Invalid state (#getMaxDays)")
     }
+}
+
+
+//Thanks mr. GPT
+function isSameWeek(date1: Date, date2: Date): boolean {
+    // Clone the input dates to avoid modifying the original objects
+    const clonedDate1 = new Date(date1)
+    const clonedDate2 = new Date(date2)
+
+    // Set the time to midnight to ignore the time part
+    clonedDate1.setHours(0, 0, 0, 0)
+    clonedDate2.setHours(0, 0, 0, 0)
+
+    // Get the start of the week (Sunday) for each date
+    clonedDate1.setDate(clonedDate1.getDate() - clonedDate1.getDay())
+    clonedDate2.setDate(clonedDate2.getDate() - clonedDate2.getDay())
+
+    // Check if the start of the weeks for both dates are the same
+    return clonedDate1.getTime() === clonedDate2.getTime()
 }
