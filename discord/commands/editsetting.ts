@@ -16,7 +16,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const result = await fetchSetting(settingKey)
 
     if(newSettingValue == null) {
-        if(result == undefined) {
+        if(result === undefined) {
             await interaction.reply("No setting with key " + settingKey + " was found(not initialized?)")
         } else {
             await interaction.reply("Setting with key " + settingKey + " currently has the value: " + result)

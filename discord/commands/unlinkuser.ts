@@ -13,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const discordUser = interaction.options.getUser("discord-user")
     if(schedgeUpId != null) {
         const entry = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\"")
-        if (entry == undefined) {
+        if (entry === undefined) {
             await interaction.reply("User with SchedgeUp id `" + schedgeUpId + "` does not have a linked user")
         } else {
             await deleteEntries("UserList", "SchedgeUpID=\"" + schedgeUpId + "\"")
@@ -21,7 +21,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
     } else if (discordUser != null) {
         const entry = await selectEntry("UserList", "DiscordUserSnowflake=\"" + discordUser.id + "\"")
-        if (entry == undefined) {
+        if (entry === undefined) {
             await interaction.reply("Discord user `" + discordUser.tag + "` does not have a linked user")
         } else {
             await deleteEntries("UserList", "DiscordUserSnowflake=\"" + discordUser.id + "\"")

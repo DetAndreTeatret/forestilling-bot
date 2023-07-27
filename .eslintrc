@@ -12,6 +12,20 @@
   "rules": {
     "@typescript-eslint/ban-ts-comment": 0,
     "semi": ["error", "never"],
-    "no-duplicate-imports": "error"
+    "no-duplicate-imports": "error",
+    "no-self-compare": "error",
+    "no-unreachable-loop": "error",
+    "no-unused-private-class-members": "warn",
+    "eqeqeq": ["error", "smart"],
+    "no-lone-blocks": "error",
+    "no-var": "error",
+    "spaced-comment": ["warn", "always", {
+      "block": {
+        "balanced": true
+      }
+    }],
+    "eol-last": "error",
+    "no-trailing-spaces": "error",
+    "quotes": "error"
   }
 }

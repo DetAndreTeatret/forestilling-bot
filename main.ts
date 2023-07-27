@@ -8,8 +8,8 @@ setupConfig()
 letsGo().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
 
 export async function letsGo() {
-    await startDiscordClient() //Populates discord client global
-    await createPage(await startBrowser()) //Populates page global
+    await startDiscordClient() // Populates discord client global
+    await createPage(await startBrowser()) // Populates page global
     await loginSchedgeUp(page)
     await createTables()
 }

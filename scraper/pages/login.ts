@@ -1,7 +1,7 @@
-//Login the given Browser to SchedgeUp through the standard login url
+// Login the given Browser to SchedgeUp through the standard login url
 
 import {navigateToUrl} from "../browser.js"
-import {Page} from 'puppeteer'
+import {Page} from "puppeteer"
 import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
 
 const LOGIN_URL = "https://www.schedgeup.com/login"

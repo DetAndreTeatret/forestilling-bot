@@ -2,7 +2,7 @@ import {Page} from "puppeteer"
 
 const DASHBOARD_URL_FORMAT = "https://www.schedgeup.com/users/%s/dashboard"
 
-//css selectors
+// css selectors
 
 const exchangeElementClass = ".exchange_bar"
 export async function scrapePickups(page: Page) {

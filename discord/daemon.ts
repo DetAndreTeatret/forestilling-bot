@@ -9,9 +9,9 @@ let daemonStarted = false
 export async function startDaemon() {
     if(daemonStarted) return
     daemonStarted = true
-    const interval = await fetchSetting("daemon-interval") //Stored in ms
-    if(interval == undefined) {
-        await updateSetting("daemon-interval", String(1000 * 60 * 60)) //One hour
+    const interval = await fetchSetting("daemon-interval") // Stored in ms
+    if(interval === undefined) {
+        await updateSetting("daemon-interval", String(1000 * 60 * 60)) // One hour
     }
     console.info("Starting deletion daemon!(Interval: " + (Number(interval) / 1000 / 60) + " minutes)")
     setTimeout(tickDaemon, Number(interval))
@@ -43,7 +43,7 @@ export async function checkDeletions()  {
         }
     }
 
-    //Skip the full #update cycle, just remove channels we've already deleted
+    // Skip the full #update cycle, just remove channels we've already deleted
     discordClient.channelCache = discordClient.channelCache.filter(channel => !channelIdsToDelete.includes(channel.id))
 
     for await (const channelCacheElement of discordClient.channelCache) {

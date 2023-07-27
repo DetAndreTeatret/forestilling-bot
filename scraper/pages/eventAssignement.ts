@@ -4,7 +4,7 @@ import {navigateToUrl} from "../browser.js"
 const EVENT_ASSIGN_FORMAT = "https://www.schedgeup.com/assignments/%s/edit"
 
 export class Worker {
-    id: string | null //null if Guest
+    id: string | null // null if Guest
     role: string
     who: string
     constructor(id: string | null, role: string, who: string) {
@@ -36,12 +36,12 @@ export async function scrapeEvents(page: Page, ids: [string, string | undefined]
         console.log("Extracting users from " + id)
         await navigateToUrl(page, EVENT_ASSIGN_FORMAT.replace("%s", id))
 
-        //Fetch the workers currently assigned to this show
+        // Fetch the workers currently assigned to this show
         const workers = await page.$$eval(usersSelector, (events) => {
 
-            //Duplicate since browser can not see our class
+            // Duplicate since browser can not see our class
             class Worker {
-                id: string | null //null if Guest
+                id: string | null // null if Guest
                 role: string
                 who: string
                 constructor(id: string | null, role: string, who: string) {
@@ -71,9 +71,9 @@ export async function scrapeEvents(page: Page, ids: [string, string | undefined]
             return JSON.stringify(workers)
         })
 
-        //Fetch the name of this show
+        // Fetch the name of this show
         const title: string = await page.$eval("#header", event => {
-            //Include spaces in split so there is no space at the end of title text
+            // Include spaces in split so there is no space at the end of title text
             const subtitle = event.querySelector(".subtitle") as HTMLElement
             return subtitle == null ? "null" : subtitle.innerText.split(" • ")[0]
         })

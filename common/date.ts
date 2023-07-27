@@ -6,7 +6,7 @@ export class DateRange {
 
     /**
      * Discards anything lower than dates(hours etc..)
-     **/
+     * */
     constructor(dateFrom: Date, dateTo: Date) {
         this.dateFrom = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate())
         this.dateTo = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate())
@@ -40,7 +40,7 @@ export function tomorrow(date?: Date) {
 }
 
 export function afterDays(days: number, from?: Date) {
-    const fromDate = from == undefined ? new Date() : from
+    const fromDate = from === undefined ? new Date() : from
     return incrementDate(fromDate.getFullYear(), fromDate.getMonth() + 1, fromDate.getDate(), days)
 }
 
@@ -49,10 +49,10 @@ export function afterDays(days: number, from?: Date) {
  */
 function incrementDate(year: number, month: number, days: number, daysToIncrement: number) {
     for (let i = 0; i < daysToIncrement; i++) {
-        if(getMaxDays(month, year) == days) {
+        if(getMaxDays(month, year) === days) {
             days = 1
-            if(month == 12) {
-                //Happy new year!
+            if(month === 12) {
+                // Happy new year!
                 month = 1
                 year++
             } else {
@@ -84,9 +84,9 @@ function getMaxDays(month: number, year: number) {
         case 9:
         case 11: return 30
         case 2: {
-            if(year % 4 == 0) {
-                if(year % 100 == 0) {
-                    if(year % 400 == 0) {
+            if(year % 4 === 0) {
+                if(year % 100 === 0) {
+                    if(year % 400 === 0) {
                         return 29
                     } else return 28
                 } else return 29
@@ -97,7 +97,7 @@ function getMaxDays(month: number, year: number) {
 }
 
 
-//Thanks mr. GPT
+// Thanks mr. GPT
 function isSameWeek(date1: Date, date2: Date): boolean {
     // Clone the input dates to avoid modifying the original objects
     const clonedDate1 = new Date(date1)

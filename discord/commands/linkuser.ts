@@ -12,10 +12,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const schedgeUpId = interaction.options.getString("schedgeup-id", true)
         const discordUser = interaction.options.getUser("discord-user", true)
         const entry = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUser.id + "\"")
-        if(entry != undefined) {
+        if(entry !== undefined) {
             await interaction.reply("User already linked")
             return
         }
         await addEntry("UserList", schedgeUpId, discordUser.id)
-        await interaction.reply("User linked!") //TODO get display name from SU cache?
+        await interaction.reply("User linked!") // TODO get display name from SU cache?
     }

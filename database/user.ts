@@ -61,7 +61,7 @@ export async function getLinkedDiscordUser(worker: Worker, guild: Guild): Promis
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
-    if(result == undefined) {
+    if(result === undefined) {
         await sendManagerMessage({content: "SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account"}, guild)
         return null
     }
@@ -72,5 +72,5 @@ export async function getLinkedDiscordUser(worker: Worker, guild: Guild): Promis
 export async function getLinkedSchedgeUpUser(member: GuildMember) {
     const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
     return result["SchedgeUpId"]
-     //TODO: Log if database does not have user
+     // TODO: Log if database does not have user
 }

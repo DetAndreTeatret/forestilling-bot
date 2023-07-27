@@ -41,10 +41,10 @@ export async function scrapeUsers(page: Page): Promise<SchedgeUpUser[]> {
 
             const displayName = (needNotNull(cells.item(1), "user td 1") as HTMLElement).innerText
 
-            //@ts-ignore
+            // @ts-ignore
             const id = needNotNull(cells.item(4), "user td 4").firstChild.href.split("=")[1]
 
-            return new SchedgeUpUser(id, displayName, [], []) //TODO: Roles and groups
+            return new SchedgeUpUser(id, displayName, [], []) // TODO: Roles and groups
         }
 
         function needNotNull<T>(object: T | null, whatIsTheObject: string) {
@@ -78,7 +78,7 @@ export async function scrapeUsers(page: Page): Promise<SchedgeUpUser[]> {
 
 
 async function navigateToUsers(page: Page) {
-    //Cant be static because the ID is from .env
+    // Cant be static because the ID is from .env
     const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID)
     const usersUrl = "https://www.schedgeup.com/theatre/" + theatreId + "/users"
     await navigateToUrl(page, usersUrl)
