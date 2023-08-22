@@ -1,20 +1,14 @@
 import {GuildChannel, Snowflake} from "discord.js"
 import {addEntry, selectEntries} from "./sqlite.js"
 
-
-/**
- * Store a time for when a {@link GuildChannel} can be deleted
- */
-export async function queChannelDeletion(channel: GuildChannel, when: Date) {
-    await addEntry("DiscordChannelDeletions", String(when.getTime()), channel.id)
-}
+const TWENTY_FOUR_HOURS_MILLISECONDS = 1000 * 60 * 60 * 24
 
 /**
  * Get snowflakes of {@link GuildChannel}s that can be deleted. (System time newer than time stored in database)
  */
 export async function getDeleteableChannels(): Promise<Snowflake[]> {
     const columnName = "DiscordChannelSnowflake"
-    const result = await selectEntries("DiscordChannelDeletions", "UnixEpoch < " + new Date().getTime(), [columnName])
+    const result = await selectEntries("ShowDays", "(" + new Date().getTime() + "- ShowStartTimestamp) > " + TWENTY_FOUR_HOURS_MILLISECONDS, [columnName])
     return result.map(value => value[columnName])
 }
 

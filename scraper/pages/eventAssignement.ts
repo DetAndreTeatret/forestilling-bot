@@ -1,5 +1,6 @@
 import {Page} from "puppeteer"
 import {navigateToUrl} from "../browser.js"
+import {EventInfo} from "./schedule.js"
 
 const EVENT_ASSIGN_FORMAT = "https://www.schedgeup.com/assignments/%s/edit"
 
@@ -19,19 +20,21 @@ export class Event {
     title: string
     workers: Worker[]
     showTemplateId: string | undefined
+    date: Date
 
-    constructor(id: string, title: string, workers: Worker[], showTemplateId: string | undefined) {
+    constructor(id: string, title: string, workers: Worker[], showTemplateId: string | undefined, date: Date) {
         this.id = id
         this.title = title
         this.workers = workers
         this.showTemplateId = showTemplateId
+        this.date = date
     }
 }
 
-export async function scrapeEvents(page: Page, ids: [string, string | undefined][]) {
+export async function scrapeEvents(page: Page, eventInfos: EventInfo[]) {
     const events: Event[] = []
-    for (let i = 0; i < ids.length; i++) {
-        const id = ids[i][0]
+    for (let i = 0; i < eventInfos.length; i++) {
+        const id = eventInfos[i].id
         const usersSelector = ".assignedUsers"
         console.log("Extracting users from " + id)
         await navigateToUrl(page, EVENT_ASSIGN_FORMAT.replace("%s", id))
@@ -78,7 +81,7 @@ export async function scrapeEvents(page: Page, ids: [string, string | undefined]
             return subtitle == null ? "null" : subtitle.innerText.split(" • ")[0]
         })
 
-        events.push(new Event(id, title, JSON.parse(workers), ids[i][1]))
+        events.push(new Event(id, title, JSON.parse(workers), eventInfos[i].showtemplateId, eventInfos[i].date))
     }
 
     return events

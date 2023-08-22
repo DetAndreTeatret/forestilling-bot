@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {deleteEntries, selectEntry} from "../../database/sqlite.js"
+import {deleteUser, fetchUser} from "../../database/user.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -12,19 +12,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const schedgeUpId = interaction.options.getString("schedgeup-id")
     const discordUser = interaction.options.getUser("discord-user")
     if(schedgeUpId != null) {
-        const entry = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\"")
-        if (entry === undefined) {
+        const user = await fetchUser(schedgeUpId)
+        if (user === undefined) {
             await interaction.reply("User with SchedgeUp id `" + schedgeUpId + "` does not have a linked user")
         } else {
-            await deleteEntries("UserList", "SchedgeUpID=\"" + schedgeUpId + "\"")
+            await deleteUser(schedgeUpId)
             await interaction.reply("Deleted SchedgeUp user with id `" + schedgeUpId + "` from database")
         }
     } else if (discordUser != null) {
-        const entry = await selectEntry("UserList", "DiscordUserSnowflake=\"" + discordUser.id + "\"")
-        if (entry === undefined) {
+        const user = await fetchUser(undefined, discordUser.id)
+        if (user === undefined) {
             await interaction.reply("Discord user `" + discordUser.tag + "` does not have a linked user")
         } else {
-            await deleteEntries("UserList", "DiscordUserSnowflake=\"" + discordUser.id + "\"")
+            await deleteUser(undefined, discordUser.id)
             await interaction.reply("Deleted Discord user `" + discordUser.tag + "` from database")
         }
     } else {

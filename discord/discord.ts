@@ -23,8 +23,10 @@ import {getLinkedDiscordUser} from "../database/user.js"
 import {cueUserRemovalFromDiscord} from "../database/discord.js"
 import {tomorrow} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
-import {selectEntry, updateSetting} from "../database/sqlite.js"
+import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
+import {fetchShowDayBySU} from "../database/showday.js"
+import {updateSetting} from "../database/settings.js"
 
 export let discordClient: SuperClient
 
@@ -38,8 +40,8 @@ const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:
 export class SuperClient extends Client {
     commands = new Collection()
 
-    // All channels currently managed by this bot
-    channelCache: Collection<string, TextChannel> = new Collection()
+    // Collection of channels mapped to the events they service (SchedgeUpIds)
+    channelCache: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
 
     constructor(options: ClientOptions) {
             super(options)
@@ -47,13 +49,12 @@ export class SuperClient extends Client {
 
     /**
      * Get all currently created channels that should be managed by this bot.
-     * The keys in the returned collections are the SchedgeUp event id the channel was created for. If
-     * the channel is for a run of events the key is the show template id with an "R" appended.
+     * The keys in the returned collections are the SchedgeUp event id the channel was created for.
      * @param guild The guild to search for running channels
      */
     public async mapRunningChannels(guild: Guild) {
         const channels = await guild.channels.fetch()
-        const runningChannels = new Collection<string, TextChannel>()
+        const runningChannels: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
 
         for await (const channel of channels.values()) {
             if(channel == null || channel.type !== ChannelType.GuildText) continue
@@ -63,7 +64,10 @@ export class SuperClient extends Client {
 
             if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
                 const id = textChannel.topic.split(":")[1]
-                runningChannels.set(id, textChannel)
+                const result = await fetchShowDayBySU(id)
+                if(result) {
+                    runningChannels.set(textChannel, result.schedgeUpIds)
+                }
             }
         }
 
@@ -72,15 +76,15 @@ export class SuperClient extends Client {
         return this.channelCache
     }
 
-    async createNewChannelForEvent(guild: Guild, event: Event, run: boolean) {
+    async createNewChannelForEvent(guild: Guild, event: Event) {
         const channel = await guild.channels.create({
             name: event.title,
             type: ChannelType.GuildText,
-            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", run ? event.showTemplateId + "R" : event.id),
+            topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
             parent: (await getCategory(guild)).id,
         })
 
-        await postEventStatusMessage(channel, event, run)
+        await postEventStatusMessage(channel, event)
 
         for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, guild)
@@ -97,23 +101,25 @@ export class SuperClient extends Client {
     }
 
     /**
-     *
-     * @param channel
+     * @param channel channel to update
      * @param event The current event to check against, will add users not found in current channel.
-     * @param run does the channel belong to a run
      */
-    async updateMembersForChannel(channel: TextChannel, event: Event, run: boolean) {
+    async updateMembersForChannel(channel: TextChannel, events: Event[]) {
         const usersFromDiscord: GuildMember[] = []
         for await (const member of channel.members.values()) {
             usersFromDiscord.push(member)
         }
 
         const usersFromSchedgeUp: Snowflake[] = []
-        for await (const worker of event.workers) {
-            const user = await getLinkedDiscordUser(worker, channel.guild)
-            if(!user) continue // Guest or not linked...
-            usersFromSchedgeUp.push(user)
+        for (let i = 0; i < events.length; i++) {
+            for await (const worker of events[i].workers) {
+                const user = await getLinkedDiscordUser(worker, channel.guild)
+                // User is null if Guest/Not linked user
+                if (!user || usersFromSchedgeUp.includes(user)) continue
+                usersFromSchedgeUp.push(user)
+            }
         }
+
 
         // Subtract users already in discord
         const usersToAdd = usersFromSchedgeUp.filter((value) => {
@@ -126,16 +132,15 @@ export class SuperClient extends Client {
             await addMemberToChannel(channel, fetchedMember)
         }
 
-        if(!run) {
-            const usersToRemove = usersFromDiscord.filter((value) => {
-                return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
-            })
+        const usersToRemove = usersFromDiscord.filter((value) => {
+            return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
+        })
 
-            for await (const user of usersToRemove) {
-                if (user.permissions.has("Administrator") || user.user.bot) continue // TODO: add special admin role for this bot, add to channels and dont remove them
-                await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
-            }
+        for await (const user of usersToRemove) {
+            if (user.permissions.has("Administrator") || user.user.bot) continue // TODO: add special admin role for this bot, add to channels and dont remove them
+            await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
         }
+
     }
 }
 
@@ -242,14 +247,13 @@ export async function removeMemberFromChannel(channel: TextChannel, user: User) 
 /**
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
  */
-async function postEventStatusMessage(channel: TextChannel, event: Event, run: boolean) {
+async function postEventStatusMessage(channel: TextChannel, event: Event) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Kanal for " + event.title)
     embedBuilder.setDescription("Event info")
     const sentMessage = await channel.send({embeds: [embedBuilder]})
     await channel.messages.pin(sentMessage)
     // await channel.messages.react() //TODO set up reactions for food ordering
-    // TODO runs
     // TODO pretty message :)
 }
 

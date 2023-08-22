@@ -1,5 +1,5 @@
-import {addEntry, selectEntry} from "../../database/sqlite.js"
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
+import {addNewUser, fetchUser} from "../../database/user.js"
 
 export const data =  new SlashCommandBuilder()
         .setName("linkuser")
@@ -11,11 +11,11 @@ export const data =  new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
         const schedgeUpId = interaction.options.getString("schedgeup-id", true)
         const discordUser = interaction.options.getUser("discord-user", true)
-        const entry = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUser.id + "\"")
-        if(entry !== undefined) {
+        const user = await fetchUser(schedgeUpId, discordUser.id)
+        if(user !== undefined) {
             await interaction.reply("User already linked")
             return
         }
-        await addEntry("UserList", schedgeUpId, discordUser.id)
-        await interaction.reply("User linked!") // TODO get display name from SU cache?
+        await addNewUser(schedgeUpId, discordUser.id)
+        await interaction.reply("User linked!")
     }

@@ -1,20 +1,24 @@
 import {getDeleteableChannels, getRemovableUsers} from "../database/discord.js"
-import {deleteEntries, fetchSetting, updateSetting} from "../database/sqlite.js"
+import {deleteEntries} from "../database/sqlite.js"
 import {discordClient, removeMemberFromChannel} from "./discord.js"
 import {Guild} from "discord.js"
 import {update} from "./commands/update.js"
+import {fetchSetting, updateSetting} from "../database/settings.js"
 
 
-let daemonStarted = false
+let daemonRunning = false
+let interval: number
 export async function startDaemon() {
-    if(daemonStarted) return
-    daemonStarted = true
-    const interval = await fetchSetting("daemon-interval") // Stored in ms
-    if(interval === undefined) {
+    if(daemonRunning) return
+    daemonRunning = true
+    const parsedInterval = await fetchSetting("daemon-interval") // Stored in ms
+    if(parsedInterval === undefined) {
         await updateSetting("daemon-interval", String(1000 * 60 * 60)) // One hour
     }
-    console.info("Starting deletion daemon!(Interval: " + (Number(interval) / 1000 / 60) + " minutes)")
-    setTimeout(tickDaemon, Number(interval))
+    interval = Number(parsedInterval)
+    console.info("Starting deletion daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
+
+    setTimeout(tickDaemon, interval)
 }
 
 const guildsToUpdate: Guild[] = []
@@ -29,7 +33,13 @@ async function tickDaemon() {
     }
 
     await checkDeletions()
+    if(daemonRunning) {
+        setTimeout(tickDaemon, interval)
+    }
+}
 
+async function stopDaemon() {
+    daemonRunning = false
 }
 
 export async function checkDeletions()  {
@@ -39,15 +49,17 @@ export async function checkDeletions()  {
         const channel = await discordClient.channels.fetch(channelsToDeleteElement)
         if(channel != null) {
             channel.delete("Event related to this channel has ended")
-            await deleteEntries("DiscordChannelDeletions", "DiscordChannelSnowflake=\"" + channel.id + "\"")
+            await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
+        } else {
+            console.warn("Tried to delete channel found in database that does not exist on the Discord server")
         }
     }
 
     // Skip the full #update cycle, just remove channels we've already deleted
-    discordClient.channelCache = discordClient.channelCache.filter(channel => !channelIdsToDelete.includes(channel.id))
+    discordClient.channelCache = discordClient.channelCache.filter((ids, channel) => !channelIdsToDelete.includes(channel.id))
 
     for await (const channelCacheElement of discordClient.channelCache) {
-        const channel = channelCacheElement[1]
+        const channel = channelCacheElement[0]
         const usersToRemove = await getRemovableUsers(channel)
         for await (const userToRemove of usersToRemove) {
             const discordUser = await channel.guild.members.fetch(userToRemove)

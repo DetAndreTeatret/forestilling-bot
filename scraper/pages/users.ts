@@ -1,7 +1,20 @@
 import {navigateToUrl} from "../browser.js"
 import {Page} from "puppeteer"
-import {SchedgeUpUser} from "../../database/user.js"
 import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
+
+class SchedgeUpUser {
+    userId: string
+    displayName: string
+    roles: string[]
+    groups: string[]
+
+    constructor(userId: string, displayName: string, roles: string[], groups: string[]) {
+        this.userId = userId
+        this.displayName = displayName
+        this.roles = roles
+        this.groups = groups
+    }
+}
 
 export async function scrapeUsers(page: Page): Promise<SchedgeUpUser[]> {
     await navigateToUsers(page)

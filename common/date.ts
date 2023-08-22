@@ -35,6 +35,10 @@ export function formatDateYYYYMM(date: Date) {
     return "" + date.getFullYear() + "-" + (date.getMonth() + 1)
 }
 
+export function formatDateYYYYMMDD(date: Date) {
+    return "" + date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
+}
+
 export function tomorrow(date?: Date) {
     return afterDays(1, date)
 }

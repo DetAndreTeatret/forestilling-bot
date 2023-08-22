@@ -30,7 +30,7 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
         }
     }
 
-    const ids: [string, string | undefined][] = []
+    const ids: EventInfo[] = []
     for await (const date of dateStrings) {
         await navigateToSchedule(page, date)
         for await (const id of await scrapeSchedule(page, dateRange)) {
@@ -49,15 +49,28 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
  */
 async function scrapeSchedule(page: Page, dateRange?: DateRange) {
     return await page.$$eval(eventFields, (events, dateFrom, dateTo) => {
-        const readEvents: [string, string | undefined][] = []
+        class EventInfo {
+            id: string
+            showtemplateId: string | undefined
+            date: Date
+
+
+            constructor(id: string, showtemplateId: string | undefined, date: Date) {
+                this.id = id
+                this.showtemplateId = showtemplateId
+                this.date = date
+            }
+        }
+
+        const readEvents: EventInfo[] = []
 
         events.forEach(element => {
+            // @ts-ignore
+            const dateString = element.innerText.split(" ")[1].split("/")
+            const date = new Date(20 + dateString[2], dateString[1] - 1, dateString[0])
             if(dateFrom && dateTo) {
                 const dateFromParsed = new Date(dateFrom)
                 const dateToParsed = new Date(dateTo)
-                // @ts-ignore
-                const dateString = element.innerText.split(" ")[1].split("/")
-                const date = new Date(20 + dateString[2], dateString[1] - 1, dateString[0])
                 if(!(dateFromParsed <= date && date <= dateToParsed)) {
                     return
                 }
@@ -76,7 +89,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
                 throw new Error("Regex matched wrongly for event href")
             } else {
                 console.info("Found new event " + id[0])
-                readEvents.push([id[0], showTemplateId])
+                readEvents.push(new EventInfo(id[0], showTemplateId, date))
             }
         })
         return readEvents
@@ -88,4 +101,17 @@ async function navigateToSchedule(page: Page, dateString?: string) {
     const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID)
     const SCHEDULE_URL = "https://www.schedgeup.com/theatre/" + theatreId + "/schedule"
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
+}
+
+export class EventInfo {
+    id: string
+    showtemplateId: string | undefined
+    date: Date
+
+
+    constructor(id: string, showtemplateId: string | undefined, date: Date) {
+        this.id = id
+        this.showtemplateId = showtemplateId
+        this.date = date
+    }
 }
