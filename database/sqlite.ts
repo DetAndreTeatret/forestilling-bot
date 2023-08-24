@@ -14,10 +14,10 @@ const db = await open({
 })
 
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UserID INTEGER, UnixEpoch TIMESTAMP, ShowDayID INTEGER)") // TODO Update usage of this table
-    await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID INTEGER, DiscordUserSnowflake varchar(64))")
-    await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))") // TODO use null in first column to autoincrement
-    await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATE, SchedgeUpIDs JSON, DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP)")
+    await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UserID INTEGER, UnixEpoch TIMESTAMP, ShowDayID INTEGER)") // TODO Update usage of this table IF ITS USED
+    await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")
+    await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
+    await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
     console.log("Database tables up and running")
 }
 
@@ -40,7 +40,9 @@ export async function addEntry(table: DatabaseTables, ...params: any[]) {
  */
 export async function selectEntries(table: DatabaseTables, condition: string, columns?: string[]/* TODO: Make this a type? prevent typos */) {
     const columnString = columns === undefined ? "*" : "(" + columns + ")"
-    return await db.all("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
+    const query = "SELECT " + columnString + " FROM " + table + " WHERE " + condition
+    debugLogQuery(query)
+    return await db.all(query)
 }
 
 /**
@@ -51,7 +53,9 @@ export async function selectEntries(table: DatabaseTables, condition: string, co
  */
 export async function selectEntry(table: DatabaseTables, condition: string, columns?: string[]) {
     const columnString = columns === undefined ? "*" : "(" + columns + ")"
-    return await db.get("SELECT " + columnString + " FROM " + table + " WHERE " + condition)
+    const query = "SELECT " + columnString + " FROM " + table + " WHERE " + condition
+    debugLogQuery(query)
+    return await db.get(query)
 }
 
 export async function deleteEntries(table: DatabaseTables, condition: string) {
@@ -62,3 +66,15 @@ export async function updateEntry(table: DatabaseTables, condition: string, colu
     return await db.exec("UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition)
 }
 
+function debugLogQuery(query: string) {
+    console.debug("[Debug] Sent SQL Query: " + query)
+}
+
+export class SQLError extends Error {
+    private query: string
+
+    constructor(message: string, query: string) {
+        super(message)
+        this.query = query
+    }
+}

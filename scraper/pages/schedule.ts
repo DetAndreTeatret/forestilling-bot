@@ -47,8 +47,8 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
  * @param page
  * @param dateRange
  */
-async function scrapeSchedule(page: Page, dateRange?: DateRange) {
-    return await page.$$eval(eventFields, (events, dateFrom, dateTo) => {
+async function scrapeSchedule(page: Page, dateRange?: DateRange): Promise<EventInfo[]> {
+    const result = await page.$$eval(eventFields, (events, dateFrom, dateTo) => {
         class EventInfo {
             id: string
             showtemplateId: string | undefined
@@ -92,8 +92,14 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange) {
                 readEvents.push(new EventInfo(id[0], showTemplateId, date))
             }
         })
-        return readEvents
+        return JSON.stringify(readEvents)
     }, dateRange?.dateFrom, dateRange?.dateTo)
+
+    return JSON.parse(result, (key, value) => {
+        if (key === "date") {
+            return new Date(value)
+        } else return value
+    })
 }
 
 async function navigateToSchedule(page: Page, dateString?: string) {

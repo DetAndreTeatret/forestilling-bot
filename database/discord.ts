@@ -1,14 +1,13 @@
 import {GuildChannel, Snowflake} from "discord.js"
 import {addEntry, selectEntries} from "./sqlite.js"
-
-const TWENTY_FOUR_HOURS_MILLISECONDS = 1000 * 60 * 60 * 24
+import {formatDateYYYYMMDD} from "../common/date.js"
 
 /**
  * Get snowflakes of {@link GuildChannel}s that can be deleted. (System time newer than time stored in database)
  */
 export async function getDeleteableChannels(): Promise<Snowflake[]> {
     const columnName = "DiscordChannelSnowflake"
-    const result = await selectEntries("ShowDays", "(" + new Date().getTime() + "- ShowStartTimestamp) > " + TWENTY_FOUR_HOURS_MILLISECONDS, [columnName])
+    const result = await selectEntries("ShowDays", "\"" + formatDateYYYYMMDD(new Date()) + "\"" + " > ShowDayDate", [columnName])
     return result.map(value => value[columnName])
 }
 

@@ -20,13 +20,15 @@ import path from "node:path"
 import fs from "node:fs"
 import {Event} from "../scraper/pages/eventAssignement.js"
 import {getLinkedDiscordUser} from "../database/user.js"
-import {cueUserRemovalFromDiscord} from "../database/discord.js"
-import {tomorrow} from "../common/date.js"
+import {getDayNameNO} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
 import {fetchShowDayBySU} from "../database/showday.js"
-import {updateSetting} from "../database/settings.js"
+import {fetchSetting, needSetting, updateSetting} from "../database/settings.js"
+import {StringConsumer} from "./daemon"
+import {needNotNullOrUndefined} from "../common/util.js"
+import {Logger} from "../common/logging.js"
 
 export let discordClient: SuperClient
 
@@ -76,9 +78,16 @@ export class SuperClient extends Client {
         return this.channelCache
     }
 
-    async createNewChannelForEvent(guild: Guild, event: Event) {
+    /**
+     *
+     * @param guild
+     * @param event
+     * @param dayTime Is this channel for daytime events? (barnelørdag osv...) TODO
+     * @param logger
+     */
+    async createNewChannelForEvent(guild: Guild, event: Event, dayTime: boolean, logger: Logger) {
         const channel = await guild.channels.create({
-            name: event.title,
+            name: getDayNameNO(event.date),
             type: ChannelType.GuildText,
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
             parent: (await getCategory(guild)).id,
@@ -87,12 +96,12 @@ export class SuperClient extends Client {
         await postEventStatusMessage(channel, event)
 
         for await (const worker of event.workers) {
-            const user = await getLinkedDiscordUser(worker, guild)
+            const user = await getLinkedDiscordUser(worker, logger)
             if (user) {
-                const fetchedMember = await guild.client.users.fetch(String(user)) // Why javascript :'(
-                await addMemberToChannel(channel, fetchedMember)
+                const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
+                await addMemberToChannel(channel, fetchedMember, logger)
             } else {
-                console.log("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
 
         }
@@ -102,9 +111,11 @@ export class SuperClient extends Client {
 
     /**
      * @param channel channel to update
-     * @param event The current event to check against, will add users not found in current channel.
+     * @param events The current events to check against, will add users not found in current channel.
+     * @param logger
      */
-    async updateMembersForChannel(channel: TextChannel, events: Event[]) {
+    async updateMembersForChannel(channel: TextChannel, events: Event[], logger: Logger) {
+        await logger.logLine("Updating members for channel " + channel.name + " (" + events.map(e => e.title) + ")")
         const usersFromDiscord: GuildMember[] = []
         for await (const member of channel.members.values()) {
             usersFromDiscord.push(member)
@@ -113,10 +124,13 @@ export class SuperClient extends Client {
         const usersFromSchedgeUp: Snowflake[] = []
         for (let i = 0; i < events.length; i++) {
             for await (const worker of events[i].workers) {
-                const user = await getLinkedDiscordUser(worker, channel.guild)
+                const user = await getLinkedDiscordUser(worker, logger)
                 // User is null if Guest/Not linked user
-                if (!user || usersFromSchedgeUp.includes(user)) continue
-                usersFromSchedgeUp.push(user)
+                if (!user) {
+                    await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                } else if (!usersFromSchedgeUp.includes(user)) {
+                    usersFromSchedgeUp.push(user)
+                }
             }
         }
 
@@ -128,19 +142,21 @@ export class SuperClient extends Client {
 
         for (let i = 0; i < usersToAdd.length; i++) {
             const user = usersToAdd[i]
-            const fetchedMember = await channel.client.users.fetch(String(user)) // Why javascript :'(
-            await addMemberToChannel(channel, fetchedMember)
+            const fetchedMember = await channel.guild.members.fetch(String(user)) // Why javascript :'(
+            await addMemberToChannel(channel, fetchedMember, logger)
         }
 
         const usersToRemove = usersFromDiscord.filter((value) => {
             return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
         })
 
-        for await (const user of usersToRemove) {
-            if (user.permissions.has("Administrator") || user.user.bot) continue // TODO: add special admin role for this bot, add to channels and dont remove them
-            await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
+        const adminRole = needNotNullOrUndefined(await channel.guild.roles.fetch(await needSetting("admin_role_snowflake")), "adminRole")
+        for await (const member of usersToRemove) {
+            if (member.permissions.has("Administrator") || member.user.bot || member.roles.cache.some((r, k) => k === adminRole.id)) continue
+            await logger.logPart("Removing user " + member.displayName + " from channel")
+            await removeMemberFromChannel(channel, member, logger)
+            // await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
         }
-
     }
 }
 
@@ -189,8 +205,20 @@ export async function startDiscordClient() {
 
         try {
             // We know the type from #isChatInputCommand further up
+            const interactionTyped = interaction as ChatInputCommandInteraction
+
+            if(interactionTyped.member != null) {
+                const member = await interactionTyped.guild?.members.fetch(interactionTyped.member.user.id)
+                if(member) {
+                    const adminRole = await fetchSetting("admin_role_snowflake")
+                    if(!(member.permissions.has("Administrator") || (adminRole && member.roles.cache.has(adminRole)))) {
+                        await interaction.reply({content: "You do not have permission to use my commands >:(", ephemeral: true})
+                    }
+                }
+            }
+
             // @ts-ignore the execute function does exist >:(
-            await command.execute(interaction as ChatInputCommandInteraction)
+            await command.execute(interactionTyped)
         } catch (error) {
             console.error(error)
             if (interaction.replied || interaction.deferred) {
@@ -214,6 +242,7 @@ async function getCategory(guild: Guild) {
     let category: CategoryChannel
     if(storedCategoryId === undefined) {
         // No category yet, create one please
+        const adminRoleSnowflake = await needSetting("admin_role_snowflake")
         category = await guild.channels.create({
             name: needEnvVariable(EnvironmentVariable.CHANNEL_CATEGORY_NAME),
             type: ChannelType.GuildCategory,
@@ -222,6 +251,9 @@ async function getCategory(guild: Guild) {
                 deny: [PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ViewChannel]
             }, {
                 id: guild.client.user.id,
+                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+            }, {
+                id: adminRoleSnowflake,
                 allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
             }]
         })
@@ -234,14 +266,14 @@ async function getCategory(guild: Guild) {
     return category
 }
 
-export async function addMemberToChannel(channel: TextChannel, user: User) {
-    console.log("Adding member " + user.tag + " to channel " + channel.name)
-    await channel.permissionOverwrites.edit(user, {SendMessages: true, ViewChannel: true})
+export async function addMemberToChannel(channel: TextChannel, member: GuildMember, logger: Logger) {
+    await logger.logPart("Adding member " + member.displayName + " to channel " + channel.name)
+    await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
 }
 
-export async function removeMemberFromChannel(channel: TextChannel, user: User) {
-    console.log("Removing member " + user.tag + " from channel " + channel.name)
-    await channel.permissionOverwrites.edit(user, {SendMessages: false, ViewChannel: false})
+export async function removeMemberFromChannel(channel: TextChannel, member: GuildMember, logger: Logger) {
+    await logger.logPart("Removing member " + member.displayName + " from channel " + channel.name)
+    await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
 }
 
 /**
@@ -249,23 +281,21 @@ export async function removeMemberFromChannel(channel: TextChannel, user: User) 
  */
 async function postEventStatusMessage(channel: TextChannel, event: Event) {
     const embedBuilder = new EmbedBuilder()
-    embedBuilder.setTitle("Kanal for " + event.title)
+    embedBuilder.setTitle("Kanal for " + getDayNameNO(event.date) + "s forestillinger")
     embedBuilder.setDescription("Event info")
+    embedBuilder.setAuthor({name: "Det Andre Teatret"})
+    embedBuilder.addFields({name: "Husk å bestille mat!", value: "https://bit.ly/DATMAT"})
     const sentMessage = await channel.send({embeds: [embedBuilder]})
     await channel.messages.pin(sentMessage)
     // await channel.messages.react() //TODO set up reactions for food ordering
     // TODO pretty message :)
 }
 
-async function sendConfirmationMessage() {
-    // TODO: Send message to somebody to confirm creating a new channel or whatever
-}
-
 let managerChannel: TextChannel | undefined = undefined
 
 export async function sendManagerMessage(message: MessageCreateOptions, guild: Guild) {
     if(managerChannel === undefined) {
-        const storedChannelId = await selectEntry("Settings", "SettingKey=\"manager_channel_id\"", ["SettingValue"])
+        const storedChannelId = await fetchSetting("manager_channel_id")
         let channel: TextChannel
 
         if(storedChannelId === undefined) {
@@ -274,11 +304,11 @@ export async function sendManagerMessage(message: MessageCreateOptions, guild: G
                 name: "schedgeup-manager-channel",
                 type: ChannelType.GuildText,
                 topic: "Used to manage the schedgeup-bot",
-                parent: (await getCategory(guild)).id // TODO: give read permissions to admins
+                parent: (await getCategory(guild)).id
             })
             await updateSetting("manager_channel_id", channel.id)
         } else {
-            channel = await guild.channels.fetch(storedChannelId["SettingValue"]) as TextChannel
+            channel = await guild.channels.fetch(storedChannelId) as TextChannel
         }
         if(channel != null){
             managerChannel = channel

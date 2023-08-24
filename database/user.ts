@@ -1,7 +1,7 @@
-import {Guild, GuildMember, Snowflake} from "discord.js"
+import {GuildMember, Snowflake} from "discord.js"
 import {Worker} from "../scraper/pages/eventAssignement.js"
-import {addEntry, deleteEntries, selectEntries, selectEntry} from "./sqlite.js"
-import {sendManagerMessage} from "../discord/discord.js"
+import {addEntry, deleteEntries, selectEntry} from "./sqlite.js"
+import {Logger} from "../common/logging.js"
 
 export class User {
     private readonly _userId: number
@@ -28,9 +28,9 @@ export class User {
     }
 }
 
-export async function addNewUser(schedgeUpId: string, discordUserSnowflake: string) {
+export async function addNewUser(schedgeUpId: string, discordUserSnowflake: string) { // TODO Display name?!
     // First column should be null so the userid is autoincremented
-    await addEntry("UserList", null, schedgeUpId, discordUserSnowflake)
+    await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake)
 }
 
 export async function fetchUser(schedgeUpId?: string, discordSnowflake?: Snowflake) { // TODO: Use Snowflake instead of string where applicable
@@ -46,13 +46,13 @@ export async function deleteUser(schedgeUpId?: string, discordSnowflake?: Snowfl
 /**
  * Returns {@code null} if given worker is a Guest/Not linked user
  */
-export async function getLinkedDiscordUser(worker: Worker, guild: Guild): Promise<Snowflake | null> {
+export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Promise<Snowflake | null> {
     if(worker.id == null) return null
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
     if(result === undefined) {
-        await sendManagerMessage({content: "SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account"}, guild)
+        await logger.logPart("SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account")
         return null
     }
 

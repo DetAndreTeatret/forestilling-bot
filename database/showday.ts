@@ -6,12 +6,14 @@ export class ShowDay {
     private readonly _schedgeUpIds: string[]
     private readonly _discordChannelSnowflake: string
     private readonly _createdAt: Date
+    private readonly _dayTimeShows: boolean
 
-    constructor(when: Date, schedgeUpIds: string[], discordChannelSnowflake: string, createdAt: Date) {
+    constructor(when: Date, schedgeUpIds: string[], discordChannelSnowflake: string, createdAt: Date, dayTimeShows: boolean) {
         this._when = when
         this._schedgeUpIds = schedgeUpIds
         this._discordChannelSnowflake = discordChannelSnowflake
         this._createdAt = createdAt
+        this._dayTimeShows = dayTimeShows
     }
 
 
@@ -30,10 +32,15 @@ export class ShowDay {
     get createdAt(): Date {
         return this._createdAt
     }
+
+    get dayTimeShows(): boolean {
+        return this._dayTimeShows
+    }
 }
 
-export async function createNewShowday(discordChannelSnowflake: string, showDay: Date, ...schedgeUpIds: string[]) {
-    await addEntry("ShowDays", formatDateYYYYMMDD(showDay), JSON.stringify(schedgeUpIds), discordChannelSnowflake, Date.now())
+export async function createNewShowday(discordChannelSnowflake: string, showDay: Date, dayTime: boolean, ...schedgeUpIds: string[]) {
+    // null to autoincrement
+    await addEntry("ShowDays", "null", "\"" + formatDateYYYYMMDD(showDay) + "\"", schedgeUpIds.join(","), discordChannelSnowflake, Date.now(), Number(dayTime))
 }
 
 export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
@@ -43,14 +50,14 @@ export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
     } else {
         const currentIds = result.schedgeUpIds
         currentIds.push(eventId)
-        await updateEntry("ShowDays", "DiscordChannelSnowflake=\"" + showDay.discordChannelSnowflake + "\"", "SchedgeUpIDs", JSON.stringify(currentIds))
+        await updateEntry("ShowDays", "DiscordChannelSnowflake=\"" + showDay.discordChannelSnowflake + "\"", "SchedgeUpIDs", currentIds.join(","))
     }
 }
 
 export async function fetchShowDayBySU(schedgeUpShowId: string) {
-    const result = await selectEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + schedgeUpShowId + "\"%") // TODO does the string thing work
+    const result = await selectEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + schedgeUpShowId + "%\"")
     if(result === undefined) return undefined
-    return new ShowDay(new Date(result["ShowDayDate"]), JSON.parse(result["SchedgeUpIDs"]), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"])
+    return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
 
 /**
@@ -59,5 +66,5 @@ export async function fetchShowDayBySU(schedgeUpShowId: string) {
 export async function fetchShowDayByDate(date: Date) {
     const result = await selectEntry("ShowDays", "ShowDayDate=\"" + formatDateYYYYMMDD(date) + "\"")
     if(result === undefined) return undefined
-    return new ShowDay(new Date(result["ShowDayDate"]), JSON.parse(result["SchedgeUpIDs"]), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"])
+    return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }

@@ -36,7 +36,7 @@ export function formatDateYYYYMM(date: Date) {
 }
 
 export function formatDateYYYYMMDD(date: Date) {
-    return "" + date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
+    return "" + date.getFullYear() + "-" + (date.getMonth() < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + date.getDate()
 }
 
 export function tomorrow(date?: Date) {
@@ -117,4 +117,17 @@ function isSameWeek(date1: Date, date2: Date): boolean {
 
     // Check if the start of the weeks for both dates are the same
     return clonedDate1.getTime() === clonedDate2.getTime()
+}
+
+export function getDayNameNO(date: Date) {
+    switch (date.getDay()) {
+        case 0: return "Søndag"
+        case 1: return "Mandag"
+        case 2: return "Tirsdag"
+        case 3: return "Onsdag"
+        case 4: return "Torsdag"
+        case 5: return "Fredag"
+        case 6: return "Lørdag"
+        default: throw new Error("Invalid day number " + date.getDay())
+    }
 }
