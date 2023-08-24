@@ -136,7 +136,7 @@ async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, 
     return channelsMapped
 }
 
-// TODO Move to common? / Simplify
+// TODO Move to common?
 export async function editMessage(this: [InteractionResponse], newPart: string) {
     await this[0].edit(newPart)
 }

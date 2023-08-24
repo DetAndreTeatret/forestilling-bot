@@ -101,24 +101,6 @@ function getMaxDays(month: number, year: number) {
 }
 
 
-// Thanks mr. GPT
-function isSameWeek(date1: Date, date2: Date): boolean {
-    // Clone the input dates to avoid modifying the original objects
-    const clonedDate1 = new Date(date1)
-    const clonedDate2 = new Date(date2)
-
-    // Set the time to midnight to ignore the time part
-    clonedDate1.setHours(0, 0, 0, 0)
-    clonedDate2.setHours(0, 0, 0, 0)
-
-    // Get the start of the week (Sunday) for each date
-    clonedDate1.setDate(clonedDate1.getDate() - clonedDate1.getDay())
-    clonedDate2.setDate(clonedDate2.getDate() - clonedDate2.getDay())
-
-    // Check if the start of the weeks for both dates are the same
-    return clonedDate1.getTime() === clonedDate2.getTime()
-}
-
 export function getDayNameNO(date: Date) {
     switch (date.getDay()) {
         case 0: return "Søndag"

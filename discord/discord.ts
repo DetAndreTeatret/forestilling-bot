@@ -14,7 +14,6 @@ import {
     PermissionsBitField,
     Snowflake,
     TextChannel,
-    User
 } from "discord.js"
 import path from "node:path"
 import fs from "node:fs"
@@ -26,7 +25,6 @@ import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
 import {fetchShowDayBySU} from "../database/showday.js"
 import {fetchSetting, needSetting, updateSetting} from "../database/settings.js"
-import {StringConsumer} from "./daemon"
 import {needNotNullOrUndefined} from "../common/util.js"
 import {Logger} from "../common/logging.js"
 
@@ -207,6 +205,7 @@ export async function startDiscordClient() {
             // We know the type from #isChatInputCommand further up
             const interactionTyped = interaction as ChatInputCommandInteraction
 
+            // Deny commands usage if member is not an admin or bot admin
             if(interactionTyped.member != null) {
                 const member = await interactionTyped.guild?.members.fetch(interactionTyped.member.user.id)
                 if(member) {

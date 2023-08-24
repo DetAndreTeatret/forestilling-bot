@@ -28,7 +28,7 @@ type DatabaseTables = "UserList" | "DiscordUserRemovals" | "Settings" | "ShowDay
  * @param table The table to insert an entry into
  * @param params The values of the entry, in the order specified in the Database Layout
  */
-export async function addEntry(table: DatabaseTables, ...params: any[]) {
+export async function addEntry(table: DatabaseTables, ...params: (string | number)[]) {
     await db.exec("INSERT INTO " + table + " VALUES(" + params + ")")
 }
 
