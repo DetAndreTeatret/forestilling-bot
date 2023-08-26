@@ -22,7 +22,6 @@ export const data = new SlashCommandBuilder()
     .setDescription("Update show channels in Discord(delete/create/update")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const updateMessage = editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")])
     if (interaction.guild == null) {
         throw new DiscordCommandError("Guild is null", "update/#execute")
     }
@@ -43,10 +42,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await updateSetting("admin_role_snowflake", role.id)
     }
 
+    const updateMessage = editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")])
     const logger = new Logger(updateMessage)
     await logger.logLine("Starting update!")
     try {
-        await update(interaction.guild, new Logger(updateMessage))
+        await update(interaction.guild, logger)
     } catch (error) {
         await updateMessage("Encountered error during update + " + error)
         throw error
@@ -124,7 +124,7 @@ async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, 
         const ids = channel[1]
         const foundEvents: Event[] = []
         for await (const id of ids) {
-            const result = events.find(e => e.id = id)
+            const result = events.find(e => e.id === id)
             if (result) {
                 foundEvents.push(result)
             }

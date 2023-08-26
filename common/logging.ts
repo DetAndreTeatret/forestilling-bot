@@ -1,4 +1,4 @@
-import {StringConsumer} from "../discord/daemon"
+import {StringConsumer} from "../discord/daemon.js"
 
 export class Logger {
     constructor(listener: StringConsumer) {
@@ -25,12 +25,13 @@ export class Logger {
      * If the last log was also inline this newpart will replace it
      */
     async logPart(newPart: string) {
+        newPart = "\n" + newPart
         const lengthMinusOne = this.currentLog.length - 1
         if(this.lastPartInline) {
             this.currentLog[lengthMinusOne] = newPart
             this.lastPartInline = newPart
         } else {
-            await this.logLineInternal(newPart)
+            this.currentLog.push(newPart)
             this.lastPartInline = newPart
         }
         await this.renderToListener()
