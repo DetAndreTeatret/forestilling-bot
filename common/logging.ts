@@ -16,10 +16,6 @@ export class Logger {
         this.lastPartInline = undefined
         await this.renderToListener()
     }
-    private async logLineInternal(line: string) {
-        this.currentLog.push("\n" + line)
-        await this.renderToListener()
-    }
 
     /**
      * If the last log was also inline this newpart will replace it
@@ -35,6 +31,10 @@ export class Logger {
             this.lastPartInline = newPart
         }
         await this.renderToListener()
+    }
+
+    async logWarning(newPart: string) {
+        await this.logLine(newPart) // TODO
     }
 
     render() {

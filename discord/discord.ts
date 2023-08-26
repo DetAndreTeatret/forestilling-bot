@@ -98,7 +98,7 @@ export class SuperClient extends Client {
             if (user) {
                 const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
                 await addMemberToChannel(channel, fetchedMember, logger)
-            } else {
+            } else if(user == null) {
                 await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
 
@@ -123,10 +123,10 @@ export class SuperClient extends Client {
         for (let i = 0; i < events.length; i++) {
             for await (const worker of events[i].workers) {
                 const user = await getLinkedDiscordUser(worker, logger)
-                // User is null if Guest/Not linked user
-                if (!user) {
+                // User is null if Guest
+                if (user === null) {
                     await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
-                } else if (!usersFromSchedgeUp.includes(user)) {
+                } else if (user !== undefined && !usersFromSchedgeUp.includes(user)) {
                     usersFromSchedgeUp.push(user)
                 }
             }

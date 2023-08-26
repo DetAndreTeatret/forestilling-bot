@@ -28,13 +28,13 @@ export class User {
     }
 }
 
-export async function addNewUser(schedgeUpId: string, discordUserSnowflake: string) { // TODO Display name?!
+export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake) {
     // First column should be null so the userid is autoincremented
     await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake)
 }
 
-export async function fetchUser(schedgeUpId?: string, discordSnowflake?: Snowflake) { // TODO: Use Snowflake instead of string where applicable
-    const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordSnowflake + "\"")
+export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
+    const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
     if(result === undefined) return undefined
     return new User(result["UserId"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
 }
@@ -44,24 +44,29 @@ export async function deleteUser(schedgeUpId?: string, discordSnowflake?: Snowfl
 }
 
 /**
- * Returns {@code null} if given worker is a Guest/Not linked user
+ * Returns {@code null} if given worker is a Guest/Not linked user, returns undefined and logs to logger if user does not
+ * have a linked account
  */
-export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Promise<Snowflake | null> {
-    if(worker.id == null) return null
+export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Promise<Snowflake | null | undefined> {
+    if(worker.id === null) return null
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
     if(result === undefined) {
-        await logger.logPart("SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked discord account")
-        return null
+        await logger.logPart("SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked Discord account")
+        return undefined
     }
 
     return result["DiscordUserSnowflake"]
 }
 
-export async function getLinkedSchedgeUpUser(member: GuildMember) {
+export async function getLinkedSchedgeUpUser(member: GuildMember, logger: Logger): Promise<string | undefined> {
     const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
-    if(result === undefined) return undefined
+
+    if(result === undefined) {
+        await logger.logPart("Discord user " + member.displayName + " does not have a linked SchedgeUp account")
+        return undefined
+    }
+
     return result["SchedgeUpId"]
-     // TODO: Log if database does not have user
 }

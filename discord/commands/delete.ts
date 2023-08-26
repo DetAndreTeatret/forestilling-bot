@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
-import {editMessage} from "./update.js"
 import {Logger} from "../../common/logging.js"
 import {getDeleteableChannels} from "../../database/discord.js"
 import {discordClient, removeMemberFromChannel} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
+import {editMessage} from "../../common/util.js"
 
 
 
@@ -27,7 +27,7 @@ export async function checkDeletions(logger: Logger)  {
                         channel.delete("Event related to this channel has ended")
                         await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
                 } else {
-                        await logger.logLine("Tried to delete channel found in database that does not exist on the Discord server") // TODO warn level on logger?
+                        await logger.logWarning("Tried to delete channel found in database that does not exist on the Discord server")
                 }
         }
         if(!channelIdsToDelete || channelIdsToDelete.length === 0) await logger.logLine("No channels to delete")

@@ -2,7 +2,6 @@ import {
     ChatInputCommandInteraction,
     Collection,
     Guild,
-    InteractionResponse,
     SlashCommandBuilder,
     TextChannel
 } from "discord.js"
@@ -15,6 +14,7 @@ import {page} from "../../scraper/browser.js"
 import {addEventToShowDay, createNewShowday, fetchShowDayByDate, fetchShowDayBySU} from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
 import {Logger} from "../../common/logging.js"
+import {editMessage} from "../../common/util.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -135,9 +135,3 @@ async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, 
 
     return channelsMapped
 }
-
-// TODO Move to common?
-export async function editMessage(this: [InteractionResponse], newPart: string) {
-    await this[0].edit(newPart)
-}
-

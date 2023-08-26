@@ -3,14 +3,14 @@ import {open} from "sqlite"
 import path from "node:path"
 import {fileURLToPath} from "url"
 
-sqlite3.verbose() // TODO: enable on startup argument
+sqlite3.verbose()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const db = await open({
     filename: path.join(__dirname, "database.db"),
-    driver: sqlite3.cached.Database // TODO: check if cached is necessary
+    driver: sqlite3.cached.Database
 })
 
 export async function createTables() {
