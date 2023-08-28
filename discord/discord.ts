@@ -281,9 +281,10 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
 async function postEventStatusMessage(channel: TextChannel, event: Event) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Kanal for " + getDayNameNO(event.date) + "s forestillinger")
-    embedBuilder.setDescription("Event info")
+    embedBuilder.setDescription("Velkommen til denne kanalen, ha en uke videre! :sunglasses:")
     embedBuilder.setAuthor({name: "Det Andre Teatret"})
     embedBuilder.addFields({name: "Husk å bestille mat!", value: "https://bit.ly/DATMAT"})
+    embedBuilder.setColor("Random")
     const sentMessage = await channel.send({embeds: [embedBuilder]})
     await channel.messages.pin(sentMessage)
     // await channel.messages.react() //TODO set up reactions for food ordering
