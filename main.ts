@@ -1,41 +1,15 @@
-import {createPage, startBrowser} from "./browser.js";
-import {login} from "./pages/login.js";
-import {getEventIds} from "./pages/schedule.js";
-import dotenv from 'dotenv'
-import {Page} from "puppeteer";
-import {scrapeEvents} from "./pages/eventAssignement.js";
-import {parseArgs} from "util";
+import {createPage, page, startBrowser} from "./scraper/browser.js"
+import {loginSchedgeUp} from "./scraper/pages/login.js"
+import {startDiscordClient} from "./discord/discord.js"
+import {createTables} from "./database/sqlite.js"
+import {setupConfig} from "./common/config.js"
 
-dotenv.config()
+setupConfig()
+letsGo().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
 
-const {
-    values: {dateFrom, dateTo}
-} = parseArgs( {
-    options: {
-        dateFrom: {
-            type: "string",
-            short: "f"
-        },
-        dateTo: {
-            type: "string",
-            short: "t"
-        }
-    }
-})
-
-const browser = await startBrowser()
-const page= await createPage(browser)
-
-await login(page)
-
-const ids = await getEventIds(page, dateFrom ? new Date(dateFrom) : new Date(), dateTo ? new Date(dateTo) : new Date())
-const events = await scrapeEvents(page, ids)
-
-console.log(JSON.stringify(events, null, 1))
-process.exit()
-
-
-export async function navigateToUrl(page: Page, url: string) {
-    console.log("Navigating to " + url + "...")
-    await page.goto(url, {waitUntil: "networkidle2"})
+export async function letsGo() {
+    await startDiscordClient() // Populates discord client global
+    await createPage(await startBrowser()) // Populates page global
+    await loginSchedgeUp(page)
+    await createTables()
 }
