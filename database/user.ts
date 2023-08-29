@@ -3,6 +3,9 @@ import {Worker} from "../scraper/pages/eventAssignement.js"
 import {addEntry, deleteEntries, selectEntry} from "./sqlite.js"
 import {Logger} from "../common/logging.js"
 
+/**
+ * A class representing a single user as it's stored in the database
+ */
 export class User {
     private readonly _userId: number
     private readonly _schedgeUpId: string
@@ -15,32 +18,60 @@ export class User {
     }
 
 
+    /**
+     * The user id of the user, only used as a way to identify users in the database
+     */
     get userId(): number {
         return this._userId
     }
 
+    /**
+     * The SchedgeUp id of the account linked to this user
+     */
     get schedgeUpId(): string {
         return this._schedgeUpId
     }
 
+    /**
+     * The Discord snowflake of the account linked to this user
+     */
     get discordSnowflake(): Snowflake {
         return this._discordSnowflake
     }
 }
 
+/**
+ * Create a new user. No users can share SchedgeUp ids or Discord snowflakes
+ * @param schedgeUpId The SchedgeUp id of the account that should be linked to this user.
+ * @param discordUserSnowflake The Discord snowflake of the account that should be linked to this user.
+ */
 export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake) {
     // First column should be null so the userid is autoincremented
     await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake)
 }
 
+/**
+ * Fetch a user from the database given either their SchedgeUp id or Discord snowflake
+ */
 export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
+    if(schedgeUpId === undefined && discordUserSnowflake === undefined) {
+        return undefined
+    }
+
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
     if(result === undefined) return undefined
     return new User(result["UserId"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
 }
 
-export async function deleteUser(schedgeUpId?: string, discordSnowflake?: Snowflake) {
-    await deleteEntries("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordSnowflake + "\"")
+/**
+ * Delete a user given either their SchedgeUp id or Discord snowflake
+ */
+export async function deleteUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
+    if(schedgeUpId === undefined && discordUserSnowflake === undefined) {
+        return undefined
+    }
+
+    await deleteEntries("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
 }
 
 /**
@@ -60,6 +91,10 @@ export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Prom
     return result["DiscordUserSnowflake"]
 }
 
+/**
+ * Get the SchedgeUp id linked to the user that is linked to the given Discord user. Returns undefined and logs to logger if user
+ * does not have a linked account
+ */
 export async function getLinkedSchedgeUpUser(member: GuildMember, logger: Logger): Promise<string | undefined> {
     const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
 

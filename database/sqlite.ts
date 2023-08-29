@@ -13,6 +13,9 @@ const db = await open({
     driver: sqlite3.cached.Database
 })
 
+/**
+ * Create the database tables necessary for this bot to run, if not already created.
+ */
 export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UserID INTEGER, UnixEpoch TIMESTAMP, ShowDayID INTEGER)") // TODO Update usage of this table IF ITS USED
     await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")

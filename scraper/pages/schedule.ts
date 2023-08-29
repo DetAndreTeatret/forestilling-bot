@@ -42,8 +42,6 @@ export async function getEventIds(page: Page, dateRange: DateRange) {
 }
 
 /**
- * string 0 - event id
- * string 1 - show template id, can be undefined
  * @param page
  * @param dateRange
  */

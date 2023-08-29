@@ -6,7 +6,7 @@ import {
     TextChannel
 } from "discord.js"
 import {DiscordCommandError, SuperClient} from "../discord.js"
-import {DateRange, formatDateYYYYMMDD, tomorrow} from "../../common/date.js"
+import {DateRange, renderDateYYYYMMDD, tomorrow} from "../../common/date.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
 import {scrapeEvents, Event} from "../../scraper/pages/eventAssignement.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
@@ -84,17 +84,17 @@ export async function update(guild: Guild | null, logger: Logger) {
             const showDay0 = await fetchShowDayByDate(event.date)
             if (!showDay0) {
                 // No ShowDay anywhere, create a new one
-                await logger.logPart("Creating new ShowDay(" + event.title + "/" + formatDateYYYYMMDD(event.date) + ")")
+                await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ")")
                 const channel = await client.createNewChannelForEvent(guild, event, false, logger) // TODO, barnelørdag osv..
                 await createNewShowday(channel.id, event.date, false, event.id)// TODO, barnelørdag osv..
                 channelsMapped.set(channel, [event])
             } else {
                 // Found a ShowDay for the event date, merge into it
-                await logger.logPart("Adding event(" + event.title + "/" + formatDateYYYYMMDD(event.date) + ") to existing ShowDay")
+                await logger.logPart("Adding event(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ") to existing ShowDay")
                 await addEventToShowDay(showDay0, event.id)
                 const channel = channelsMapped.findKey((e, c) => c.id === showDay0.discordChannelSnowflake)
                 if (!channel) {
-                    throw new Error("Could not find channel belonging to ShowDay " + formatDateYYYYMMDD(showDay0.when))
+                    throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay0.when))
                 } else {
                     const events = channelsMapped.get(channel)
                     if (!events) throw new Error("Could not find any events mapped to channel " + channel)
@@ -105,9 +105,9 @@ export async function update(guild: Guild | null, logger: Logger) {
             // Update showday
             const channel = channelsMapped.findKey((e, c) => c.id === showDay.discordChannelSnowflake)
             if (!channel) {
-                throw new Error("Could not find channel belonging to ShowDay " + formatDateYYYYMMDD(showDay.when))
+                throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay.when))
             } else {
-                await logger.logLine("Looking for worker updates in " + event.title + "/" + formatDateYYYYMMDD(event.date))
+                await logger.logLine("Looking for worker updates in " + event.title + "/" + renderDateYYYYMMDD(event.date))
                 const events = channelsMapped.get(channel)
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
                 await client.updateMembersForChannel(channel, events, logger)

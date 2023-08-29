@@ -27,15 +27,25 @@ export class DateRange {
     }
 
     toString() {
-        return formatDateYYYYMM(this.dateFrom) + " to " + formatDateYYYYMM(this.dateTo)
+        return renderDateYYYYMM(this.dateFrom) + " to " + renderDateYYYYMM(this.dateTo)
     }
 }
 
-export function formatDateYYYYMM(date: Date) {
-    return "" + date.getFullYear() + "-" + (date.getMonth() + 1)
+/**
+ * Renders the date in the YYYY-MM format(e.g. 2005-11-12), disregards all data more precise than months.
+ * Includes a "0" before months numbers <10 to stay consistent with {@link renderDateYYYYMMDD}.
+ * @param date the date to render
+ */
+export function renderDateYYYYMM(date: Date) {
+    return "" + date.getFullYear() + "-" + (date.getMonth() < 10 ? "0" : "") + (date.getMonth() + 1)
 }
 
-export function formatDateYYYYMMDD(date: Date) {
+/**
+ * Renders the date in the YYYY-MM-DD format(e.g. 2003-02-08), disregards all data more precise than days.
+ * This function including the "0" before month numbers <10 is important for database storage! If not it can ruin string comparisons.
+ * @param date the date to render
+ */
+export function renderDateYYYYMMDD(date: Date) {
     return "" + date.getFullYear() + "-" + (date.getMonth() < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + date.getDate()
 }
 
