@@ -4,7 +4,7 @@ export function setupConfig() {
     dotenv.config()
     for (const environmentVariableKey in EnvironmentVariable) {
         const result = process.env[environmentVariableKey]
-        if (result === undefined) {
+        if (result === undefined || "") {
             throw new Error("Env variable with key " + environmentVariableKey + " not found during startup")
         }
     }

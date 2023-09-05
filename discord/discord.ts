@@ -185,7 +185,7 @@ export async function startDiscordClient() {
     client.commands.forEach(name => commands = commands + name + ",")
     console.log("Parsed " + client.commands.size + " Discord commands [" + commands + "]") */ // TODO
 
-    client.once(Events.ClientReady, c => {
+    client.once(Events.ClientReady, async c => {
         console.log(`Discord client ready! Logged in as ${c.user.tag}`)
     })
 
@@ -212,6 +212,7 @@ export async function startDiscordClient() {
                     const adminRole = await fetchSetting("admin_role_snowflake")
                     if(!(member.permissions.has("Administrator") || (adminRole && member.roles.cache.has(adminRole)))) {
                         await interaction.reply({content: "You do not have permission to use my commands >:(", ephemeral: true})
+                        return
                     }
                 }
             }
