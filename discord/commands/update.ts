@@ -6,7 +6,7 @@ import {
     TextChannel
 } from "discord.js"
 import {DiscordCommandError, SuperClient} from "../discord.js"
-import {DateRange, renderDateYYYYMMDD, tomorrow} from "../../common/date.js"
+import {afterDays, DateRange, renderDateYYYYMMDD, tomorrow} from "../../common/date.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
 import {scrapeEvents, Event} from "../../scraper/pages/eventAssignement.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
@@ -65,7 +65,7 @@ export async function update(guild: Guild | null, logger: Logger) {
     // Any running channels belonging to events not fetched here will be deleted after some time
     const today = new Date()
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
-    const eventInfos = await getEventIds(page, new DateRange(today, tomorrow(today)))
+    const eventInfos = await getEventIds(page, new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
     const events = await scrapeEvents(page, eventInfos)
     if (guild == null) throw new DiscordCommandError("Guild is null", "update")
     const client = guild.client as SuperClient
