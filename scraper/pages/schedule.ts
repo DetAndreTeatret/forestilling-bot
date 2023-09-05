@@ -103,7 +103,7 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange): Promise<EventI
 async function navigateToSchedule(page: Page, dateString?: string) {
     // Cant be static because the ID is from .env
     const theatreId = needEnvVariable(EnvironmentVariable.THEATRE_ID)
-    const SCHEDULE_URL = "https://www.schedgeup.com/theatre/" + theatreId + "/schedule"
+    const SCHEDULE_URL = "https://www.schedgeup.com/theatres/" + theatreId + "/assignments"
     await navigateToUrl(page, dateString == null ? SCHEDULE_URL : SCHEDULE_URL + dateString)
 }
 
