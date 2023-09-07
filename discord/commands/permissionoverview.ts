@@ -44,6 +44,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     for await (const membersMappedToChannel of membersMappedToChannels) {
         console.log(membersMappedToChannel[0] + " has members: " + membersMappedToChannel[1].toString())
-        interaction.channel?.send(membersMappedToChannel[0])
+        interaction.channel?.send(membersMappedToChannel[0] + " has members: " + membersMappedToChannel[1].toString())
     }
 }
