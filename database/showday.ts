@@ -1,5 +1,5 @@
 import {renderDateYYYYMMDD} from "../common/date.js"
-import {addEntry, selectEntry, updateEntry} from "./sqlite.js"
+import {addEntry, deleteEntries, selectEntry, updateEntry} from "./sqlite.js"
 
 /**
  * A class representing a single day that has one or more shows.
@@ -70,7 +70,7 @@ export async function createNewShowday(discordChannelSnowflake: string, showDay:
  * @param eventId the event to add
  */
 export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
-    const result = await fetchShowDayBySU(showDay.schedgeUpIds[0])
+    const result = await fetchShowDayBySU(showDay.schedgeUpIds[0], showDay.dayTimeShows)
     if(!result) {
         throw new Error("ShowDay not found when trying to update ShowDay")
     } else {
@@ -82,9 +82,11 @@ export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
 
 /**
  * Fetch the show day belonging to a SchedgeUp event given the SchedgeUp event id
+ * @param schedgeUpShowId the SchedgeUp to use for searching
+ * @param dayTime If the ShowDay should be for daytime shows or not
  */
-export async function fetchShowDayBySU(schedgeUpShowId: string) {
-    const result = await selectEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + schedgeUpShowId + "%\"")
+export async function fetchShowDayBySU(schedgeUpShowId: string, dayTime: boolean) {
+    const result = await selectEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + schedgeUpShowId + "%\" AND DayTimeShows=" + Number(dayTime))
     if(result === undefined) return undefined
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
@@ -92,9 +94,23 @@ export async function fetchShowDayBySU(schedgeUpShowId: string) {
 /**
  * Fetch a show day based on the date it's happening.
  * @param date the date of the show day. Only takes into account YYYY-MM-DD.
+ * @param dayTime If the ShowDay should be for daytime shows or not
  */
-export async function fetchShowDayByDate(date: Date) {
-    const result = await selectEntry("ShowDays", "ShowDayDate=\"" + renderDateYYYYMMDD(date) + "\"")
+export async function fetchShowDayByDate(date: Date, dayTime: boolean) {
+    const result = await selectEntry("ShowDays", "ShowDayDate=\"" + renderDateYYYYMMDD(date) + "\" AND DayTimeShows=" + Number(dayTime))
     if(result === undefined) return undefined
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
+}
+
+export async function addDayTimeShow(templateId: string) {
+    await addEntry("DayTimeShows", templateId)
+}
+
+export async function removeDayTimeShow(templateId: string) {
+    await deleteEntries("DayTimeShows", "ShowTemplateID=" + templateId)
+}
+
+export async function isDayTimeShow(templateId: string) {
+    const result = await selectEntry("DayTimeShows", "ShowTemplateID=" + templateId)
+    return result !== undefined
 }
