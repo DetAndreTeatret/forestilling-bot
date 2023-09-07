@@ -6,12 +6,18 @@ import {
     TextChannel
 } from "discord.js"
 import {DiscordCommandError, SuperClient} from "../discord.js"
-import {afterDays, DateRange, renderDateYYYYMMDD, tomorrow} from "../../common/date.js"
+import {afterDays, DateRange, renderDateYYYYMMDD} from "../../common/date.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
 import {scrapeEvents, Event} from "../../scraper/pages/eventAssignement.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {page} from "../../scraper/browser.js"
-import {addEventToShowDay, createNewShowday, fetchShowDayByDate, fetchShowDayBySU} from "../../database/showday.js"
+import {
+    addEventToShowDay,
+    createNewShowday,
+    fetchShowDayByDate,
+    fetchShowDayBySU,
+    isDayTimeShow
+} from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
 import {Logger} from "../../common/logging.js"
 import {editMessage} from "../../common/util.js"
@@ -78,15 +84,16 @@ export async function update(guild: Guild | null, logger: Logger) {
 
     for (let i = 0; i < events.length; i++) {
         const event = events[i]
-        const showDay = await fetchShowDayBySU(event.id)
+        const isEventDaytime = event.showTemplateId === undefined ? false : await isDayTimeShow(event.showTemplateId)
+        const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
         if (!showDay) {
             // No ShowDay for the given found, maybe there is one for the given date?
-            const showDay0 = await fetchShowDayByDate(event.date)
+            const showDay0 = await fetchShowDayByDate(event.date, isEventDaytime)
             if (!showDay0) {
                 // No ShowDay anywhere, create a new one
                 await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ")")
-                const channel = await client.createNewChannelForEvent(guild, event, false, logger) // TODO, barnelørdag osv..
-                await createNewShowday(channel.id, event.date, false, event.id)// TODO, barnelørdag osv..
+                const channel = await client.createNewChannelForEvent(guild, event, isEventDaytime, logger)
+                await createNewShowday(channel.id, event.date, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
             } else {
                 // Found a ShowDay for the event date, merge into it

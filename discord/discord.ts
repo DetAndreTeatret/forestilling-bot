@@ -36,6 +36,7 @@ const __dirname = path.dirname(__filename)
 const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 
 const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+R?$")
+const DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX = "dagtid"
 
 export class SuperClient extends Client {
     commands = new Collection()
@@ -64,7 +65,7 @@ export class SuperClient extends Client {
 
             if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
                 const id = textChannel.topic.split(":")[1]
-                const result = await fetchShowDayBySU(id)
+                const result = await fetchShowDayBySU(id, textChannel.name.includes(DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX))
                 if(result) {
                     runningChannels.set(textChannel, result.schedgeUpIds)
                 }
@@ -80,12 +81,12 @@ export class SuperClient extends Client {
      *
      * @param guild
      * @param event
-     * @param dayTime Is this channel for daytime events? (barnelørdag osv...) TODO
+     * @param dayTime Is this channel for daytime events? (barnelørdag osv...)
      * @param logger
      */
     async createNewChannelForEvent(guild: Guild, event: Event, dayTime: boolean, logger: Logger) {
         const channel = await guild.channels.create({
-            name: getDayNameNO(event.date),
+            name: getDayNameNO(event.date) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
             type: ChannelType.GuildText,
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
             parent: (await getCategory(guild)).id,
@@ -98,7 +99,7 @@ export class SuperClient extends Client {
             if (user) {
                 const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
                 await addMemberToChannel(channel, fetchedMember, logger)
-            } else if(user == null) {
+            } else if(user === null) {
                 await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
 
@@ -282,7 +283,7 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
 async function postEventStatusMessage(channel: TextChannel, event: Event) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Kanal for " + getDayNameNO(event.date) + "s forestillinger")
-    embedBuilder.setDescription("Velkommen til denne kanalen, ha en uke videre! :sunglasses:")
+    embedBuilder.setDescription("Velkommen til denne kanalen, ha en fin uke videre! :sunglasses:\nOBS: Husk at denne kanalen forsvinner når forestillingen er over!")
     embedBuilder.setAuthor({name: "Det Andre Teatret"})
     embedBuilder.addFields({name: "Husk å bestille mat!", value: "https://bit.ly/DATMAT"})
     embedBuilder.setColor("Random")

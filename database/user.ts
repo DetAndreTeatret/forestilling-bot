@@ -75,7 +75,7 @@ export async function deleteUser(schedgeUpId?: string, discordUserSnowflake?: Sn
 }
 
 /**
- * Returns {@code null} if given worker is a Guest/Not linked user, returns undefined and logs to logger if user does not
+ * Returns {@code null} if given worker is a Guest, returns undefined and logs to logger if user does not
  * have a linked account
  */
 export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Promise<Snowflake | null | undefined> {

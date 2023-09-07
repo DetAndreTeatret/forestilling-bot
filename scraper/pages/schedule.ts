@@ -76,8 +76,8 @@ async function scrapeSchedule(page: Page, dateRange?: DateRange): Promise<EventI
 
             let showTemplateId
             element.classList.forEach(className => {
-                if(className.startsWith("show_template_")) {
-                    showTemplateId = className.split("show_template_")[1]
+                if(className.startsWith("event_template_")) {
+                    showTemplateId = className.split("event_template_")[1]
                 }
             })
             // @ts-ignore
