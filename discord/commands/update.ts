@@ -84,7 +84,7 @@ export async function update(guild: Guild | null, logger: Logger) {
 
     for (let i = 0; i < events.length; i++) {
         const event = events[i]
-        const isEventDaytime = event.showTemplateId === undefined ? false : await isDayTimeShow(event.showTemplateId)
+        const isEventDaytime = event.showTemplateId === undefined ? false : await isDayTimeShow(event.showTemplateId, event.title)
         const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
         if (!showDay) {
             // No ShowDay for the given found, maybe there is one for the given date?

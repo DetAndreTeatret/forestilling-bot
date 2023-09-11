@@ -1,5 +1,5 @@
 import {renderDateYYYYMMDD} from "../common/date.js"
-import {addEntry, deleteEntries, selectEntry, updateEntry} from "./sqlite.js"
+import {addEntry, deleteEntries, selectAllEntires, selectEntry, updateEntry} from "./sqlite.js"
 
 /**
  * A class representing a single day that has one or more shows.
@@ -102,15 +102,20 @@ export async function fetchShowDayByDate(date: Date, dayTime: boolean) {
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
 
-export async function addDayTimeShow(templateId: string) {
-    await addEntry("DayTimeShows", templateId)
+export async function addDayTimeShow(templateIdOrShowName: string) {
+    await addEntry("DayTimeShows", "\"" + templateIdOrShowName.toLowerCase() + "\"")
 }
 
-export async function removeDayTimeShow(templateId: string) {
-    await deleteEntries("DayTimeShows", "ShowTemplateID=" + templateId)
+export async function removeDayTimeShow(templateIdOrShowName: string) {
+    await deleteEntries("DayTimeShows", "ShowTemplateIDOrName=\"" + templateIdOrShowName.toLowerCase() + "\"")
 }
 
-export async function isDayTimeShow(templateId: string) {
-    const result = await selectEntry("DayTimeShows", "ShowTemplateID=" + templateId)
+export async function isDayTimeShow(templateId: string, showName: string) {
+    const result = await selectEntry("DayTimeShows", "ShowTemplateIDOrName=\"" + templateId.toLowerCase() + "\" OR ShowTemplateIDOrName=\"" + showName.toLowerCase() + "\"")
     return result !== undefined
+}
+
+export async function fetchAllDayTimeShows(): Promise<string[]> {
+    const result = await selectAllEntires("DayTimeShows")
+    return result.map(e => e["ShowTemplateIDOrName"])
 }

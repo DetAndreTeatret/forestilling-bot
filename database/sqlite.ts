@@ -21,7 +21,7 @@ export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
-    await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateID INTEGER)")
+    await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
     console.log("Database tables up and running")
 }
 
@@ -37,7 +37,7 @@ export async function addEntry(table: DatabaseTables, ...params: (string | numbe
 }
 
 /**
- * Select some entries from a table. Returns undefined if no entries match condition
+ * Select some entries from a table. Returns an empty array if no entries match condition
  * @param table where to select entries from
  * @param condition the filter condition for choosing entries
  * @param columns which columns to include. If undefined, all columns will be included
@@ -60,6 +60,18 @@ export async function selectEntry(table: DatabaseTables, condition: string, colu
     const query = "SELECT " + columnString + " FROM " + table + " WHERE " + condition
     debugLogQuery(query)
     return await db.get(query)
+}
+
+/**
+ * Select ALL entries from a table. Returns an empty array if the table is empty
+ * @param table where to select entries from
+ * @param columns which columns to include. If undefined, all columns will be included
+ */
+export async function selectAllEntires(table: DatabaseTables, columns?: string[]) {
+    const columnString = columns === undefined ? "*" : "(" + columns + ")"
+    const query = "SELECT " + columnString + " FROM " + table
+    debugLogQuery(query)
+    return await db.all(query)
 }
 
 export async function deleteEntries(table: DatabaseTables, condition: string) {
