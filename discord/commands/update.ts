@@ -5,7 +5,7 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from "discord.js"
-import {DiscordCommandError, SuperClient} from "../discord.js"
+import {DiscordCommandError, SuperClient, updateShowsInEventStatusMessage} from "../discord.js"
 import {afterDays, DateRange, renderDateYYYYMMDD} from "../../common/date.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
 import {scrapeEvents, Event} from "../../scraper/pages/eventAssignement.js"
@@ -105,7 +105,9 @@ export async function update(guild: Guild | null, logger: Logger) {
                 } else {
                     const events = channelsMapped.get(channel)
                     if (!events) throw new Error("Could not find any events mapped to channel " + channel)
+                    events.push(event)
                     await client.updateMembersForChannel(channel, events, logger)
+                    await updateShowsInEventStatusMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
                 }
             }
         } else {

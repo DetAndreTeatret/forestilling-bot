@@ -281,16 +281,25 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
  */
 async function postEventStatusMessage(channel: TextChannel, event: Event) {
+    const embedToPost = createStandardEventEmbed(event.date, event.title)
+    const sentMessage = await channel.send({embeds: [embedToPost]})
+    await channel.messages.pin(sentMessage)
+}
+export async function updateShowsInEventStatusMessage(channel: TextChannel, eventDate: Date, showTitles: string) {
+    const messages = await channel.messages.fetchPinned()
+    const pinnedMessage = messages.at(0)
+    await pinnedMessage?.edit({embeds: [createStandardEventEmbed(eventDate, showTitles)]})
+}
+
+function createStandardEventEmbed(eventDate: Date, shows: string) {
     const embedBuilder = new EmbedBuilder()
-    embedBuilder.setTitle("Kanal for " + getDayNameNO(event.date) + "s forestillinger")
+    embedBuilder.setTitle("Kanal for " + getDayNameNO(eventDate) + "s forestillinger(" + shows + ")")
     embedBuilder.setDescription("Velkommen til denne kanalen, ha en fin uke videre! :sunglasses:\nOBS: Husk at denne kanalen forsvinner når forestillingen er over!")
-    embedBuilder.setAuthor({name: "Det Andre Teatret"})
     embedBuilder.addFields({name: "Husk å bestille mat!", value: "https://bit.ly/DATMAT"})
     embedBuilder.setColor("Random")
-    const sentMessage = await channel.send({embeds: [embedBuilder]})
-    await channel.messages.pin(sentMessage)
-    // await channel.messages.react() //TODO set up reactions for food ordering
-    // TODO pretty message :)
+    embedBuilder.setImage("https://www.detandreteatret.no/uploads/assets/images/Stemning/_800x800_crop_center-center_82_none/andre-teatret-logo.png")
+
+    return embedBuilder
 }
 
 let managerChannel: TextChannel | undefined = undefined

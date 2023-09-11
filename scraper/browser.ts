@@ -10,6 +10,7 @@ export async function startBrowser() {
         ignoreHTTPSErrors: true,
         // DISPLAY: ':10.0',
     })
+
 }
 
 export async function createPage(browser: Browser) {

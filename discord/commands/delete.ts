@@ -45,7 +45,7 @@ export async function checkDeletions(logger: Logger)  {
                         await removeMemberFromChannel(channel, discordMember, logger)
                         await deleteEntries("DiscordUserRemovals", "DiscordChannelSnowflake=\"" + channel.id + "\" AND DiscordUserSnowflake=\"" + discordMember.id + "\"")
                 }
-                if(!usersToRemove || usersToRemove.length === 0) await logger.logLine("No users to remove")
+                if(!usersToRemove || usersToRemove.length === 0) await logger.logLine("No users to remove from channel: " + channel.name)
         }
 
         await logger.logLine("Deletions are done!")

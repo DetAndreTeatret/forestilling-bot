@@ -1,5 +1,3 @@
-import assert from "assert"
-
 export class DateRange {
     public dateFrom
     public dateTo
@@ -11,7 +9,9 @@ export class DateRange {
         this.dateFrom = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate())
         this.dateTo = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate())
 
-        assert(dateFrom <= dateTo)
+        if(this.dateTo < this.dateFrom) {
+            throw new Error("Invalid date range: " + dateFrom.toDateString() + " to " + dateTo.toDateString())
+        }
     }
 
     contains(date: Date) {

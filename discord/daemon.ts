@@ -36,7 +36,7 @@ async function tickDaemon() {
         try {
             await update(guild, new Logger(async log => console.log("[update.d] " + log)))
         } catch (error) {
-            await console.error("Encountered error during update + " + error)
+            await console.error("Encountered error during update: " + error)
             throw error
         }
         await checkDeletions(new Logger(async (log) => console.log("[delete.d] " + log)))
