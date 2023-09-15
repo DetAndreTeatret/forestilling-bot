@@ -5,10 +5,10 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from "discord.js"
-import {DiscordCommandError, SuperClient, updateShowsInEventStatusMessage} from "../discord.js"
+import {DiscordCommandError, SuperClient, updateCastList, updateShowsInEventInfoMessage} from "../discord.js"
 import {afterDays, DateRange, renderDateYYYYMMDD} from "../../common/date.js"
 import {getEventIds} from "../../scraper/pages/schedule.js"
-import {scrapeEvents, Event} from "../../scraper/pages/eventAssignement.js"
+import {scrapeEvents, Event, Worker} from "../../scraper/pages/eventAssignement.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {page} from "../../scraper/browser.js"
 import {
@@ -84,7 +84,7 @@ export async function update(guild: Guild | null, logger: Logger) {
 
     for (let i = 0; i < events.length; i++) {
         const event = events[i]
-        const isEventDaytime = event.showTemplateId === undefined ? false : await isDayTimeShow(event.showTemplateId, event.title)
+        const isEventDaytime = await isDayTimeShow(event.showTemplateId === undefined ? "null" : event.showTemplateId, event.title)
         const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
         if (!showDay) {
             // No ShowDay for the given found, maybe there is one for the given date?
@@ -107,7 +107,15 @@ export async function update(guild: Guild | null, logger: Logger) {
                     if (!events) throw new Error("Could not find any events mapped to channel " + channel)
                     events.push(event)
                     await client.updateMembersForChannel(channel, events, logger)
-                    await updateShowsInEventStatusMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
+                    await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
+                    const allWorkers = events.map(e => e.workers).flat()
+                    const allWorkersFiltered: Worker[] = []
+                    allWorkers.forEach(worker => {
+                        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who)) {
+                            allWorkersFiltered.push(worker)
+                        }
+                    })
+                    await updateCastList(channel, allWorkersFiltered)
                 }
             }
         } else {

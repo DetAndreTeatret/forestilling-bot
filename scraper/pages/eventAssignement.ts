@@ -66,7 +66,7 @@ export async function scrapeEvents(page: Page, eventInfos: EventInfo[]) {
                         const who = whoListElement.querySelector(".bar_info") as HTMLElement
                         if(who != null) {
                             const name = who.firstChild?.textContent?.replaceAll("\n", "")
-                            workers.push(new Worker(id, role.innerText.split(" ")[0], name == null ? "MissingName" : name))
+                            workers.push(new Worker(id, role.innerText.split(" ")[0], name == null ? "MissingName" : name.trim()))
                         }
                     })
                 }

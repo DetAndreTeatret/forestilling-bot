@@ -9,15 +9,14 @@ import {
     Events,
     GatewayIntentBits,
     Guild,
-    GuildMember,
-    MessageCreateOptions,
+    GuildMember, Message,
     PermissionsBitField,
     Snowflake,
     TextChannel,
 } from "discord.js"
 import path from "node:path"
 import fs from "node:fs"
-import {Event} from "../scraper/pages/eventAssignement.js"
+import {Event, Worker} from "../scraper/pages/eventAssignement.js"
 import {getLinkedDiscordUser} from "../database/user.js"
 import {getDayNameNO} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
@@ -45,7 +44,7 @@ export class SuperClient extends Client {
     channelCache: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
 
     constructor(options: ClientOptions) {
-            super(options)
+        super(options)
     }
 
     /**
@@ -58,15 +57,15 @@ export class SuperClient extends Client {
         const runningChannels: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
 
         for await (const channel of channels.values()) {
-            if(channel == null || channel.type !== ChannelType.GuildText) continue
+            if (channel == null || channel.type !== ChannelType.GuildText) continue
 
             const textChannel = channel as TextChannel
-            if(textChannel.topic === null) continue
+            if (textChannel.topic === null) continue
 
             if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
                 const id = textChannel.topic.split(":")[1]
                 const result = await fetchShowDayBySU(id, textChannel.name.includes(DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX))
-                if(result) {
+                if (result) {
                     runningChannels.set(textChannel, result.schedgeUpIds)
                 }
             }
@@ -92,14 +91,15 @@ export class SuperClient extends Client {
             parent: (await getCategory(guild)).id,
         })
 
-        await postEventStatusMessage(channel, event)
+        await postEventInfo(channel, event)
+        await postCastList(channel, event.workers)
 
         for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, logger)
             if (user) {
                 const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
                 await addMemberToChannel(channel, fetchedMember, logger)
-            } else if(user === null) {
+            } else if (user === null) {
                 await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
 
@@ -160,7 +160,7 @@ export class SuperClient extends Client {
 }
 
 export async function startDiscordClient() {
-    const client = new SuperClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences] })
+    const client = new SuperClient({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences]})
 
     const commandsPath = path.join(__dirname, "commands")
     let commandFiles: string[] = []
@@ -192,7 +192,7 @@ export async function startDiscordClient() {
 
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
-    client.on(Events.InteractionCreate, async function(interaction) {
+    client.on(Events.InteractionCreate, async function (interaction) {
         if (!interaction.isChatInputCommand()) return
 
         const command = (interaction.client as SuperClient).commands.get(interaction.commandName)
@@ -207,12 +207,15 @@ export async function startDiscordClient() {
             const interactionTyped = interaction as ChatInputCommandInteraction
 
             // Deny commands usage if member is not an admin or bot admin
-            if(interactionTyped.member != null) {
+            if (interactionTyped.member != null) {
                 const member = await interactionTyped.guild?.members.fetch(interactionTyped.member.user.id)
-                if(member) {
+                if (member) {
                     const adminRole = await fetchSetting("admin_role_snowflake")
-                    if(!(member.permissions.has("Administrator") || (adminRole && member.roles.cache.has(adminRole)))) {
-                        await interaction.reply({content: "You do not have permission to use my commands >:(", ephemeral: true})
+                    if (!(member.permissions.has("Administrator") || (adminRole && member.roles.cache.has(adminRole)))) {
+                        await interaction.reply({
+                            content: "You do not have permission to use my commands >:(",
+                            ephemeral: true
+                        })
                         return
                     }
                 }
@@ -241,7 +244,7 @@ async function getCategory(guild: Guild) {
     const storedCategoryId = await selectEntry("Settings", "SettingKey=\"category_id\"", ["SettingValue"])
 
     let category: CategoryChannel
-    if(storedCategoryId === undefined) {
+    if (storedCategoryId === undefined) {
         // No category yet, create one please
         const adminRoleSnowflake = await needSetting("admin_role_snowflake")
         category = await guild.channels.create({
@@ -280,18 +283,19 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
 /**
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
  */
-async function postEventStatusMessage(channel: TextChannel, event: Event) {
-    const embedToPost = createStandardEventEmbed(event.date, event.title)
+async function postEventInfo(channel: TextChannel, event: Event) {
+    const embedToPost = createEventInfoEmbed(event.date, event.title)
     const sentMessage = await channel.send({embeds: [embedToPost]})
     await channel.messages.pin(sentMessage)
 }
-export async function updateShowsInEventStatusMessage(channel: TextChannel, eventDate: Date, showTitles: string) {
+
+export async function updateShowsInEventInfoMessage(channel: TextChannel, eventDate: Date, showTitles: string) {
     const messages = await channel.messages.fetchPinned()
-    const pinnedMessage = messages.at(0)
-    await pinnedMessage?.edit({embeds: [createStandardEventEmbed(eventDate, showTitles)]})
+    const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.EVENT_STATUS, messages)
+    await pinnedMessage.edit({embeds: [createEventInfoEmbed(eventDate, showTitles)]})
 }
 
-function createStandardEventEmbed(eventDate: Date, shows: string) {
+function createEventInfoEmbed(eventDate: Date, shows: string) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Kanal for " + getDayNameNO(eventDate) + "s forestillinger(" + shows + ")")
     embedBuilder.setDescription("Velkommen til denne kanalen, ha en fin uke videre! :sunglasses:\nOBS: Husk at denne kanalen forsvinner når forestillingen er over!")
@@ -302,34 +306,75 @@ function createStandardEventEmbed(eventDate: Date, shows: string) {
     return embedBuilder
 }
 
-let managerChannel: TextChannel | undefined = undefined
+/**
+ * Post a cast list embed in the given channel, with the given workers
+ */
+async function postCastList(channel: TextChannel, workers: Worker[]) {
+    const embedBuilder = createCastList(workers)
+    const message = await channel.send({embeds: [embedBuilder]})
+    await channel.messages.pin(message)
+}
 
-export async function sendManagerMessage(message: MessageCreateOptions, guild: Guild) {
-    if(managerChannel === undefined) {
-        const storedChannelId = await fetchSetting("manager_channel_id")
-        let channel: TextChannel
+/**
+ * Update the cast list in a given channel, will replace the whole cast with the given workers
+ */
+export async function updateCastList(channel: TextChannel, workers: Worker[]) {
+    const messages = await channel.messages.fetchPinned()
+    const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.CAST_LIST, messages)
+    await pinnedMessage.edit({embeds: [createCastList(workers)]})
+}
 
-        if(storedChannelId === undefined) {
-            // No stored channel, create one please
-            channel = await guild.channels.create({
-                name: "schedgeup-manager-channel",
-                type: ChannelType.GuildText,
-                topic: "Used to manage the schedgeup-bot",
-                parent: (await getCategory(guild)).id
-            })
-            await updateSetting("manager_channel_id", channel.id)
-        } else {
-            channel = await guild.channels.fetch(storedChannelId) as TextChannel
-        }
-        if(channel != null){
-            managerChannel = channel
-        } else {
-            throw new Error("Manager channel in Discord not found")
-        }
-    }
+/**
+ * Create a cast list embed from a list of workers
+ */
+function createCastList(workers: Worker[]) {
+    const embedBuilder = new EmbedBuilder()
+    const addedWorkers: Worker[] = []
+    embedBuilder.setTitle("Hvem gjør hva i kveld?")
+    const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
+    createCastList("Husansvarlig")
+    createCastList("Frivillig")
+    createCastList("Skuespiller")
+    createCastList("Lydimprovisatør")
+    createCastList("Lysimprovisatør")
+    createCastList("Regissør")
+    const workersRest = workers.filter(w => !addedWorkers.includes(w))
+    const createCastListAgain = createCastEmbedField.bind([workersRest, [], embedBuilder])
+    const restRoles = workersRest.map(w => w.role)
+    restRoles.filter((item, index) => restRoles.indexOf(item) === index).forEach(role => {
+        createCastListAgain(role)
+    })
 
-    await managerChannel.send(message)
-    console.log("[ManagerMessage] " + message.content)
+    return embedBuilder
+}
+
+/**
+ * this[0] - Collection of all workers yet to use
+ * this[1] - Collection of all workers used
+ * this[2] - Embed add cast member field to
+ * @param role the role to create embed fields from
+ */
+function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: string) {
+    const workersFiltered = this[0].filter(w => w.role === role)
+    if(workersFiltered.length === 0) return
+    const workerList = workersFiltered.map(w => w.who).join("\n")
+    workersFiltered.forEach(w => this[1].push(w))
+    this[2].addFields({name: role, value: workerList, inline: true})
+}
+
+function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Collection<string, Message<true>>) {
+    const pinnedMessage = pinnedMessages.at(message)
+    if (!pinnedMessage) {
+        throw new Error("Could not find pinned embed message " + message)
+    } else return pinnedMessage
+}
+
+/**
+ * Pinned messages are fetched from newest to oldest. (First in, last out)
+ */
+enum PinnedEmbedMessages {
+    CAST_LIST,
+    EVENT_STATUS
 }
 
 export class DiscordCommandError extends Error {
