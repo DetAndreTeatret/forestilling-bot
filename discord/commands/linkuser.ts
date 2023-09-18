@@ -17,5 +17,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return
         }
         await addNewUser(schedgeUpId, discordUser.id)
-        await interaction.reply("User linked!")
+        await interaction.reply("User linked!(" + schedgeUpId + "/" + discordUser.tag + ")")
     }
