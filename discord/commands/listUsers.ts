@@ -3,7 +3,6 @@ import {fetchAllUsers, fetchUser} from "../../database/user.js"
 import {editMessage} from "../../common/util.js"
 import {Logger} from "../../common/logging.js"
 
-
 export const data = new SlashCommandBuilder()
     .setName("listusers")
     .setDescription("List one or all users")

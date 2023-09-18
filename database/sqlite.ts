@@ -33,7 +33,9 @@ type DatabaseTables = "UserList" | "DiscordUserRemovals" | "Settings" | "ShowDay
  * @param params The values of the entry, in the order specified in the Database Layout
  */
 export async function addEntry(table: DatabaseTables, ...params: (string | number)[]) {
-    await db.exec("INSERT INTO " + table + " VALUES(" + params + ")")
+    const query = "INSERT INTO " + table + " VALUES(" + params + ")"
+    debugLogQuery(query)
+    await db.exec(query)
 }
 
 /**
@@ -75,22 +77,17 @@ export async function selectAllEntires(table: DatabaseTables, columns?: string[]
 }
 
 export async function deleteEntries(table: DatabaseTables, condition: string) {
-    return await db.exec("DELETE FROM " + table + " WHERE " + condition)
+    const query = "DELETE FROM " + table + " WHERE " + condition
+    debugLogQuery(query)
+    return await db.exec(query)
 }
 
 export async function updateEntry(table: DatabaseTables, condition: string, column: string, newValue: string) {
-    return await db.exec("UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition)
+    const query = "UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition
+    debugLogQuery(query)
+    return await db.exec(query)
 }
 
 function debugLogQuery(query: string) {
-    console.debug("[Debug] Sent SQL Query: " + query)
-}
-
-export class SQLError extends Error {
-    private query: string
-
-    constructor(message: string, query: string) {
-        super(message)
-        this.query = query
-    }
+    console.debug("[Debug] Sent SQL Query: " + query) // TODO move to logger
 }
