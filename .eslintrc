@@ -19,7 +19,7 @@
     "eqeqeq": ["error", "smart"],
     "no-lone-blocks": "error",
     "no-var": "error",
-    "spaced-comment": ["error", "always", {
+    "spaced-comment": ["warn", "always", {
       "block": {
         "balanced": true
       }

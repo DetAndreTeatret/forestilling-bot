@@ -1,6 +1,6 @@
 import {GuildMember, Snowflake} from "discord.js"
 import {Worker} from "../scraper/pages/eventAssignement.js"
-import {addEntry, deleteEntries, selectEntry} from "./sqlite.js"
+import {addEntry, deleteEntries, selectAllEntires, selectEntry} from "./sqlite.js"
 import {Logger} from "../common/logging.js"
 
 /**
@@ -51,6 +51,13 @@ export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snow
 }
 
 /**
+ * Fetch all stored users, returns empty array if no users
+ */
+export async function fetchAllUsers(columns?: string[]) {
+    return (await selectAllEntires("UserList", columns)).map(result => new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"]))
+}
+
+/**
  * Fetch a user from the database given either their SchedgeUp id or Discord snowflake
  */
 export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
@@ -60,7 +67,7 @@ export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Sno
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
     if(result === undefined) return undefined
-    return new User(result["UserId"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
+    return new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
 }
 
 /**
