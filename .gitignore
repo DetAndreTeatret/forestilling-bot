@@ -13,3 +13,5 @@ node_modules
 /database/database.db
 
 build
+
+log.txt

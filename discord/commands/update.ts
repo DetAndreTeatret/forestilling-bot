@@ -108,14 +108,7 @@ export async function update(guild: Guild | null, logger: Logger) {
                     events.push(event)
                     await client.updateMembersForChannel(channel, events, logger)
                     await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
-                    const allWorkers = events.map(e => e.workers).flat()
-                    const allWorkersFiltered: Worker[] = []
-                    allWorkers.forEach(worker => {
-                        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who)) {
-                            allWorkersFiltered.push(worker)
-                        }
-                    })
-                    await updateCastList(channel, allWorkersFiltered)
+                    await updateCastList(channel, filterDistinctWorkers(events))
                 }
             }
         } else {
@@ -128,11 +121,23 @@ export async function update(guild: Guild | null, logger: Logger) {
                 const events = channelsMapped.get(channel)
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
                 await client.updateMembersForChannel(channel, events, logger)
+                await updateCastList(channel, filterDistinctWorkers(events))
             }
         }
     }
 
     await logger.logLine("Update is done!")
+}
+
+function filterDistinctWorkers(events: Event[]) {
+    const allWorkers = events.map(e => e.workers).flat()
+    const allWorkersFiltered: Worker[] = []
+    allWorkers.forEach(worker => {
+        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who)) {
+            allWorkersFiltered.push(worker)
+        }
+    })
+    return allWorkersFiltered
 }
 
 async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, events: Event[]) {

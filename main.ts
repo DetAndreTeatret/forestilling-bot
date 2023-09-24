@@ -6,6 +6,7 @@ import {setupConfig} from "./common/config.js"
 letsGo().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
 
 export async function letsGo() {
+    console.log("Starting ShowTime")
     setupConfig()
     await startDiscordClient() // Populates discord client global
     await createPage(await startBrowser()) // Populates page global
