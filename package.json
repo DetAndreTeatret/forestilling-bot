@@ -1,17 +1,15 @@
 {
-  "name": "schedgeup-bot",
-  "version": "1.0.1",
-  "description": "Bot for å lese av informasjon fra SchedgeUp",
+  "name": "forestilling-bot",
+  "version": "2.0.0",
+  "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run lint && tsc && node build/main.js",
     "lint": "eslint . --ext .ts",
-    "lintFix" : "eslint . --ext .ts --fix"
+    "lintFix": "eslint . --ext .ts --fix"
   },
   "type": "module",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Simon Mørland",
+  "license": "MIT",
   "dependencies": {
     "@tsconfig/node18": "1.0.1",
     "@types/node": "18.15.11",
