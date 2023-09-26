@@ -40,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const allUsers = await fetchAllUsers()
         let report = ""
         for await (const databaseUser of allUsers) {
-            await message.logPart("Adding user: " + databaseUser.userId) // TODO store display name??
+            await message.logPart("Adding user: " + databaseUser.userId + "/" + allUsers.length) // TODO store display name??
             const discordUser = await interaction.guild?.members.fetch(databaseUser.discordSnowflake)
             report += "\nUserID: " + databaseUser.userId + ", SchedgeUpID: " + databaseUser.schedgeUpId + ", DiscordUser: " + (discordUser === undefined ? databaseUser.discordSnowflake : discordUser.displayName)
         }

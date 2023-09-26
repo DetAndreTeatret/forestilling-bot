@@ -37,7 +37,7 @@ export class DateRange {
  * @param date the date to render
  */
 export function renderDateYYYYMM(date: Date) {
-    return "" + date.getFullYear() + "-" + (date.getMonth() < 10 ? "0" : "") + (date.getMonth() + 1)
+    return "" + date.getFullYear() + "-" + ((date.getMonth() + 1) < 10 ? "0" : "") + (date.getMonth() + 1)
 }
 
 /**
@@ -46,7 +46,7 @@ export function renderDateYYYYMM(date: Date) {
  * @param date the date to render
  */
 export function renderDateYYYYMMDD(date: Date) {
-    return "" + date.getFullYear() + "-" + (date.getMonth() < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + (date.getDate() < 10 ? "0" : "") + date.getDate()
+    return "" + date.getFullYear() + "-" + ((date.getMonth() + 1) < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + (date.getDate() < 10 ? "0" : "") + date.getDate()
 }
 
 export function tomorrow(date?: Date) {
