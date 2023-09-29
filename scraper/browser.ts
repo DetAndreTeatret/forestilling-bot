@@ -42,6 +42,8 @@ export async function createPage(browser: Browser) {
         height: 480,
     })
 
+    page0.setDefaultNavigationTimeout(1000 * 60)
+
     page = page0
     return page0
 }
