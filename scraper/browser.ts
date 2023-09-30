@@ -48,7 +48,17 @@ export async function createPage(browser: Browser) {
     return page0
 }
 
-export async function navigateToUrl(page: Page, url: string) {
+export async function navigateToUrl(page: Page, url: string, tryCount?: number) {
     console.log("Navigating to " + url + "...")
-    await page.goto(url, {waitUntil: "networkidle2"})
+    try {
+        await page.goto(url, {waitUntil: "networkidle2"})
+    } catch (e) {
+        console.log("Error while trying to navigate to " + url + ": " + e)
+        const currentTry = tryCount === undefined ? 0 : tryCount
+        if(currentTry > 3) {
+            throw new Error("Failed to navigate to url " + url + " after 3 retries :(")
+        }
+        console.log("Retrying...(" + tryCount + "/3)")
+        await navigateToUrl(page, url, currentTry + 1)
+    }
 }
