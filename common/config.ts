@@ -1,6 +1,14 @@
 import dotenv from "dotenv"
+import path from "node:path";
+import {fileURLToPath} from "url";
+import {JWT} from "google-auth-library";
 
-export function setupConfig() {
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+export let jwt: JWT
+
+export async function setupConfig() {
     dotenv.config()
     for (const environmentVariableKey in EnvironmentVariable) {
         const result = process.env[environmentVariableKey]
@@ -8,6 +16,17 @@ export function setupConfig() {
             throw new Error("Env variable with key " + environmentVariableKey + " not found during startup")
         }
     }
+
+    const googleKeysFilePath = path.join(__dirname, needEnvVariable(EnvironmentVariable.GOOGLE_KEYS_DOCUMENT))
+    const keys = await import(googleKeysFilePath)
+
+    jwt = new JWT({
+        email: keys.client_email,
+        key: keys.private_key,
+        scopes: [
+            'https://www.googleapis.com/auth/spreadsheets',
+        ],
+    });
 }
 
 /**
@@ -27,5 +46,7 @@ export enum EnvironmentVariable {
     BOT_TOKEN = "BOT_TOKEN",
     APPLICATION_ID = "APPLICATION_ID",
     GUILD_ID = "GUILD_ID",
-    CHANNEL_CATEGORY_NAME = "CHANNEL_CATEGORY_NAME"
+    CHANNEL_CATEGORY_NAME = "CHANNEL_CATEGORY_NAME",
+    GOOGLE_KEYS_DOCUMENT = "GOOGLE_KEYS_DOCUMENT",
+    GOOGLE_SPREADSHEET_ID = "GOOGLE_SPREADSHEET_ID"
 }

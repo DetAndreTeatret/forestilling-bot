@@ -4,7 +4,7 @@ import fs from "node:fs"
 import path from "node:path"
 import {EnvironmentVariable, needEnvVariable, setupConfig} from "../common/config.js"
 
-setupConfig()
+await setupConfig()
 
 const commands = []
 const __filename = fileURLToPath(import.meta.url)

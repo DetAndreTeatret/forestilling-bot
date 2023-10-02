@@ -363,6 +363,10 @@ function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: st
     this[2].addFields({name: role, value: workerList, inline: true})
 }
 
+function createFoodOrderMessage() {
+    const embedBuilder = new EmbedBuilder()
+}
+
 function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Collection<string, Message<true>>) {
     const pinnedMessage = pinnedMessages.at(message)
     if (!pinnedMessage) {
@@ -374,6 +378,7 @@ function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Co
  * Pinned messages are fetched from newest to oldest. (First in, last out)
  */
 enum PinnedEmbedMessages {
+    FOOD_ORDER,
     CAST_LIST,
     EVENT_STATUS
 }

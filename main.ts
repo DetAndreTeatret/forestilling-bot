@@ -10,7 +10,7 @@ letsGo().then(() => console.log("Ready to rumble, use /update in Discord to fina
 
 export async function letsGo() {
     console.log("Starting forestilling-bot version " + await findVersion() + "...")
-    setupConfig()
+    await setupConfig()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
     await createTables()

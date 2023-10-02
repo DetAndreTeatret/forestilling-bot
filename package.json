@@ -18,7 +18,9 @@
     "sqlite": "4.2.1",
     "sqlite3": "5.1.6",
     "typescript": "5.0.3",
-    "schedgeup-scraper": "1.4.0"
+    "schedgeup-scraper": "1.4.0",
+    "google-spreadsheet": "4.0.2",
+    "google-auth-library": "8.8.0"
   },
   "devDependencies": {
     "eslint-config-dat": "1.0.1"
