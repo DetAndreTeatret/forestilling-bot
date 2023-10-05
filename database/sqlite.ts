@@ -17,7 +17,6 @@ const db = await open({
  * Create the database tables necessary for this bot to run, if not already created.
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS DiscordUserRemovals(UserID INTEGER, UnixEpoch TIMESTAMP, ShowDayID INTEGER)") // TODO Update usage of this table IF ITS USED
     await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
@@ -25,7 +24,7 @@ export async function createTables() {
     console.log("Database tables up and running")
 }
 
-type DatabaseTables = "UserList" | "DiscordUserRemovals" | "Settings" | "ShowDays" | "DayTimeShows"
+type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows"
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified

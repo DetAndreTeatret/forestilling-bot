@@ -37,11 +37,11 @@ const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+R?$")
 const DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX = "dagtid"
 
-export class SuperClient extends Client {
+export class SuperClient extends Client { // TODO look over methods inside/outside SuperClient
     commands = new Collection()
 
     // Collection of channels mapped to the events they service (SchedgeUpIds)
-    channelCache: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
+    channelCache: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>() // TODO is this actually used?
 
     constructor(options: ClientOptions) {
         super(options)
