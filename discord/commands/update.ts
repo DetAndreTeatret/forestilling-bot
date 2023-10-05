@@ -82,7 +82,8 @@ export async function update(guild: Guild | null, logger: Logger) {
 
     // Find ShowDay and channel belonging to event, if none check if channel for show day exists, if not created a new ShowDay instance
 
-    for (let i = 0; i < events.length; i++) {
+    // TODO decide if bot should keep any show related info stored, or rebuild everytime?
+    for (let i = 0; i < events.length; i++) { // TODO each ShowDay cast is updated multiple times for each event it contains
         const event = events[i]
         const isEventDaytime = await isDayTimeShow(event.showTemplateId === undefined ? "null" : event.showTemplateId, event.title)
         const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
@@ -121,6 +122,7 @@ export async function update(guild: Guild | null, logger: Logger) {
                 const events = channelsMapped.get(channel)
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
                 await client.updateMembersForChannel(channel, events, logger)
+                await updateShowsInEventInfoMessage(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
                 await updateCastList(channel, filterDistinctWorkers(events))
             }
         }
