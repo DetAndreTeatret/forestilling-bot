@@ -2,7 +2,8 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "jsdoc"
   ],
   "extends": [
     "eslint:recommended",
@@ -10,7 +11,7 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "rules": {
-    "@typescript-eslint/ban-ts-comment": 0,
+    "@typescript-eslint/ban-ts-comment": "off",
     "semi": ["warn", "never"],
     "no-duplicate-imports": "error",
     "no-self-compare": "error",
@@ -26,6 +27,11 @@
     }],
     "eol-last": "warn",
     "no-trailing-spaces": "warn",
-    "quotes": "error"
+    "quotes": ["error", "double"], // Template literals are allowed
+    "padding-line-between-statements": ["error", // Order is important!
+      {"blankLine": "always", "prev": "import", "next": "*"},
+      {"blankLine": "never", "prev": "import", "next": "import"}
+    ],
+    "jsdoc/no-undefined-types": "warn"
   }
 }

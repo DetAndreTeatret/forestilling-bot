@@ -167,7 +167,8 @@ export async function startDiscordClient() {
     try {
         commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"))
     } catch (e) {
-        console.error(e + " WEEE")
+        console.error("Error reading command files: " + e)
+        throw e
     }
 
     for await (const file of commandFiles) {
