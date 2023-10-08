@@ -1,26 +1,34 @@
-import {SimpleDate} from "../common/date";
+import {SimpleDate} from "../common/date.js";
+import {browser, createPage, navigateToUrl, page} from "../scraper/browser.js"
 
-type Allergy = string | "Jeg har ingen allergier e.l."
+const FORMAT = "https://docs.google.com/forms/d/e/1FAIpQLSdumsKM0oAOeM2kRzjDLbC28BDQvQitERBMsSsCQCxRRLCVlQ/formResponse?&submit=Submit?usp=pp_url&entry.461723780=%name%&entry.1829257856=%allergi%&entry.2032323668=%matValg%&entry.554086150=%dato%&entry.1753729631=%rolle%"
+
+enum FoodChoice {
+    A = "A: Nr 1. Thai Grønn Karri KYLLING",
+    B = "B: Nr 1. Thai Grønn Karri VEGETAR",
+    C = "C: Nr 2. Pad Thai KYLLING",
+    D = "D: Nr 2. Pad Thai BIFF",
+    E = "E: Nr 3. Thai vårrull",
+    F = "F: Nr 4. Vegetar tofu wok"
+}
 
 enum Role {
     SKUESPILLER = "Skuespiller",
     TEKNIKER = "Tekniker",
     FRIVILLIG = "Frivillig",
-    BAREN = "Baren"
+    BAR = "Bar"
 }
 
-enum FoodChoice {
-    NR_1 = "" //TODO
-}
+type Allergy = string | "Jeg har ingen allergier e.l."
 
 class FoodOrder {
     private readonly _who: string
-    private readonly _when: Date
+    private readonly _when: SimpleDate
     private readonly _food: FoodChoice
     private readonly _role: Role
     private readonly _allergy: Allergy
 
-    constructor(who: string, when: Date, food: FoodChoice, role: Role, allergy: Allergy) {
+    constructor(who: string, when: SimpleDate, food: FoodChoice, role: Role, allergy: Allergy) {
         this._who = who;
         this._when = when;
         this._food = food;
@@ -32,7 +40,7 @@ class FoodOrder {
         return this._who;
     }
 
-    get when(): Date {
+    get when(): SimpleDate {
         return this._when;
     }
 
@@ -49,10 +57,16 @@ class FoodOrder {
     }
 }
 
-export async function orderFood(who: string, date: Date, foodChoice: FoodChoice, allergies: Allergy, role: Role) {
-    //Construct the form url to submit
+export async function orderFood(who: string, date: SimpleDate, foodChoice: FoodChoice, role: Role, allergies: Allergy) {
+    const order = new FoodOrder(who, date, foodChoice, role, allergies)
+    const url = createFormString(order)
 
-    //Send the url
+    const newPage = await createPage(browser)
+    await navigateToUrl(page, url)
+    await newPage.close()
+    if(!newPage.isClosed()) {
+        throw new Error("Unable to close page after sending form response with food order!")
+    }
 }
 
 export async function updateOrder(who: string, date: Date, newFoodChoice?: FoodChoice, adjustedAllergy?: Allergy) {
@@ -65,4 +79,13 @@ export async function checkCurrentOrder(who: string, when: SimpleDate) {
     //Check current order for given date
 
     //null if nothing
+}
+
+function createFormString(order: FoodOrder) {
+    return FORMAT
+        .replace("%name%", encodeURI(order.who))
+        .replace("%allergi%", encodeURI(order.allergy))
+        .replace("%matValg%", encodeURI(order.food))
+        .replace("%dato%", order.when.renderStringYYYYMMDD()) // format
+        .replace("%rolle%", order.role)
 }
