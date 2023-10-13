@@ -13,13 +13,12 @@
   "dependencies": {
     "@tsconfig/node18": "1.0.1",
     "@types/node": "18.15.11",
-    "@types/puppeteer": "7.0.4",
     "discord.js": "14.11.0",
     "dotenv": "16.0.3",
-    "puppeteer": "19.8.3",
     "sqlite": "4.2.1",
     "sqlite3": "5.1.6",
-    "typescript": "5.0.3"
+    "typescript": "5.0.3",
+    "schedgeup-scraper": "1.4.0"
   },
   "devDependencies": {
     "eslint-config-dat": "1.0.1"

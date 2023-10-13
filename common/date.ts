@@ -1,36 +1,3 @@
-export class DateRange {
-    public dateFrom
-    public dateTo
-
-    /**
-     * Discards anything lower than dates(hours etc..)
-     * */
-    constructor(dateFrom: Date, dateTo: Date) {
-        this.dateFrom = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate())
-        this.dateTo = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate())
-
-        if(this.dateTo < this.dateFrom) {
-            throw new Error("Invalid date range: " + dateFrom.toDateString() + " to " + dateTo.toDateString())
-        }
-    }
-
-    contains(date: Date) {
-        return this.dateFrom <= date && date <= this.dateTo
-    }
-
-    isSingleMonth() {
-        return this.dateFrom.getMonth() === this.dateTo.getMonth() && this.dateFrom.getFullYear() === this.dateTo.getFullYear()
-    }
-
-    isSingleDay() {
-        return this.isSingleMonth() && this.dateFrom.getDay() === this.dateTo.getDay()
-    }
-
-    toString() {
-        return renderDateYYYYMM(this.dateFrom) + " to " + renderDateYYYYMM(this.dateTo)
-    }
-}
-
 /**
  * Renders the date in the YYYY-MM format(e.g. 2005-11-12), disregards all data more precise than months.
  * Includes a "0" before months numbers <10 to stay consistent with {@link renderDateYYYYMMDD}.

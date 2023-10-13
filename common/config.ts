@@ -24,9 +24,6 @@ export function needEnvVariable(key: EnvironmentVariable) {
 }
 
 export enum EnvironmentVariable {
-    THEATRE_ID= "THEATRE_ID",
-    SCHEDGEUP_EMAIL = "SCHEDGEUP_EMAIL",
-    SCHEDGEUP_PASS = "SCHEDGEUP_PASS",
     BOT_TOKEN = "BOT_TOKEN",
     APPLICATION_ID = "APPLICATION_ID",
     GUILD_ID = "GUILD_ID",

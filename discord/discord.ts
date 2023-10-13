@@ -16,7 +16,7 @@ import {
 } from "discord.js"
 import path from "node:path"
 import fs from "node:fs"
-import {Event, Worker} from "../scraper/pages/eventAssignement.js"
+import {Event, Worker} from "schedgeup-scraper"
 import {getLinkedDiscordUser} from "../database/user.js"
 import {getDayNameNO} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
