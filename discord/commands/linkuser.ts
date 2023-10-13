@@ -1,9 +1,8 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
 import {addNewUser, fetchUser} from "../../database/user.js"
-import {scrapeUsers} from "../../scraper/pages/users.js"
-import {page} from "../../scraper/browser.js"
 import {editMessage} from "../../common/util.js"
 import {Logger} from "../../common/logging.js"
+import {scrapeUsers} from "schedgeup-scraper"
 
 export const data =  new SlashCommandBuilder()
         .setName("linkuser")
@@ -28,7 +27,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         } else {
             // Try to look for matching name...
 
-            const users = await scrapeUsers(page)
+            const users = await scrapeUsers()
             const user = users.find(u => u.displayName.toLowerCase().trim() === schedgeUpId.toLowerCase().trim())
             if(user) {
                 await addNewUser(user.userId, discordUser.id)

@@ -1,5 +1,5 @@
 import {GuildMember, Snowflake} from "discord.js"
-import {Worker} from "../scraper/pages/eventAssignement.js"
+import {Worker} from "schedgeup-scraper"
 import {addEntry, deleteEntries, selectAllEntires, selectEntry} from "./sqlite.js"
 import {Logger} from "../common/logging.js"
 

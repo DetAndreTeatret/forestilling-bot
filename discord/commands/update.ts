@@ -5,12 +5,10 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from "discord.js"
+import {getEventInfos, scrapeEvents, Event, Worker, DateRange} from "schedgeup-scraper"
 import {DiscordCommandError, SuperClient, updateCastList, updateShowsInEventInfoMessage} from "../discord.js"
-import {afterDays, DateRange, renderDateYYYYMMDD} from "../../common/date.js"
-import {getEventIds} from "../../scraper/pages/schedule.js"
-import {scrapeEvents, Event, Worker} from "../../scraper/pages/eventAssignement.js"
+import {afterDays, renderDateYYYYMMDD} from "../../common/date.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
-import {page} from "../../scraper/browser.js"
 import {
     addEventToShowDay,
     createNewShowday,
@@ -71,8 +69,8 @@ export async function update(guild: Guild | null, logger: Logger) {
     // Any running channels belonging to events not fetched here will be deleted after some time
     const today = new Date()
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
-    const eventInfos = await getEventIds(page, new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
-    const events = await scrapeEvents(page, eventInfos)
+    const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
+    const events = await scrapeEvents(eventInfos)
     if (guild == null) throw new DiscordCommandError("Guild is null", "update")
     const client = guild.client as SuperClient
     await logger.logLine("Mapping currently running Discord channels...")
