@@ -6,7 +6,13 @@ import {
     TextChannel
 } from "discord.js"
 import {getEventInfos, scrapeEvents, Event, Worker, DateRange} from "schedgeup-scraper"
-import {DiscordCommandError, SuperClient, updateCastList, updateShowsInEventInfoMessage} from "../discord.js"
+import {
+    ChannelMemberDifference,
+    DiscordCommandError,
+    SuperClient,
+    updateCastList,
+    updateShowsInEventInfoMessage
+} from "../discord.js"
 import {afterDays, renderDateYYYYMMDD} from "../../common/date.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {
@@ -50,7 +56,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const logger = new Logger(updateMessage)
     await logger.logLine("Starting update!")
     try {
-        await update(interaction.guild, logger)
+        // TODO: use this difference in post update-log
+        const memberDifference = await update(interaction.guild, logger)
     } catch (error) {
         await updateMessage("Encountered error during update + " + error)
         throw error
@@ -61,40 +68,45 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 /**
  * Look for changes in SchedgeUp
+ * @return All members removed or added during the update
  */
 export async function update(guild: Guild | null, logger: Logger) {
     await logger.logLine("Fetching SchedgeUp Events...")
 
-    // Its important that this only includes events for the current week!!!!!!
-    // Any running channels belonging to events not fetched here will be deleted after some time
     const today = new Date()
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
     const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
     const events = await scrapeEvents(eventInfos)
+
     if (guild == null) throw new DiscordCommandError("Guild is null", "update")
     const client = guild.client as SuperClient
+
     await logger.logLine("Mapping currently running Discord channels...")
     const channels = await client.mapRunningChannels(guild)
-
     const channelsMapped = await mapChannelsToEvents(channels, events)
 
-    // Find ShowDay and channel belonging to event, if none check if channel for show day exists, if not created a new ShowDay instance
+    const daysUpdated: TextChannel[] = []
+    const channelMemberDifferences: ChannelMemberDifference[] = []
 
     // TODO decide if bot should keep any show related info stored, or rebuild everytime?
-    for (let i = 0; i < events.length; i++) { // TODO each ShowDay cast is updated multiple times for each event it contains
+    for (let i = 0; i < events.length; i++) {
         const event = events[i]
         const isEventDaytime = await isDayTimeShow(event.showTemplateId === undefined ? "null" : event.showTemplateId, event.title)
         const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
         if (!showDay) {
-            // No ShowDay for the given found, maybe there is one for the given date?
+
+            // No ShowDay for the given event found, maybe there is one for the given date?
             const showDay0 = await fetchShowDayByDate(event.date, isEventDaytime)
             if (!showDay0) {
+
                 // No ShowDay anywhere, create a new one
                 await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ")")
                 const channel = await client.createNewChannelForEvent(guild, event, isEventDaytime, logger)
                 await createNewShowday(channel.id, event.date, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
+
             } else {
+
                 // Found a ShowDay for the event date, merge into it
                 await logger.logPart("Adding event(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ") to existing ShowDay")
                 await addEventToShowDay(showDay0, event.id)
@@ -105,30 +117,56 @@ export async function update(guild: Guild | null, logger: Logger) {
                     const events = channelsMapped.get(channel)
                     if (!events) throw new Error("Could not find any events mapped to channel " + channel)
                     events.push(event)
-                    await client.updateMembersForChannel(channel, events, logger)
+
+                    // Merge successful, now update channel with new members
+                    channelMemberDifferences.push(await client.updateMembersForChannel(channel, events, logger))
+
+                    // Update pinned info messages
                     await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
                     await updateCastList(channel, filterDistinctWorkers(events))
                 }
+
             }
         } else {
+
             // Update showday
             const channel = channelsMapped.findKey((e, c) => c.id === showDay.discordChannelSnowflake)
             if (!channel) {
                 throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay.when))
             } else {
-                await logger.logLine("Looking for worker updates in " + event.title + "/" + renderDateYYYYMMDD(event.date))
+
+                // Prevent updating showday channels multiple times for events on same days
+                if(daysUpdated.includes(channel)) {
+                    continue
+                } else {
+                    daysUpdated.push(channel)
+                }
+
+                // Update channel members
+                await logger.logLine("Updating ShowDay for " + event.title + "/" + renderDateYYYYMMDD(event.date))
                 const events = channelsMapped.get(channel)
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
-                await client.updateMembersForChannel(channel, events, logger)
+
+                // Update members in channel
+                channelMemberDifferences.push(await client.updateMembersForChannel(channel, events, logger))
+
+
+                // Update pinned info messages
                 await updateShowsInEventInfoMessage(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
                 await updateCastList(channel, filterDistinctWorkers(events))
+
             }
+
         }
     }
 
     await logger.logLine("Update is done!")
+    return channelMemberDifferences
 }
 
+/**
+ * Returns a list of all workers present in the given events, ignoring any duplicates
+ */
 function filterDistinctWorkers(events: Event[]) {
     const allWorkers = events.map(e => e.workers).flat()
     const allWorkersFiltered: Worker[] = []

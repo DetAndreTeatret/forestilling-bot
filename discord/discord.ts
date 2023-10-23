@@ -112,6 +112,8 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
      * @param channel channel to update
      * @param events The current events to check against, will add users not found in current channel.
      * @param logger
+     *
+     * @return returns all members added to this channel
      */
     async updateMembersForChannel(channel: TextChannel, events: Event[], logger: Logger) {
         await logger.logLine("Updating members for channel " + channel.name + " (" + events.map(e => e.title) + ")")
@@ -139,10 +141,12 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
             return !usersFromDiscord.some(member => member.id === value)
         })
 
+        const membersAdded: GuildMember[] = []
         for (let i = 0; i < usersToAdd.length; i++) {
             const user = usersToAdd[i]
             const fetchedMember = await channel.guild.members.fetch(String(user)) // Why javascript :'(
             await addMemberToChannel(channel, fetchedMember, logger)
+            membersAdded.push(fetchedMember)
         }
 
         const usersToRemove = usersFromDiscord.filter((value) => {
@@ -150,12 +154,15 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         })
 
         const adminRole = needNotNullOrUndefined(await channel.guild.roles.fetch(await needSetting("admin_role_snowflake")), "adminRole")
+        const membersRemoved: GuildMember[] = []
         for await (const member of usersToRemove) {
             if (member.permissions.has("Administrator") || member.user.bot || member.roles.cache.some((r, k) => k === adminRole.id)) continue
             await logger.logPart("Removing user " + member.displayName + " from channel")
             await removeMemberFromChannel(channel, member, logger)
-            // await cueUserRemovalFromDiscord(user.id, channel, tomorrow())
+            membersRemoved.push(member)
         }
+
+        return new ChannelMemberDifference(channel, membersAdded, membersRemoved)
     }
 }
 
@@ -368,6 +375,21 @@ function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Co
     if (!pinnedMessage) {
         throw new Error("Could not find pinned embed message " + message)
     } else return pinnedMessage
+}
+
+/**
+ * Contains members added or removed from a channel during an update
+ */
+export class ChannelMemberDifference {
+    channel: TextChannel
+    membersAdded: GuildMember[]
+    membersRemoved: GuildMember[]
+
+    constructor(channel: TextChannel, membersAdded: GuildMember[], membersRemoved: GuildMember[]) {
+        this.channel = channel
+        this.membersAdded = membersAdded
+        this.membersRemoved = membersRemoved
+    }
 }
 
 /**

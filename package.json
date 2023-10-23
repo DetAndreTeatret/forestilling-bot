@@ -5,7 +5,8 @@
   "scripts": {
     "start": "npm run lint && tsc && node build/main.js",
     "lint": "eslint . --ext .ts",
-    "lintFix": "eslint . --ext .ts --fix"
+    "lintFix": "eslint . --ext .ts --fix",
+    "transpile": "tsc"
   },
   "type": "module",
   "author": "Simon Mørland",
