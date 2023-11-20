@@ -1,12 +1,12 @@
 import {GoogleSpreadsheet} from "google-spreadsheet"
-import {EnvironmentVariable, jwt, needEnvVariable} from "../common/config.js";
-import {SimpleDate} from "../common/date";
+import {EnvironmentVariable, jwt, needEnvVariable} from "../common/config.js"
+import {SimpleDate} from "../common/date"
 
 enum SheetPages {
     GOOGLE_FORM_SUBMISSIONS,
     TRANSLATOR,
     TEST,
-    DISPLAY //TODO Names
+    DISPLAY // TODO Names
 }
 
 async function getFoodSheet() {
@@ -17,6 +17,15 @@ async function getFoodSheet() {
 }
 
 async function fetchRow(who: string, when: SimpleDate) {
+    const sheet = await getFoodSheet()
 
+    const correctWorksheet = sheet.sheetsByTitle["Coolio"] // TODO
+    const size = correctWorksheet.rowCount
 
+    // Is the things we need inside the last 50 rows? probably not.........
+    const rows = await correctWorksheet.getRows()
+
+    rows.find(row => row.)
+
+    return null
 }

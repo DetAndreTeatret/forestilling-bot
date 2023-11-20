@@ -1,5 +1,6 @@
 import {renderDateYYYYMMDD} from "../common/date.js"
 import {addEntry, deleteEntries, selectAllEntires, selectEntry, updateEntry} from "./sqlite.js"
+import {Snowflake} from "discord.js"
 
 /**
  * A class representing a single day that has one or more shows.
@@ -61,7 +62,7 @@ export class ShowDay {
  */
 export async function createNewShowday(discordChannelSnowflake: string, showDay: Date, dayTime: boolean, ...schedgeUpIds: string[]) {
     // null to autoincrement
-    await addEntry("ShowDays", "null", "\"" + renderDateYYYYMMDD(showDay) + "\"", schedgeUpIds.join(","), discordChannelSnowflake, Date.now(), Number(dayTime))
+    await addEntry("ShowDays", "null", renderDateYYYYMMDD(showDay), schedgeUpIds.join(","), discordChannelSnowflake, Date.now(), Number(dayTime))
 }
 
 /**
@@ -102,8 +103,18 @@ export async function fetchShowDayByDate(date: Date, dayTime: boolean) {
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
 
+/**
+ * Fetch a show day based on the discord channel belonging to the show day.
+ * @param channelSnowflake the channel to find the show day of
+ */
+export async function fetchShowDayByDiscordChannel(channelSnowflake: Snowflake) {
+    const result = await selectEntry("ShowDays", "DiscroChannelSnowflake=\"" + channelSnowflake + "\"")
+    if(result === undefined) return undefined
+    return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
+}
+
 export async function addDayTimeShow(templateIdOrShowName: string) {
-    await addEntry("DayTimeShows", "\"" + templateIdOrShowName.toLowerCase() + "\"")
+    await addEntry("DayTimeShows", templateIdOrShowName.toLowerCase())
 }
 
 export async function removeDayTimeShow(templateIdOrShowName: string) {

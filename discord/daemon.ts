@@ -6,7 +6,7 @@ import {checkDeletions} from "./commands/delete.js"
 
 const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 
-export type StringConsumer = (string: string) => Promise<void>
+export type StringConsumer = (string: string) => Promise<void> // TODO move to logger
 
 let daemonRunning = false
 let interval: number

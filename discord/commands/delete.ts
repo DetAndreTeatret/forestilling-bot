@@ -4,6 +4,7 @@ import {getDeleteableChannels} from "../../database/discord.js"
 import {discordClient} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
 import {editMessage} from "../../common/util.js"
+import {cleanupChangeOrderCallbacks} from "../../database/food.js"
 
 
 
@@ -24,6 +25,7 @@ export async function checkDeletions(logger: Logger)  {
                 const channel = await discordClient.channels.fetch(channelsToDeleteElement)
                 if(channel != null) {
                         await logger.logLine("Deleting channel " + (channel as TextChannel).name)
+                        await cleanupChangeOrderCallbacks(channel.id)
                         channel.delete("Event related to this channel has ended")
                         await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
                 } else {

@@ -1,5 +1,5 @@
 import {AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {fetchAllUsers, fetchUser} from "../../database/user.js"
+import {fetchAllUsers, fetchUser} from "../../database/coolUser.js"
 import {editMessage} from "../../common/util.js"
 import {Logger} from "../../common/logging.js"
 

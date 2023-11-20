@@ -32,7 +32,7 @@ export async function updateSetting(key: string, value: string) { // TODO: Shoul
     assertValidSettingKey(key)
     const result = await fetchSetting(key)
     if(result === undefined) {
-        await addEntry("Settings", "'" + key + "'", "'" + value + "'")
+        await addEntry("Settings", key, value)
     } else {
         await updateEntry("Settings", "SettingKey=\"" + key + "\"", "SettingValue", value)
     }

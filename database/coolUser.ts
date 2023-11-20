@@ -6,15 +6,17 @@ import {Logger} from "../common/logging.js"
 /**
  * A class representing a single user as it's stored in the database
  */
-export class User {
+export class CoolUser {
     private readonly _userId: number
     private readonly _schedgeUpId: string
     private readonly _discordSnowflake: Snowflake
+    private readonly _displayName: string
 
-    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake) {
+    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake, displayName: string) {
         this._userId = userId
         this._schedgeUpId = schedgeUpId
         this._discordSnowflake = discordSnowflake
+        this._displayName = displayName
     }
 
 
@@ -38,36 +40,44 @@ export class User {
     get discordSnowflake(): Snowflake {
         return this._discordSnowflake
     }
+
+    /**
+     * The display name of this user, fetched from SchedgeUp
+     */
+    get displayName(): string {
+        return this._displayName
+    }
 }
 
 /**
  * Create a new user. No users can share SchedgeUp ids or Discord snowflakes
  * @param schedgeUpId The SchedgeUp id of the account that should be linked to this user.
  * @param discordUserSnowflake The Discord snowflake of the account that should be linked to this user.
+ * @param displayName The display name of this user, fetched from SchedgeUp
  */
-export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake) {
+export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake, displayName: string) {
     // First column should be null so the userid is autoincremented
-    await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake)
+    await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake, displayName)
 }
 
 /**
  * Fetch all stored users, returns empty array if no users
  */
 export async function fetchAllUsers(columns?: string[]) {
-    return (await selectAllEntires("UserList", columns)).map(result => new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"]))
+    return (await selectAllEntires("UserList", columns)).map(result => new CoolUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["DisplayName"]))
 }
 
 /**
  * Fetch a user from the database given either their SchedgeUp id or Discord snowflake
  */
-export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
+export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake, displayName?: string) {
     if(schedgeUpId === undefined && discordUserSnowflake === undefined) {
         return undefined
     }
 
-    const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
+    const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\" OR DisplayName=\"" + displayName + "\"")
     if(result === undefined) return undefined
-    return new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
+    return new CoolUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["DisplayName"])
 }
 
 /**

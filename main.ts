@@ -24,6 +24,6 @@ async function findVersion() {
     const __dirname = path.dirname(__filename)
     const packagePath = __dirname.replace("build", "package.json")
     // importing gives assertion errors...
-    const pjs = JSON.parse(fs.readFileSync(packagePath).toString())
+    const pjs = JSON.parse(fs.readFileSync(packagePath).toString()) // TODO import with app-root-path
     return pjs.version
 }

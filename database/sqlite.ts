@@ -5,6 +5,8 @@ import {fileURLToPath} from "url"
 
 sqlite3.verbose()
 
+// TODO auto isolate strings in condition?
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -17,24 +19,50 @@ const db = await open({
  * Create the database tables necessary for this bot to run, if not already created.
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")
+    await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64), DisplayName varchar(150))")
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
     await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
+    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrderVeterans(UserID INTEGER)")
+    await db.exec("CREATE TABLE IF NOT EXISTS ChangeOrderButtonCallbackIDs(ID varchar(36), FoodChoice varchar(1), DiscordChannelSnowflake varchar(64))")
+    await db.exec("CREATE TABLE IF NOT EXISTS UserFoodAllergies(UserID INTEGER, Allergy varchar(140))")
     console.log("Database tables up and running")
 }
 
-type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows"
+type DatabaseTables =
+    "UserList"
+    | "Settings"
+    | "ShowDays"
+    | "DayTimeShows"
+    | "FoodOrderVeterans"
+    | "ChangeOrderButtonCallbackIDs"
+    | "UserFoodAllergies"
+
+type Params = (string | number)[]
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified
  * @param table The table to insert an entry into
  * @param params The values of the entry, in the order specified in the Database Layout
  */
-export async function addEntry(table: DatabaseTables, ...params: (string | number)[]) {
-    const query = "INSERT INTO " + table + " VALUES(" + params + ")"
+export async function addEntry(table: DatabaseTables, ...params: Params) {
+    const query = "INSERT INTO " + table + " VALUES(" + transformParams(params) + ")"
     debugLogQuery(query)
     await db.exec(query)
+}
+
+function transformParams(params: Params) {
+    const transformed: Params = []
+
+    params.forEach(param => {
+        if (typeof param === "string" && param !== "null") { // TODO check null
+            transformed.push("\"" + param + "\"")
+        } else {
+            transformed.push(param)
+        }
+    })
+
+    return transformed
 }
 
 /**
@@ -85,6 +113,16 @@ export async function updateEntry(table: DatabaseTables, condition: string, colu
     const query = "UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition
     debugLogQuery(query)
     return await db.exec(query)
+}
+
+/**
+ * TODO
+ * @param result
+ * @param parameterName
+ */
+export function needDatabase<T>(result: T | undefined, parameterName: string) { // TODO generalize?
+    if (result == null) throw new Error("Needed database result but got undefined: " + parameterName)
+    return result
 }
 
 function debugLogQuery(query: string) {

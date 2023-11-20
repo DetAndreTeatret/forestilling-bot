@@ -13,6 +13,8 @@ node_modules
 /database/database.db
 
 build
+
+# TODO
 /sheets/*.json
 
 log.txt

@@ -1,6 +1,6 @@
 import {InteractionResponse} from "discord.js"
 
-export function needNotNullOrUndefined<T>(object: T | null | undefined, errorContext: string) {
+export function needNotNullOrUndefined<T>(object: T | null | undefined, errorContext: string) { // TODO rename?
     if (object === null) {
         throw new Error("object needs to be not null and is in fact, null: " + errorContext)
     }

@@ -1,10 +1,7 @@
 import dotenv from "dotenv"
-import path from "node:path";
-import {fileURLToPath} from "url";
-import {JWT} from "google-auth-library";
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import path from "node:path"
+import {JWT} from "google-auth-library"
+import appRootPath from "app-root-path"
 
 export let jwt: JWT
 
@@ -17,16 +14,20 @@ export async function setupConfig() {
         }
     }
 
-    const googleKeysFilePath = path.join(__dirname, needEnvVariable(EnvironmentVariable.GOOGLE_KEYS_DOCUMENT))
-    const keys = await import(googleKeysFilePath)
+    const googleKeysFilePath = path.join(appRootPath.toString(), needEnvVariable(EnvironmentVariable.GOOGLE_KEYS_DOCUMENT))
+    const keys = await import(googleKeysFilePath, {
+        assert: {
+            type: "json"
+        }
+    })
 
     jwt = new JWT({
         email: keys.client_email,
         key: keys.private_key,
         scopes: [
-            'https://www.googleapis.com/auth/spreadsheets',
+            "https://www.googleapis.com/auth/spreadsheets",
         ],
-    });
+    })
 }
 
 /**
@@ -35,7 +36,7 @@ export async function setupConfig() {
  */
 export function needEnvVariable(key: EnvironmentVariable) {
     const result = process.env[key]
-    if(result === undefined) {
+    if (result === undefined) {
         throw new Error("Env variable with key " + key + " not found")
     }
 

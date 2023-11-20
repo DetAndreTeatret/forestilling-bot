@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {deleteUser, fetchUser} from "../../database/user.js"
+import {deleteUser, fetchUser} from "../../database/coolUser.js"
 
 
 export const data = new SlashCommandBuilder()

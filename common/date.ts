@@ -3,12 +3,12 @@
  */
 export class SimpleDate {
     private readonly _year: number
-    private readonly _month: number //NOT Zero-Indexed >:(
+    private readonly _month: number // NOT Zero-Indexed >:(
     private readonly _date: number
     private readonly _day: number
 
-    constructor(...part: any) {
-        if(part === undefined) {
+    constructor(...part: any[]) {
+        if(part.length === 0) {
             const date = new Date()
             this._year = date.getFullYear()
             this._month = date.getMonth() + 1 // >:(
@@ -21,27 +21,27 @@ export class SimpleDate {
             this._date = date.getDate()
             this._day = date.getDay()
         } else if (part.length === 4) {
-            this._year = part[0];
-            this._month = part[1];
-            this._date = part[2];
-            this._day = part[3];
+            this._year = part[0]
+            this._month = part[1]
+            this._date = part[2]
+            this._day = part[3]
         } else throw new Error("Could not create a SimpleDate given the provided parts: " + part.toString())
     }
 
     get year(): number {
-        return this._year;
+        return this._year
     }
 
     get month(): number {
-        return this._month;
+        return this._month
     }
 
     get date(): number {
-        return this._date;
+        return this._date
     }
 
     get day(): number {
-        return this._day;
+        return this._day
     }
 
     renderStringYYYYMMDD() {
@@ -51,10 +51,14 @@ export class SimpleDate {
     renderStringYYYYMM() {
         return "" + this._year + "-" + (10 > this._month ? "0" : "") + this._month
     }
+
+    toString() {
+        return this.renderStringYYYYMMDD()
+    }
 }
 
 /**
- * Renders the date in the YYYY-MM format(e.g. 2005-11-12), disregards all data more precise than months.
+ * Renders the date in the YYYY-MM format(e.g. 2005-11), disregards all data more precise than months.
  * Includes a "0" before months numbers <10 to stay consistent with {@link renderDateYYYYMMDD}.
  * @param date the date to render
  */
