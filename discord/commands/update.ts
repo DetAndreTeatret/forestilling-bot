@@ -56,14 +56,30 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const logger = new Logger(updateMessage)
     await logger.logLine("Starting update!")
     try {
-        // TODO: use this difference in post update-log
         const memberDifference = await update(interaction.guild, logger)
+        if (interaction.channel !== null) await interaction.channel.send(formatMemberDifference(memberDifference))
     } catch (error) {
         await updateMessage("Encountered error during update + " + error)
         throw error
     }
 
     startDaemon() // Only start daemon after first update to ensure local channelCache is updated
+}
+
+function formatMemberDifference(differences: ChannelMemberDifference[]) {
+    let result = "Members added/removed during update:"
+
+    differences.forEach(difference => {
+        result += "\n\n#" + difference.channel.name
+
+        if (difference.membersAdded.length !== 0) result += ", Added: " + difference.membersAdded.map(member => member.nickname !== null ? member.nickname : member.displayName).join(",")
+        else result += ", No members added"
+
+        if (difference.membersRemoved.length !== 0) result += ", Removed: " + difference.membersRemoved.map(member => member.nickname !== null ? member.nickname : member.displayName).join(",")
+        else result += ", No members removed"
+    })
+
+    return result
 }
 
 /**
@@ -136,7 +152,7 @@ export async function update(guild: Guild | null, logger: Logger) {
             } else {
 
                 // Prevent updating showday channels multiple times for events on same days
-                if(daysUpdated.includes(channel)) {
+                if (daysUpdated.includes(channel)) {
                     continue
                 } else {
                     daysUpdated.push(channel)
