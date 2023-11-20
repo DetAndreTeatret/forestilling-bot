@@ -6,10 +6,11 @@ import {checkDeletions} from "./commands/delete.js"
 
 const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 
-export type StringConsumer = (string: string) => Promise<void>
-
 let daemonRunning = false
 let interval: number
+
+const daemonLogger = new Logger(async log => console.log("[daemon] " + log))
+
 export async function startDaemon() {
     if(daemonRunning) return
     daemonRunning = true
@@ -34,12 +35,12 @@ export function addGuildToUpdate(guild: Guild) {
 async function tickDaemon() {
     for await (const guild of guildsToUpdate) {
         try {
-            await update(guild, new Logger(async log => console.log("[update.d] " + log)))
+            await update(guild, daemonLogger)
         } catch (error) {
-            await console.error("Encountered error during update: " + error)
+            console.error("Encountered error during update: " + error)
             throw error
         }
-        await checkDeletions(new Logger(async (log) => console.log("[delete.d] " + log)))
+        await checkDeletions(daemonLogger)
     }
 
     if(daemonRunning) {

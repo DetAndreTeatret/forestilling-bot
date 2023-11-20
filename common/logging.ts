@@ -1,4 +1,4 @@
-import {StringConsumer} from "../discord/daemon.js"
+type StringConsumer = (string: string) => Promise<void>
 
 export class Logger {
     constructor(listener: StringConsumer) {
