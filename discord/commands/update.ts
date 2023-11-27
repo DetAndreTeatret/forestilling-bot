@@ -139,7 +139,7 @@ export async function update(guild: Guild | null, logger: Logger) {
 
                     // Update pinned info messages
                     await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
-                    await updateCastList(channel, filterDistinctWorkers(events))
+                    await updateCastList(channel, filterDistinctWorkers(events), showDay0.dayTimeShows)
                 }
 
             }
@@ -169,7 +169,7 @@ export async function update(guild: Guild | null, logger: Logger) {
 
                 // Update pinned info messages
                 await updateShowsInEventInfoMessage(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
-                await updateCastList(channel, filterDistinctWorkers(events))
+                await updateCastList(channel, filterDistinctWorkers(events), showDay.dayTimeShows)
 
             }
 
