@@ -92,7 +92,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         })
 
         await postEventInfo(channel, event)
-        await postCastList(channel, event.workers)
+        await postCastList(channel, event.workers, dayTime)
 
         for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, logger)
@@ -317,8 +317,8 @@ function createEventInfoEmbed(eventDate: Date, shows: string) {
 /**
  * Post a cast list embed in the given channel, with the given workers
  */
-async function postCastList(channel: TextChannel, workers: Worker[]) {
-    const embedBuilder = createCastList(workers)
+async function postCastList(channel: TextChannel, workers: Worker[], daytimeshow: boolean) {
+    const embedBuilder = createCastList(workers, daytimeshow)
     const message = await channel.send({embeds: [embedBuilder]})
     await channel.messages.pin(message)
 }
@@ -326,19 +326,22 @@ async function postCastList(channel: TextChannel, workers: Worker[]) {
 /**
  * Update the cast list in a given channel, will replace the whole cast with the given workers
  */
-export async function updateCastList(channel: TextChannel, workers: Worker[]) {
+export async function updateCastList(channel: TextChannel, workers: Worker[], daytimeshow: boolean) {
     const messages = await channel.messages.fetchPinned()
     const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.CAST_LIST, messages)
-    await pinnedMessage.edit({embeds: [createCastList(workers)]})
+    await pinnedMessage.edit({embeds: [createCastList(workers, daytimeshow)]})
 }
 
 /**
  * Create a cast list embed from a list of workers
  */
-function createCastList(workers: Worker[]) {
+function createCastList(workers: Worker[], daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
     const addedWorkers: Worker[] = []
     embedBuilder.setTitle("Hvem gjør hva i kveld?")
+    if (!daytimeshow) {
+        embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
+    }
     const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
     createCastList("Husansvarlig")
     createCastList("Frivillig")
@@ -364,7 +367,7 @@ function createCastList(workers: Worker[]) {
  */
 function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: string) {
     const workersFiltered = this[0].filter(w => w.role === role)
-    if(workersFiltered.length === 0) return
+    if (workersFiltered.length === 0) return
     const workerList = workersFiltered.map(w => w.who).join("\n")
     workersFiltered.forEach(w => this[1].push(w))
     this[2].addFields({name: role, value: workerList, inline: true})
