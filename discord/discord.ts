@@ -26,6 +26,7 @@ import {fetchShowDayBySU} from "../database/showday.js"
 import {fetchSetting, needSetting, updateSetting} from "../database/settings.js"
 import {needNotNullOrUndefined} from "../common/util.js"
 import {Logger} from "../common/logging.js"
+import {handleButtonPress} from "./commands/orderfood.js"
 
 export let discordClient: SuperClient
 
@@ -198,10 +199,19 @@ export async function startDiscordClient() {
         console.log(`Discord client ready! Logged in as ${c.user.tag}`)
     })
 
+    client.on(Events.Error, console.error)
+    process.on("unhandledRejection", error => {
+        console.error("Unhandled promise rejection:", error)
+    })
+
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
     client.on(Events.InteractionCreate, async function (interaction) {
-        if (!interaction.isChatInputCommand()) return
+        if(interaction.isButton()) {
+            await handleButtonPress(interaction)
+            return
+        }
+        else if (!interaction.isChatInputCommand()) return
 
         const command = (interaction.client as SuperClient).commands.get(interaction.commandName)
 
