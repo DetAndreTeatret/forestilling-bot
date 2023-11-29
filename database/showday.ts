@@ -1,5 +1,6 @@
 import {renderDateYYYYMMDD} from "../common/date.js"
 import {addEntry, deleteEntries, selectAllEntires, selectEntry, updateEntry} from "./sqlite.js"
+import {TextChannel} from "discord.js"
 
 /**
  * A class representing a single day that has one or more shows.
@@ -71,7 +72,7 @@ export async function createNewShowday(discordChannelSnowflake: string, showDay:
  */
 export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
     const result = await fetchShowDayBySU(showDay.schedgeUpIds[0], showDay.dayTimeShows)
-    if(!result) {
+    if (!result) {
         throw new Error("ShowDay not found when trying to update ShowDay")
     } else {
         const currentIds = result.schedgeUpIds
@@ -87,7 +88,7 @@ export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
  */
 export async function fetchShowDayBySU(schedgeUpShowId: string, dayTime: boolean) {
     const result = await selectEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + schedgeUpShowId + "%\" AND DayTimeShows=" + Number(dayTime))
-    if(result === undefined) return undefined
+    if (result === undefined) return undefined
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
 
@@ -98,7 +99,13 @@ export async function fetchShowDayBySU(schedgeUpShowId: string, dayTime: boolean
  */
 export async function fetchShowDayByDate(date: Date, dayTime: boolean) {
     const result = await selectEntry("ShowDays", "ShowDayDate=\"" + renderDateYYYYMMDD(date) + "\" AND DayTimeShows=" + Number(dayTime))
-    if(result === undefined) return undefined
+    if (result === undefined) return undefined
+    return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
+}
+
+export async function fetchShowDayByDiscordChannel(channel: TextChannel) {
+    const result = await selectEntry("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
+    if (result === undefined) return undefined
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
 }
 

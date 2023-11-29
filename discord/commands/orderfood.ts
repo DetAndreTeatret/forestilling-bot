@@ -1,12 +1,21 @@
 import {
     ActionRowBuilder,
-    ButtonBuilder, ButtonInteraction,
+    ButtonBuilder,
+    ButtonInteraction,
+    ButtonStyle,
     ChatInputCommandInteraction,
-    ModalBuilder, SlashCommandBuilder, TextChannel, TextInputBuilder,
-    TextInputStyle, ButtonStyle, InteractionResponse
+    InteractionResponse,
+    ModalBuilder,
+    SlashCommandBuilder,
+    TextChannel,
+    TextInputBuilder,
+    TextInputStyle
 } from "discord.js"
 import {needNotNullOrUndefined} from "../../common/util.js"
 import http from "http"
+import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
+import {fetchShowDayByDiscordChannel} from "../../database/showday.js"
+import {isToday} from "../../common/date.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1700"
 
@@ -15,6 +24,20 @@ export const data = new SlashCommandBuilder()
     .setDescription("Send in matbestilling")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    const showDay = await fetchShowDayByDiscordChannel(interaction.channel as TextChannel)
+    if (showDay) {
+        if(showDay.dayTimeShows) {
+            await interaction.reply("Denne forestillingen skjer på dagtid :baby:, og har ikke matbestilling på samme måte som kveldsforestillingene :night_with_stars:")
+            return
+        } else if(!isToday(showDay.when)) {
+            await interaction.reply("Denne forestillingen er ikke i dag :thinking:. Du kan kun bestille mat til din forestilling samme dag som forestillingen skal foregå :sunglasses::+1:")
+            return
+        }
+    } else {
+        await interaction.reply(":no_entry_sign: Denne kanalen tilhører ikke en forestilling :no_entry_sign:, bruk denne kommandoen i en forestillingskanal for å bestille mat.")
+        return
+    }
+
     const response = await interaction.reply(createConfirmationMessage(needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel"), DEFAULT_HENTETIDSPUNKT))
     startTimeout(response, 14)
 }
@@ -22,9 +45,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 function createConfirmationMessage(channel: TextChannel, time: string) {
     const builder = new ActionRowBuilder<ButtonBuilder>()
 
-    builder.addComponents(new ButtonBuilder().setCustomId("food-confirm" + channel.id + "-" + time).setLabel("Bekreft(Med hentetidspunkt kl " + time + ")").setStyle(ButtonStyle.Primary))
+    builder.addComponents(new ButtonBuilder().setCustomId("food-confirm" + channel.id + "-" + time).setLabel("Bekreft(Med hentetidspunkt kl " + time + ")").setStyle(ButtonStyle.Success))
     builder.addComponents(new ButtonBuilder().setCustomId("food-confirm-custom-time").setLabel("Endre hentetidspunkt").setStyle(ButtonStyle.Primary))
-    builder.addComponents(new ButtonBuilder().setCustomId("food-cancel").setLabel("Avbryt").setStyle(ButtonStyle.Primary))
+    builder.addComponents(new ButtonBuilder().setCustomId("food-cancel").setLabel("Avbryt").setStyle(ButtonStyle.Danger))
 
     return {
         components: [builder], content: "Du bestiller nå mat for kveldens forestilling til kl **" + time + "**. " +
@@ -38,7 +61,7 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
 
     if (idTokens[1] === "confirm") {
         if (idTokens[2] === needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel").id) {
-            http.request("https://hook.eu2.make.com/l3avjib1hwtievh69xxn2uhj5h1i35uw?Hentetidspunkt=" + idTokens[3], (res) => console.log("Response status:" + res.statusCode))
+            http.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", idTokens[3]), (res) => console.log("Response status:" + res.statusCode))
             await interaction.reply({content: "Matbestilling er sent av gårde med hentetidspunkt " + idTokens[3] + "!", ephemeral: true})
             return
         } else if (idTokens[2] === "custom") {
