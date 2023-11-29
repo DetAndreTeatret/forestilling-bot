@@ -9,7 +9,8 @@ import {
     Events,
     GatewayIntentBits,
     Guild,
-    GuildMember, Message,
+    GuildMember,
+    Message,
     PermissionsBitField,
     Snowflake,
     TextChannel,
@@ -23,10 +24,10 @@ import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
 import {fetchShowDayBySU} from "../database/showday.js"
-import {fetchSetting, needSetting, updateSetting} from "../database/settings.js"
-import {needNotNullOrUndefined} from "../common/util.js"
+import {needSetting, updateSetting} from "../database/settings.js"
 import {Logger} from "../common/logging.js"
 import {handleButtonPress} from "./commands/orderfood.js"
+import {checkPermission, PermissionLevel} from "./permission.js"
 
 export let discordClient: SuperClient
 
@@ -151,13 +152,12 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         }
 
         const usersToRemove = usersFromDiscord.filter((value) => {
-            return !value.user.bot && !value.permissions.has("Administrator") && !usersFromSchedgeUp.includes(value.id)
+            return !usersFromSchedgeUp.includes(value.id)
         })
 
-        const adminRole = needNotNullOrUndefined(await channel.guild.roles.fetch(await needSetting("admin_role_snowflake")), "adminRole")
         const membersRemoved: GuildMember[] = []
         for await (const member of usersToRemove) {
-            if (member.permissions.has("Administrator") || member.user.bot || member.roles.cache.some((r, k) => k === adminRole.id)) continue
+            if (await checkPermission(member, PermissionLevel.ADMINISTRATOR)) continue
             await logger.logPart("Removing user " + member.displayName + " from channel")
             await removeMemberFromChannel(channel, member, logger)
             membersRemoved.push(member)
@@ -228,10 +228,11 @@ export async function startDiscordClient() {
             if (interactionTyped.member != null) {
                 const member = await interactionTyped.guild?.members.fetch(interactionTyped.member.user.id)
                 if (member) {
-                    const adminRole = await fetchSetting("admin_role_snowflake")
-                    if (!(member.permissions.has("Administrator") || (adminRole && member.roles.cache.has(adminRole)))) {
+                    // @ts-ignore
+                    const permissionLevel: PermissionLevel = ("permissionLevel" in command) ? command.permissionLevel : PermissionLevel.ADMINISTRATOR
+                    if (!(await checkPermission(member, permissionLevel))) {
                         await interaction.reply({
-                            content: "You do not have permission to use my commands >:(",
+                            content: "You do not have permission to use my commands >:(\nRequired level: " + permissionLevel,
                             ephemeral: true
                         })
                         return
@@ -348,7 +349,7 @@ export async function updateCastList(channel: TextChannel, workers: Worker[], da
 function createCastList(workers: Worker[], daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
     const addedWorkers: Worker[] = []
-    embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld?"))
+    embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld") + "?")
     if (!daytimeshow) {
         embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
     }

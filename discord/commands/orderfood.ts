@@ -16,8 +16,11 @@ import http from "http"
 import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
 import {fetchShowDayByDiscordChannel} from "../../database/showday.js"
 import {isToday} from "../../common/date.js"
+import {PermissionLevel} from "../permission.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1700"
+
+export const permissionLevel = PermissionLevel.HUSANSVARLIG
 
 export const data = new SlashCommandBuilder()
     .setName("bestillmat")
