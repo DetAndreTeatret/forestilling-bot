@@ -118,6 +118,7 @@ export async function update(guild: Guild | null, logger: Logger) {
                 // No ShowDay anywhere, create a new one
                 await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ")")
                 const channel = await client.createNewChannelForEvent(guild, event, isEventDaytime, logger)
+                channelMemberDifferences.push(new ChannelMemberDifference(channel, Array.from(channel.members.values()), []))
                 await createNewShowday(channel.id, event.date, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
 

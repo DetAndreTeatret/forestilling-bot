@@ -338,7 +338,7 @@ export async function updateCastList(channel: TextChannel, workers: Worker[], da
 function createCastList(workers: Worker[], daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
     const addedWorkers: Worker[] = []
-    embedBuilder.setTitle("Hvem gjør hva i kveld?")
+    embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld?"))
     if (!daytimeshow) {
         embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
     }
