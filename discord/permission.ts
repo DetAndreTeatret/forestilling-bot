@@ -15,9 +15,10 @@ export async function checkPermission(member: GuildMember, permission: Permissio
             return (member.permissions.has("Administrator") || member.user.bot || member.roles.cache.some((role, snowflake) => snowflake === adminRole.id))
         }
         case PermissionLevel.HUSANSVARLIG: {
-            const husansvarligRole = needNotNullOrUndefined(await member.guild.roles.fetch(needEnvVariable(EnvironmentVariable.HUSANSVARLIG_ROLE_SNOWFLAKE)), "husansvarligRole")
-            if (member.roles.cache.has(husansvarligRole.id)) return true
-            return checkPermission(member, PermissionLevel.ADMINISTRATOR)
+            return true
+            //const husansvarligRole = needNotNullOrUndefined(await member.guild.roles.fetch(needEnvVariable(EnvironmentVariable.HUSANSVARLIG_ROLE_SNOWFLAKE)), "husansvarligRole")
+            //if (member.roles.cache.has(husansvarligRole.id)) return true
+            //return checkPermission(member, PermissionLevel.ADMINISTRATOR)
         }
         default: {
             console.error("Checked permission for non-existing level: " + permission)

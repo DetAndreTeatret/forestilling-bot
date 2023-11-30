@@ -40,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await interaction.reply(":no_entry_sign: Denne kanalen tilhører ikke en forestilling :no_entry_sign:, bruk denne kommandoen i en forestillingskanal for å bestille mat.")
         return
     }
-
+    // TODO check if food has already been ordered for this channel
     const response = await interaction.reply(createConfirmationMessage(needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel"), DEFAULT_HENTETIDSPUNKT))
     startTimeout(response, 14)
 }
@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 function createConfirmationMessage(channel: TextChannel, time: string) {
     const builder = new ActionRowBuilder<ButtonBuilder>()
 
-    builder.addComponents(new ButtonBuilder().setCustomId("food-confirm" + channel.id + "-" + time).setLabel("Bekreft(Med hentetidspunkt kl " + time + ")").setStyle(ButtonStyle.Success))
+    builder.addComponents(new ButtonBuilder().setCustomId("food-confirm-" + channel.id + "-" + time).setLabel("Bekreft(Med hentetidspunkt kl " + time + ")").setStyle(ButtonStyle.Success))
     builder.addComponents(new ButtonBuilder().setCustomId("food-confirm-custom-time").setLabel("Endre hentetidspunkt").setStyle(ButtonStyle.Primary))
     builder.addComponents(new ButtonBuilder().setCustomId("food-cancel").setLabel("Avbryt").setStyle(ButtonStyle.Danger))
 
@@ -64,8 +64,8 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
 
     if (idTokens[1] === "confirm") {
         if (idTokens[2] === needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel").id) {
-            http.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", idTokens[3]), (res) => console.log("Response status:" + res.statusCode))
-            await interaction.reply({content: "Matbestilling er sent av gårde med hentetidspunkt " + idTokens[3] + "!", ephemeral: true})
+            http.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", idTokens[3]))
+            await interaction.reply({content: "Matbestilling er sent av gårde med hentetidspunkt **" + idTokens[3] + "**!", ephemeral: true})
             return
         } else if (idTokens[2] === "custom") {
             await interaction.showModal(createCustomTimeModal())
@@ -79,7 +79,7 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
         return
     }
 
-    throw new Error("Invalid button id passed to orderfood")
+    throw new Error("Invalid button id passed to orderfood: " + idTokens.join("-"))
 }
 
 function startTimeout(response: InteractionResponse, length: number) {
