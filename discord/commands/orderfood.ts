@@ -12,11 +12,12 @@ import {
     TextInputStyle
 } from "discord.js"
 import {needNotNullOrUndefined} from "../../common/util.js"
-import http from "http"
 import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
 import {fetchShowDayByDiscordChannel} from "../../database/showday.js"
 import {isToday} from "../../common/date.js"
 import {PermissionLevel} from "../permission.js"
+import {hasChannelOrdered, markChannelAsOrdered} from "../../database/food.js"
+import https from "https"
 
 const DEFAULT_HENTETIDSPUNKT = "1700"
 
@@ -27,7 +28,13 @@ export const data = new SlashCommandBuilder()
     .setDescription("Send in matbestilling")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const showDay = await fetchShowDayByDiscordChannel(interaction.channel as TextChannel)
+    const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
+    const hasOrdered = await hasChannelOrdered(textChannel)
+    if(hasOrdered) {
+        await interaction.reply("Det er allerede bestilt mat for denne forestillingen :face_with_open_eyes_and_hand_over_mouth:! Hentetidspunkt: " + hasOrdered)
+        return
+    }
+    const showDay = await fetchShowDayByDiscordChannel(textChannel)
     if (showDay) {
         if(showDay.dayTimeShows) {
             await interaction.reply("Denne forestillingen skjer på dagtid :baby:, og har ikke matbestilling på samme måte som kveldsforestillingene :night_with_stars:")
@@ -63,14 +70,21 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
     const idTokens = interaction.customId.split("-")
 
     if (idTokens[1] === "confirm") {
-        if (idTokens[2] === needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel").id) {
-            http.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", idTokens[3]))
-            await interaction.reply({content: "Matbestilling er sent av gårde med hentetidspunkt **" + idTokens[3] + "**!", ephemeral: true})
+        const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
+        if (idTokens[2] === textChannel.id) {
+            const orderTime = idTokens[3]
+            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", orderTime), (res) => {
+                console.log("Status code: " + res.statusCode)
+            })
+            req.on("error", console.log)
+            req.end()
+            await interaction.reply({content: "Matbestilling er sent av gårde med hentetidspunkt **" + orderTime + "**!", ephemeral: true})
+            await markChannelAsOrdered(textChannel, orderTime)
             return
         } else if (idTokens[2] === "custom") {
             await interaction.showModal(createCustomTimeModal())
             const response = await interaction.awaitModalSubmit({time: 60000, filter: i => i.user.id === interaction.user.id})
-            const interactionResponse = await response.reply(createConfirmationMessage(needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel"), response.fields.getTextInputValue("food-enter-custom-time")))
+            const interactionResponse = await response.reply(createConfirmationMessage(textChannel, response.fields.getTextInputValue("food-enter-custom-time")))
             startTimeout(interactionResponse, 13)
             return
         }
