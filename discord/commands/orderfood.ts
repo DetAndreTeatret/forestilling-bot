@@ -18,7 +18,7 @@ import {isToday} from "../../common/date.js"
 import {PermissionLevel} from "../permission.js"
 import {hasChannelOrdered, markChannelAsOrdered} from "../../database/food.js"
 import https from "https"
-import {fetchUser} from "../../database/user"
+import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
 
 const DEFAULT_HENTETIDSPUNKT = "1900"
@@ -33,20 +33,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
     const hasOrdered = await hasChannelOrdered(textChannel)
     if (hasOrdered) {
-        await interaction.reply("Det er allerede bestilt mat for denne forestillingen :face_with_open_eyes_and_hand_over_mouth:! Hentetidspunkt: " + hasOrdered)
+        await interaction.reply({
+            content: "Det er allerede bestilt mat for denne forestillingen :face_with_open_eyes_and_hand_over_mouth:! Hentetidspunkt: " + hasOrdered,
+            ephemeral: true
+        })
         return
     }
     const showDay = await fetchShowDayByDiscordChannel(textChannel)
     if (showDay) {
         if (showDay.dayTimeShows) {
-            await interaction.reply("Denne forestillingen skjer på dagtid :baby:, og har ikke matbestilling på samme måte som kveldsforestillingene :night_with_stars:")
+            await interaction.reply({
+                content: "Denne forestillingen skjer på dagtid :baby:, og har ikke matbestilling på samme måte som kveldsforestillingene :night_with_stars:",
+                ephemeral: true
+            })
             return
         } else if (!isToday(showDay.when)) {
-            await interaction.reply("Denne forestillingen er ikke i dag :thinking:. Du kan kun bestille mat til din forestilling samme dag som forestillingen skal foregå :sunglasses::+1:")
+            await interaction.reply({
+                content: "Denne forestillingen er ikke i dag :thinking:. Du kan kun bestille mat til din forestilling samme dag som forestillingen skal foregå :sunglasses::+1:",
+                ephemeral: true
+            })
             return
         }
     } else {
-        await interaction.reply(":no_entry_sign: Denne kanalen tilhører ikke en forestilling :no_entry_sign:, bruk denne kommandoen i en forestillingskanal for å bestille mat.")
+        await interaction.reply({
+            content: ":no_entry_sign: Denne kanalen tilhører ikke en forestilling :no_entry_sign:, bruk denne kommandoen i en forestillingskanal for å bestille mat.",
+            ephemeral: true
+        })
         return
     }
     const response = await interaction.reply(createConfirmationMessage(needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel"), DEFAULT_HENTETIDSPUNKT))
@@ -74,9 +86,14 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
         const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
         if (idTokens[2] === textChannel.id) {
             const orderTime = idTokens[3]
-            const user = (await scrapeUsers()).find(async user => user.userId === (await fetchUser(undefined, interaction.user.id))?.schedgeUpId)
-            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", orderTime).replace("%t", <string>user?.phoneNumber), (res) => {
-                console.log("Status code: " + res.statusCode)
+            const user = await fetchUser(undefined, interaction.user.id)
+            if(!user) throw new Error("User not found during food order :(")
+            const schedgeUpUser = (await scrapeUsers()).find(u => u.userId === user.schedgeUpId)
+            if (!schedgeUpUser) throw new Error("SchedgeUpUser not found during food order :(")
+            const phoneNumber = schedgeUpUser.phoneNumber === null ? "" : schedgeUpUser.phoneNumber
+
+            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", orderTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
+                console.log("Food order sent(" + orderTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
             })
             req.on("error", console.log)
             req.end()
