@@ -89,9 +89,9 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
                 content: "Forbereder sending av matbestilling...",
                 ephemeral: true
             })
-            const orderTime = idTokens[3]
+            const pickupTime = idTokens[3]
             const user = await fetchUser(undefined, interaction.user.id)
-            if(!user) throw new Error("User not found during food order :(")
+            if(!user) throw new Error("User not found during food order :(") // TODO, find out how to tell command user that error was thrown
             const schedgeUpUser = (await scrapeUsers()).find(u => u.userId === user.schedgeUpId)
             if (!schedgeUpUser) throw new Error("SchedgeUpUser not found during food order :(")
             const phoneNumber = schedgeUpUser.phoneNumber === null ? "" : schedgeUpUser.phoneNumber
@@ -99,15 +99,15 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
             await interaction.editReply({
                 content: "Sender matbestilling...",
             })
-            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", orderTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
-                console.log("Food order sent(" + orderTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
+            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", pickupTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
+                console.log("Food order sent(" + pickupTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
             })
             req.on("error", console.log)
             req.end()
             await interaction.editReply({
-                content: "Matbestilling er sent av gårde med hentetidspunkt **" + orderTime + "**!",
+                content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",
             })
-            await markChannelAsOrdered(textChannel, orderTime)
+            await markChannelAsOrdered(textChannel, pickupTime)
             return
         } else if (idTokens[2] === "custom") {
             await interaction.showModal(createCustomTimeModal())

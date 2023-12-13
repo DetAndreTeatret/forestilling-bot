@@ -11,14 +11,14 @@ export enum PermissionLevel {
 export async function checkPermission(member: GuildMember, permission: PermissionLevel): Promise<boolean> {
     switch (permission) {
         case PermissionLevel.ADMINISTRATOR: {
+            if(member.user.bot || member.permissions.has("Administrator")) return true
             const adminRole = needNotNullOrUndefined(await member.guild.roles.fetch(await needSetting("admin_role_snowflake")), "adminRole")
-            return (member.permissions.has("Administrator") || member.user.bot || member.roles.cache.some((role, snowflake) => snowflake === adminRole.id))
+            return (member.roles.cache.some((role, snowflake) => snowflake === adminRole.id))
         }
         case PermissionLevel.HUSANSVARLIG: {
-            return true
-            //const husansvarligRole = needNotNullOrUndefined(await member.guild.roles.fetch(needEnvVariable(EnvironmentVariable.HUSANSVARLIG_ROLE_SNOWFLAKE)), "husansvarligRole")
-            //if (member.roles.cache.has(husansvarligRole.id)) return true
-            //return checkPermission(member, PermissionLevel.ADMINISTRATOR)
+            const husansvarligRole = needNotNullOrUndefined(await member.guild.roles.fetch(needEnvVariable(EnvironmentVariable.HUSANSVARLIG_ROLE_SNOWFLAKE)), "husansvarligRole")
+            if (member.roles.cache.has(husansvarligRole.id)) return true
+            return checkPermission(member, PermissionLevel.ADMINISTRATOR)
         }
         default: {
             console.error("Checked permission for non-existing level: " + permission)

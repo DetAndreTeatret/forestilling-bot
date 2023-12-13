@@ -200,9 +200,6 @@ export async function startDiscordClient() {
     })
 
     client.on(Events.Error, console.error)
-    process.on("unhandledRejection", error => {
-        console.error("Unhandled promise rejection:", error)
-    })
 
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
@@ -232,7 +229,7 @@ export async function startDiscordClient() {
                     const permissionLevel: PermissionLevel = ("permissionLevel" in command) ? command.permissionLevel : PermissionLevel.ADMINISTRATOR
                     if (!(await checkPermission(member, permissionLevel))) {
                         await interaction.reply({
-                            content: "You do not have permission to use my commands >:(\nRequired level: " + permissionLevel,
+                            content: "You do not have permission to use this command >:(\nRequired level: " + permissionLevel,
                             ephemeral: true
                         })
                         return
