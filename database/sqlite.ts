@@ -21,10 +21,11 @@ export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
     await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
+    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4))")
     console.log("Database tables up and running")
 }
 
-type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows"
+type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered"
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified

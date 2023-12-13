@@ -13,6 +13,9 @@ export let VERSION: string
 export async function start() {
     VERSION = await findVersion()
     console.log("Starting forestilling-bot version " + VERSION + "...")
+    process.on("unhandledRejection", error => {
+        console.error("Unhandled promise rejection:", error)
+    })
     setupConfig()
     await startDiscordClient() // Populates discord client global
     await setupScraper()

@@ -4,6 +4,7 @@ import {getDeleteableChannels} from "../../database/discord.js"
 import {discordClient} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
 import {editMessage} from "../../common/util.js"
+import {deleteFoodChannelEntries} from "../../database/food.js"
 
 
 
@@ -21,11 +22,12 @@ export async function checkDeletions(logger: Logger)  {
         await logger.logLine("Starting check for channels to remove...")
         const channelIdsToDelete = await getDeleteableChannels()
         for await (const channelsToDeleteElement of channelIdsToDelete) {
-                const channel = await discordClient.channels.fetch(channelsToDeleteElement)
+                const channel = await discordClient.channels.fetch(channelsToDeleteElement) as TextChannel
                 if(channel != null) {
                         await logger.logLine("Deleting channel " + (channel as TextChannel).name)
-                        channel.delete("Event related to this channel has ended")
+                        await channel.delete("Event related to this channel has ended")
                         await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
+                        await deleteFoodChannelEntries(channel)
                 } else {
                         await logger.logWarning("Tried to delete channel found in database that does not exist on the Discord server")
                 }

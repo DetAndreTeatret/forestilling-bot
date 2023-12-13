@@ -90,3 +90,8 @@ export function getDayNameNO(date: Date) {
         default: throw new Error("Invalid day number " + date.getDay())
     }
 }
+
+export function isToday(date: Date) {
+    const now = new Date()
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate()
+}
