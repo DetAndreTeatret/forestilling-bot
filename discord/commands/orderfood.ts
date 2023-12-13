@@ -85,6 +85,10 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
     if (idTokens[1] === "confirm") {
         const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
         if (idTokens[2] === textChannel.id) {
+            await interaction.reply({
+                content: "Forbereder sending av matbestilling...",
+                ephemeral: true
+            })
             const orderTime = idTokens[3]
             const user = await fetchUser(undefined, interaction.user.id)
             if(!user) throw new Error("User not found during food order :(")
@@ -92,14 +96,16 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
             if (!schedgeUpUser) throw new Error("SchedgeUpUser not found during food order :(")
             const phoneNumber = schedgeUpUser.phoneNumber === null ? "" : schedgeUpUser.phoneNumber
 
+            await interaction.editReply({
+                content: "Sender matbestilling...",
+            })
             const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", orderTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
                 console.log("Food order sent(" + orderTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
             })
             req.on("error", console.log)
             req.end()
-            await interaction.reply({
+            await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + orderTime + "**!",
-                ephemeral: true
             })
             await markChannelAsOrdered(textChannel, orderTime)
             return
