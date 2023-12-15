@@ -315,7 +315,7 @@ function createEventInfoEmbed(eventDate: Date, shows: string) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Kanal for " + getDayNameNO(eventDate) + "s forestillinger(" + shows + ")")
     embedBuilder.setDescription("Velkommen til denne kanalen, ha en fin uke videre! :sunglasses:\nOBS: Husk at kanalen forsvinner når forestillingen er over!")
-    embedBuilder.addFields({name: "Husk å bestille mat!", value: "https://bit.ly/DATMAT"})
+    embedBuilder.addFields({name: "Husk å bestille mat!", value: needEnvVariable(EnvironmentVariable.FOOD_ORDER_LINK)})
     embedBuilder.setColor("Random")
     embedBuilder.setImage("https://www.detandreteatret.no/uploads/assets/images/Stemning/_800x800_crop_center-center_82_none/andre-teatret-logo.png")
 
