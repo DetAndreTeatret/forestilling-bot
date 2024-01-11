@@ -115,7 +115,7 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
             await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",
             })
-            await markChannelAsOrdered(textChannel, pickupTime)
+            await markChannelAsOrdered(textChannel, pickupTime, interaction.user.id)
             return
         } else if (idTokens[2] === "custom") {
             await interaction.showModal(createCustomTimeModal())

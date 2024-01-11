@@ -1,13 +1,15 @@
-import {TextChannel} from "discord.js"
+import {Snowflake, TextChannel} from "discord.js"
 import {addEntry, deleteEntries, selectEntry} from "./sqlite.js"
+import {fetchShowDayByDate} from "./showday.js"
 
 /**
  * Stores the pickup time for the order for a given channel, effectively keeping track of which channels has already ordered food.
  * @param channel the channel to store the order for
  * @param pickupTime the time the order is to be picked up
+ * @param whoOrdered the user that initiated the order, will receive any mail updates from the restaurant
  */
-export async function markChannelAsOrdered(channel: TextChannel, pickupTime: string) {
-    await addEntry("FoodOrdered", channel.id, pickupTime)
+export async function markChannelAsOrdered(channel: TextChannel, pickupTime: string, whoOrdered: Snowflake) {
+    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered)
 }
 
 /**
@@ -20,6 +22,29 @@ export async function hasChannelOrdered(channel: TextChannel): Promise<string | 
     const result = await selectEntry("FoodOrdered", "DiscordChannelSnowflake=\"" + channel.id + "\"")
     if (result === undefined) return undefined
     return result["PickupTime"]
+}
+
+/**
+ * Checks which user ordered food for the given channel.
+ * @return a discord user snowflake, if the channel does not have an active order {@code undefined} is returned
+ */
+export async function whoOrderedForChannel(channel: Snowflake): Promise<Snowflake | undefined> {
+    const result = await selectEntry("FoodOrdered", "DiscordChannelSnowflake=\"" + channel + "\"")
+    if (result === undefined) return undefined
+    return result["OrderedByDiscordUserSnowflake"]
+}
+
+/**
+ * Checks if anyone has ordered food for todays showday.
+ * @return a discord user snowflake. If no shows today or no active order for today's show {@code undefined} is returned
+ */
+export async function whoOrderedToday() {
+    const showDay = await fetchShowDayByDate(new Date(), false)
+    if (showDay === undefined) return undefined
+    const result = await whoOrderedForChannel(showDay.discordChannelSnowflake)
+
+    if (result === undefined) return undefined
+    return result
 }
 
 /**

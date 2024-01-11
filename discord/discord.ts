@@ -28,6 +28,8 @@ import {needSetting, updateSetting} from "../database/settings.js"
 import {ConsoleLogger, Logger} from "../common/logging.js"
 import {handleButtonPress} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
+import {whoOrderedToday} from "../database/food.js"
+import {handleFoodConversation} from "./food.js"
 
 export let discordClient: SuperClient
 
@@ -168,7 +170,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
 }
 
 export async function startDiscordClient() {
-    const client = new SuperClient({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences]})
+    const client = new SuperClient({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.DirectMessages]})
 
     const commandsPath = path.join(__dirname, "commands")
     let commandFiles: string[] = []
@@ -248,6 +250,17 @@ export async function startDiscordClient() {
                 })
             } else {
                 await interaction.reply({content: "There was an error while executing this command!", ephemeral: true})
+            }
+        }
+    })
+
+    client.on(Events.MessageCreate, async (message) => {
+        if(!message.guild) {
+            // Direct message
+            const maybeOrderer = await whoOrderedToday()
+            if (maybeOrderer && message.author.id === maybeOrderer) {
+                // Looks like we are in a conversation with this user
+                await handleFoodConversation(message)
             }
         }
     })
