@@ -8,13 +8,16 @@ export class FoodOrder {
     channelSnowflake: Snowflake
     pickupTime: string
     ordererSnowflake: Snowflake
-    conversationID: string
+    mailConvoId: string
+    mailConvoSubject: string
 
-    constructor(channelSnowflake: Snowflake, pickupTime: string, whoOrdered: Snowflake, conversationID: string) {
+
+    constructor(channelSnowflake: Snowflake, pickupTime: string, whoOrdered: Snowflake, conversationID: string, mailConvoSubject: string) {
         this.channelSnowflake = channelSnowflake
         this.pickupTime = pickupTime
         this.ordererSnowflake = whoOrdered
-        this.conversationID = conversationID
+        this.mailConvoId = conversationID
+        this.mailConvoSubject = mailConvoSubject
     }
 }
 
@@ -25,7 +28,7 @@ export class FoodOrder {
  * @param whoOrdered the user that initiated the order, will receive any mail updates from the restaurant
  */
 export async function markChannelAsOrdered(channel: TextChannel, pickupTime: string, whoOrdered: Snowflake) {
-    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, NO_CONVERSATION_YET)
+    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, NO_CONVERSATION_YET, NO_CONVERSATION_YET)
 }
 
 /**
@@ -63,14 +66,15 @@ export async function whoOrderedToday() {
     return result
 }
 
-export async function updateFoodConversation(orderer: Snowflake, mailConvoID: string) {
+export async function updateFoodConversation(orderer: Snowflake, mailConvoID: string, mailConvoSubject: string) {
     await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", "MailConvoID", mailConvoID)
+    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", "MailConvoSubject", mailConvoSubject)
 }
 
 export async function fetchFoodOrderByUser(user: Snowflake) {
     const result = await selectEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + user + "\"")
     if (result === undefined) return undefined
-    return new FoodOrder(result["DiscordChannelSnowflake"], result["PickupTime"], result["OrderedByDiscordUserSnowflake"], result["MailConvoID"])
+    return new FoodOrder(result["DiscordChannelSnowflake"], result["PickupTime"], result["OrderedByDiscordUserSnowflake"], result["MailConvoID"], result["MailConvoSubject"])
 }
 
 /**

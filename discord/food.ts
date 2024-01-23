@@ -27,13 +27,13 @@ export async function handleFoodConversation(message: Message) {
         const foodOrder = await fetchFoodOrderByUser(message.author.id)
         if (!foodOrder) throw new Error("Error trying to fetch food order while replying in food convo")
 
-        if (foodOrder.conversationID === NO_CONVERSATION_YET && messageCache === undefined) {
+        if (foodOrder.mailConvoId === NO_CONVERSATION_YET && messageCache === undefined) {
             await message.reply(":warning: Resturangen har ikke svart på bestillingen enda(meldingen vil opprette ny mail-tråd) :warning:")
             await confirmMessage(message)
         }
 
         if(messageCache !== undefined) {
-            replyFoodMail(messageCache, foodOrder.conversationID, async (err) => {
+            replyFoodMail(messageCache, foodOrder.mailConvoId, foodOrder.mailConvoSubject, async (err) => {
                 if (err) {
                     throw new Error("Encountered error while trying to send reply to restaurant")
                 } else {

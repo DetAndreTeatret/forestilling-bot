@@ -81,9 +81,9 @@ export function setupMailServices() {
                                 }
                                 console.log("Successfully parsed email!")
                                 if (mail.text) {
-                                    receiveFoodMail(mail.text, needNotNullOrUndefined(mail.messageId, "mail message id text")).then(() => console.log("Mail processed(text)"))
+                                    receiveFoodMail(mail.text, needNotNullOrUndefined(mail.messageId, "mail message id text"), needNotNullOrUndefined(mail.subject, "mail subject text")).then(() => console.log("Mail processed(text)"))
                                 } else if (mail.html) {
-                                    receiveFoodMail(htmlToText(mail.html), needNotNullOrUndefined(mail.messageId, "mail message id html")).then(() => console.log("Mail processed(html)"))
+                                    receiveFoodMail(htmlToText(mail.html), needNotNullOrUndefined(mail.messageId, "mail message id html"), needNotNullOrUndefined(mail.subject, "mail subject html")).then(() => console.log("Mail processed(html)"))
                                 } else {
                                     throw new Error("Unable to extract text from mail")
                                 }
@@ -141,22 +141,25 @@ let smtp: nodemailer.Transporter<SentMessageInfo>
  * Should reply to today's conversation between orderer and restaurant
  * @param orderText The text to send as mail body
  * @param replyId The id of the mail to reply to
+ * @param subject the subject of this mail thread(important for threading)
  * @param callback returns errors if any arise
  */
-export function replyFoodMail(orderText: string, replyId: string, callback: (err: Error | null) => void) {
+export function replyFoodMail(orderText: string, replyId: string, subject: string, callback: (err: Error | null) => void) {
     const message = {
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
-        subject: "Matbestilling fra Det Andre Teatret " + new Date().toISOString(),
+        subject: subject,
         text: orderText,
-        inReplyTo: replyId
+        inReplyTo: replyId,
+        references: replyId
     }
+
     smtp.sendMail(message, (err) => {
         callback(err)
     })
 }
 
-async function receiveFoodMail(body: string, mailConvoID: string) {
+async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubject: string) {
     const showDay = await fetchShowDayByDate(new Date(), false)
     if (!showDay) {
         // Uh oh, rogue email
@@ -170,7 +173,7 @@ async function receiveFoodMail(body: string, mailConvoID: string) {
         return
     }
 
-    await updateFoodConversation(orderer, mailConvoID)
+    await updateFoodConversation(orderer, mailConvoID, mailConvoSubject)
 
     await receiveFoodOrderResponse(body, orderer)
 }
