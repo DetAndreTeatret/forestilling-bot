@@ -2,7 +2,7 @@ import {EmbedBuilder, Message, Snowflake} from "discord.js"
 import {discordClient} from "./discord.js"
 import {getDayNameNO} from "../common/date.js"
 import {replyFoodMail} from "../mail/mail.js"
-import {fetchFoodOrderByUser, NO_CONVERSATION_YET} from "../database/food.js"
+import {FoodOrder, NO_CONVERSATION_YET} from "../database/food.js"
 
 const confirm_string = ["bekreft","y","yes","confirm","bekräfta", "proceed", "engage", "accept"]
 
@@ -22,10 +22,8 @@ export async function receiveFoodOrderResponse(body: string, orderer: Snowflake)
     await user.send({embeds: [embedBuilder]})
 }
 
-export async function handleFoodConversation(message: Message) {
+export async function handleFoodConversation(message: Message, foodOrder: FoodOrder) {
     if(confirm_string.includes(message.content.trim().toLowerCase())) {
-        const foodOrder = await fetchFoodOrderByUser(message.author.id)
-        if (!foodOrder) throw new Error("Error trying to fetch food order while replying in food convo")
 
         if (foodOrder.mailConvoId === NO_CONVERSATION_YET && messageCache === undefined) {
             await message.reply(":warning: Resturangen har ikke svart på bestillingen enda(meldingen vil opprette ny mail-tråd) :warning:")

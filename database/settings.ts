@@ -34,7 +34,7 @@ export async function updateSetting(key: string, value: string) { // TODO: Shoul
     if(result === undefined) {
         await addEntry("Settings", "'" + key + "'", "'" + value + "'")
     } else {
-        await updateEntry("Settings", "SettingKey=\"" + key + "\"", "SettingValue", value)
+        await updateEntry("Settings", "SettingKey=\"" + key + "\"", ["SettingValue"], [value])
     }
 }
 

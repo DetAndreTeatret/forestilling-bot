@@ -66,11 +66,21 @@ export async function whoOrderedToday() {
     return result
 }
 
+/**
+ * Call to update conversation info, should be called when resturant replies to the initial food order
+ * @param orderer the user which originally ordered the food
+ * @param mailConvoID the Message-ID of the first reply
+ * @param mailConvoSubject the subject of the mail thread
+ */
 export async function updateFoodConversation(orderer: Snowflake, mailConvoID: string, mailConvoSubject: string) {
-    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", "MailConvoID", mailConvoID)
-    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", "MailConvoSubject", mailConvoSubject)
+    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", ["MailConvoID", "MailConvoSubject"], [mailConvoID, mailConvoSubject])
 }
 
+/**
+ * Fetch the food order ordered by the given user
+ * @param user the user which ordered the food
+ * @return if the user has an active order return the order, if no order return {@code undefined}
+ */
 export async function fetchFoodOrderByUser(user: Snowflake) {
     const result = await selectEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + user + "\"")
     if (result === undefined) return undefined

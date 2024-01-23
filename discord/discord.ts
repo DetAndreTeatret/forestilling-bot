@@ -28,7 +28,7 @@ import {needSetting, updateSetting} from "../database/settings.js"
 import {ConsoleLogger, Logger} from "../common/logging.js"
 import {handleButtonPress} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
-import {whoOrderedToday} from "../database/food.js"
+import {fetchFoodOrderByUser, whoOrderedToday} from "../database/food.js"
 import {handleFoodConversation} from "./food.js"
 
 export let discordClient: SuperClient
@@ -255,15 +255,22 @@ export async function startDiscordClient() {
     })
 
     client.on(Events.MessageCreate, async (message) => {
-        if(!message.guild) {
+        if(!message.guild && message.author.id !== message.client.user.id) {
             // Direct message
-            const maybeOrderer = await whoOrderedToday()
-            if (maybeOrderer && message.author.id === maybeOrderer) {
+            const foodOrder = await fetchFoodOrderByUser(message.author.id)
+            if (foodOrder && message.author.id === foodOrder.ordererSnowflake) {
                 // Looks like we are in a conversation with this user
-                await handleFoodConversation(message)
+                await handleFoodConversation(message, foodOrder)
             }
         }
     })
+
+    // Try to recover any ongoing food convo
+    const maybeOrderer = await whoOrderedToday()
+    if(maybeOrderer) {
+        const user = await client.users.fetch(maybeOrderer)
+        await user.createDM()
+    }
 
     discordClient = client
     return client

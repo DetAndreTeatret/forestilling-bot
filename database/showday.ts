@@ -77,7 +77,7 @@ export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
     } else {
         const currentIds = result.schedgeUpIds
         currentIds.push(eventId)
-        await updateEntry("ShowDays", "DiscordChannelSnowflake=\"" + showDay.discordChannelSnowflake + "\"", "SchedgeUpIDs", currentIds.join(","))
+        await updateEntry("ShowDays", "DiscordChannelSnowflake=\"" + showDay.discordChannelSnowflake + "\"", ["SchedgeUpIDs"], [currentIds.join(",")])
     }
 }
 

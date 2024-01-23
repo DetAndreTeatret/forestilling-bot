@@ -82,10 +82,20 @@ export async function deleteEntries(table: DatabaseTables, condition: string) {
     return await db.exec(query)
 }
 
-export async function updateEntry(table: DatabaseTables, condition: string, column: string, newValue: string) {
-    const query = "UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition
+export async function updateEntry(table: DatabaseTables, condition: string, columns: string[], newValues: string[]) {
+    const query = "UPDATE " + table + " SET " + createUpdateColumnString(columns, newValues) + " WHERE " + condition
     debugLogQuery(query)
     return await db.exec(query)
+}
+
+function createUpdateColumnString(columns: string[], newValues: string[]) {
+    let result = ""
+    for (let i = 0; i < columns.length; i++) {
+        result += columns[i] + "=\"" + newValues[i] + "\""
+        if(i + 1 !== columns.length) result += ","
+    }
+
+    return result
 }
 
 function debugLogQuery(query: string) {
