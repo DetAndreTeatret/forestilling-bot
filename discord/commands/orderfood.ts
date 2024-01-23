@@ -91,16 +91,24 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
             })
             const pickupTime = idTokens[3]
             const user = await fetchUser(undefined, interaction.user.id)
-            if(!user) throw new Error("User not found during food order :(") // TODO, find out how to tell command user that error was thrown
+            if (!user) throw new Error("User not found during food order :(") // TODO, find out how to tell command user that error was thrown
             const schedgeUpUser = (await scrapeUsers()).find(u => u.userId === user.schedgeUpId)
             if (!schedgeUpUser) throw new Error("SchedgeUpUser not found during food order :(")
-            const phoneNumber = schedgeUpUser.phoneNumber === null ? "" : schedgeUpUser.phoneNumber
+            let phoneNumber: string
+
+            if (schedgeUpUser.phoneNumber === null) {
+                phoneNumber = needEnvVariable(EnvironmentVariable.BACKUP_NUMBER_FOOD_ORDER)
+                console.warn("====User " + schedgeUpUser.displayName + " does not have a stored phone number, backup number was used====")
+            } else {
+                phoneNumber = schedgeUpUser.phoneNumber
+            }
 
             await interaction.editReply({
                 content: "Sender matbestilling...",
             })
             const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", pickupTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
-                console.log("Food order sent(" + pickupTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
+                if (res.statusCode === 200) console.log("Food order sent(" + pickupTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
+                else needNotNullOrUndefined(interaction.channel, "channel").send(":warning: Uh oh!! :warning: Det har skjedd en feil under avsending av matbestilling(Feilkode " + res.statusCode + ")\n @kingofsquares coman fiks problemene du har skapt")
             })
             req.on("error", console.log)
             req.end()
