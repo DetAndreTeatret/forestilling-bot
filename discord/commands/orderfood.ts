@@ -31,7 +31,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
-    const hasOrdered = await hasChannelOrdered(textChannel)
+    const hasOrdered = await hasChannelOrdered(textChannel.id)
     if (hasOrdered) {
         await interaction.reply({
             content: "Det er allerede bestilt mat for denne forestillingen :face_with_open_eyes_and_hand_over_mouth:! Hentetidspunkt: " + hasOrdered,
@@ -110,7 +110,7 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
                 if (res.statusCode === 200) console.log("Food order sent(" + pickupTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
                 else needNotNullOrUndefined(interaction.channel, "channel").send(":warning: Uh oh!! :warning: Det har skjedd en feil under avsending av matbestilling(Feilkode " + res.statusCode + ")\n @kingofsquares coman fiks problemene du har skapt")
             })
-            req.on("error", console.log)
+            req.on("error", console.error)
             req.end()
             await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",

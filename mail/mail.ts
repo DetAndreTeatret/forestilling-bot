@@ -4,8 +4,9 @@ import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {htmlToText} from "html-to-text"
 import {simpleParser} from "mailparser"
 import {fetchShowDayByDate} from "../database/showday.js"
-import {whoOrderedForChannel} from "../database/food.js"
+import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
+import {needNotNullOrUndefined} from "../common/util.js"
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -67,12 +68,12 @@ export function setupMailServices() {
             if (error) {
                 throw new Error("Encountered error while trying to connect to IMAP server: " + error)
             } else {
-                imap.seq.search(["UNSEEN", ["FROM", needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER)]], (error, seqs) => {
+                imap.search(["UNSEEN", ["FROM", needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER)]], (error, uids) => {
                     if (error) throw new Error("Error while searching through new mails: " + error)
                     console.log("Email received from restaurant! Fetching...")
-                    const result = imap.fetch(seqs, {markSeen: true, bodies: ""})
+                    const result = imap.fetch(uids, {markSeen: true, bodies: ""})
                     result.on("message", (message) => {
-                        message.on("body", (stream, info) => {
+                        message.on("body", (stream) => {
                             console.log("Starting to read email...")
                             simpleParser(stream, (err, mail) => {
                                 if (err) {
@@ -80,9 +81,9 @@ export function setupMailServices() {
                                 }
                                 console.log("Successfully parsed email!")
                                 if (mail.text) {
-                                    receiveFoodMail(mail.text).then(() => console.log("Mail processed(text)"))
+                                    receiveFoodMail(mail.text, needNotNullOrUndefined(mail.messageId, "mail message id text")).then(() => console.log("Mail processed(text)"))
                                 } else if (mail.html) {
-                                    receiveFoodMail(htmlToText(mail.html)).then(() => console.log("Mail processed(html)"))
+                                    receiveFoodMail(htmlToText(mail.html), needNotNullOrUndefined(mail.messageId, "mail message id html")).then(() => console.log("Mail processed(html)"))
                                 } else {
                                     throw new Error("Unable to extract text from mail")
                                 }
@@ -90,7 +91,7 @@ export function setupMailServices() {
                         })
                     })
                     result.once("end", () => {
-                        imap.addFlags(seqs, "\\\\Seen", () => {
+                        imap.addFlags(uids, "\\\\Seen", () => {
                             // For the current mail host it seems to always throw an error while setting this flag
                             // even though it's actually working(marked as seen).
                             // For now, we just ignore the error, praying that the false positive never will be true
@@ -136,19 +137,26 @@ let imap: Connection
 
 let smtp: nodemailer.Transporter<SentMessageInfo>
 
-export function sendFoodMail(orderText: string, callback: (err: Error | null) => void) {
+/**
+ * Should reply to today's conversation between orderer and restaurant
+ * @param orderText The text to send as mail body
+ * @param replyId The id of the mail to reply to
+ * @param callback returns errors if any arise
+ */
+export function replyFoodMail(orderText: string, replyId: string, callback: (err: Error | null) => void) {
     const message = {
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
         subject: "Matbestilling fra Det Andre Teatret " + new Date().toISOString(),
-        text: orderText
+        text: orderText,
+        inReplyTo: replyId
     }
     smtp.sendMail(message, (err) => {
         callback(err)
     })
 }
 
-async function receiveFoodMail(body: string) {
+async function receiveFoodMail(body: string, mailConvoID: string) {
     const showDay = await fetchShowDayByDate(new Date(), false)
     if (!showDay) {
         // Uh oh, rogue email
@@ -161,6 +169,8 @@ async function receiveFoodMail(body: string) {
         await sendBackupMail(body, "Mail mottatt fra resturant uten at det er noen som har bestilt mat i dag enda")
         return
     }
+
+    await updateFoodConversation(orderer, mailConvoID)
 
     await receiveFoodOrderResponse(body, orderer)
 }
