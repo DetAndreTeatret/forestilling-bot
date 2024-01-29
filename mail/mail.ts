@@ -7,6 +7,7 @@ import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
 import {needNotNullOrUndefined} from "../common/util.js"
+import {postUrgentDebug} from "../discord/discord"
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -164,7 +165,7 @@ export function replyFoodMail(orderText: string, replyId: string, subject: strin
 }
 
 /**
- * Handles food mail reply from resturant
+ * Handles food mail reply from restaurant
  * @param body the content of the mail to be sent to the food orderer
  * @param mailConvoID the Message-ID
  * @param mailConvoSubject
@@ -173,13 +174,13 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
     const showDay = await fetchShowDayByDate(new Date(), false)
     if (!showDay) {
         // Uh oh, rogue email
-        await sendBackupMail(body, "Mail mottatt fra resturant uten at det er noen oppførte forestillinger i dag")
+        await handleRogueMail(body, "Mail mottatt fra resturant uten at det er noen oppførte forestillinger i dag")
         return
     }
 
     const orderer = await whoOrderedForChannel(showDay.discordChannelSnowflake)
     if (!orderer) {
-        await sendBackupMail(body, "Mail mottatt fra resturant uten at det er noen som har bestilt mat i dag enda")
+        await handleRogueMail(body, "Mail mottatt fra resturant uten at det er noen som har bestilt mat i dag enda")
         return
     }
 
@@ -188,22 +189,7 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
     await receiveFoodOrderResponse(body, orderer)
 }
 
-async function sendBackupMail(body: string, reason: string) { // TODO also send to debug channel in Discord/log?
-    console.log("Mail sent to backup mails...(reason:" + reason + ")")
-    const message = {
-        from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
-        to: fetchBackupEmails(),
-        subject: "[DAT Matbestilling] Mail på avveie? " + new Date().toISOString(),
-        text: "En feil førte til at denne mailen ble videresendt til backup addresser. \nFeilmelding: \"" + reason + "\"" +
-            "\n\nMailens innhold var som følger: \"" + body + "\""
-    }
-    await smtp.sendMail(message)
+async function handleRogueMail(body: string, reason: string) {
+    await postUrgentDebug(reason + "\n\n\"" + body + "\"")
 }
 
-function fetchBackupEmails() {
-    const emails = needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_BACKUP)
-
-    if (emails.startsWith("[")) {
-        return emails.split(",")
-    } else return [emails]
-}

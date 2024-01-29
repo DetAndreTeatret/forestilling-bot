@@ -67,7 +67,7 @@ export async function whoOrderedToday() {
 }
 
 /**
- * Call to update conversation info, should be called when resturant replies to the initial food order
+ * Call to update conversation info, should be called when restaurant replies to the initial food order
  * @param orderer the user which originally ordered the food
  * @param mailConvoID the Message-ID of the first reply
  * @param mailConvoSubject the subject of the mail thread
