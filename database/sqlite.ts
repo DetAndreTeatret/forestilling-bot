@@ -21,7 +21,7 @@ export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(7), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
     await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
-    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4))")
+    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), MailConvoID varchar(100), MailConvoSubject varchar(150))")
     console.log("Database tables up and running")
 }
 
@@ -82,10 +82,20 @@ export async function deleteEntries(table: DatabaseTables, condition: string) {
     return await db.exec(query)
 }
 
-export async function updateEntry(table: DatabaseTables, condition: string, column: string, newValue: string) {
-    const query = "UPDATE " + table + " SET " + column + "=\"" + newValue + "\"" + "WHERE " + condition
+export async function updateEntry(table: DatabaseTables, condition: string, columns: string[], newValues: string[]) {
+    const query = "UPDATE " + table + " SET " + createUpdateColumnString(columns, newValues) + " WHERE " + condition
     debugLogQuery(query)
     return await db.exec(query)
+}
+
+function createUpdateColumnString(columns: string[], newValues: string[]) {
+    let result = ""
+    for (let i = 0; i < columns.length; i++) {
+        result += columns[i] + "=\"" + newValues[i] + "\""
+        if(i + 1 !== columns.length) result += ","
+    }
+
+    return result
 }
 
 function debugLogQuery(query: string) {

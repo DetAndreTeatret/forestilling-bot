@@ -5,6 +5,7 @@ import {fileURLToPath} from "url"
 import path from "node:path"
 import fs from "node:fs"
 import {setupScraper} from "schedgeup-scraper"
+import {setupMailServices} from "./mail/mail.js"
 
 start().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
 
@@ -20,6 +21,7 @@ export async function start() {
     await startDiscordClient() // Populates discord client global
     await setupScraper()
     await createTables()
+    setupMailServices()
 }
 
 /**
