@@ -7,7 +7,7 @@ import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
 import {needNotNullOrUndefined} from "../common/util.js"
-import {postUrgentDebug} from "../discord/discord"
+import {postUrgentDebug} from "../discord/discord.js"
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
