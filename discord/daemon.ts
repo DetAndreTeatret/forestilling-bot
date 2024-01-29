@@ -1,7 +1,7 @@
 import {Guild} from "discord.js"
 import {update} from "./commands/update.js"
 import {fetchSetting, updateSetting} from "../database/settings.js"
-import {Logger} from "../common/logging.js"
+import {ConsoleLogger} from "../common/logging.js"
 import {checkDeletions} from "./commands/delete.js"
 
 const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
@@ -9,7 +9,7 @@ const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 let daemonRunning = false
 let interval: number
 
-const daemonLogger = new Logger(async log => console.log("[daemon] " + log))
+const daemonLogger = new ConsoleLogger("[daemon]")
 
 export async function startDaemon() {
     if(daemonRunning) return

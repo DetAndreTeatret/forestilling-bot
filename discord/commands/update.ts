@@ -23,8 +23,7 @@ import {
     isDayTimeShow
 } from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
-import {Logger} from "../../common/logging.js"
-import {editMessage} from "../../common/util.js"
+import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -35,7 +34,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (interaction.guild == null) {
         throw new DiscordCommandError("Guild is null", "update/#execute")
     }
-
 
     // First time stuff
     addGuildToUpdate(interaction.guild)
@@ -52,14 +50,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await updateSetting("admin_role_snowflake", role.id)
     }
 
-    const updateMessage = editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")])
-    const logger = new Logger(updateMessage)
+    const logger = new DiscordMessageReplyLogger(interaction)
     await logger.logLine("Starting update!")
     try {
         const memberDifference = await update(interaction.guild, logger)
         if (interaction.channel !== null) await interaction.channel.send(formatMemberDifference(memberDifference))
     } catch (error) {
-        await updateMessage("Encountered error during update + " + error)
+        await logger.logWarning("Encountered error during update + " + error)
         throw error
     }
 

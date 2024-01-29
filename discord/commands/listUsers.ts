@@ -1,7 +1,6 @@
 import {AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
 import {fetchAllUsers, fetchUser} from "../../database/user.js"
-import {editMessage} from "../../common/util.js"
-import {Logger} from "../../common/logging.js"
+import {DiscordMessageReplyLogger} from "../../common/logging.js"
 
 export const data = new SlashCommandBuilder()
     .setName("listusers")
@@ -14,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const discordUser = interaction.options.getUser("discord-user")
     const schedgeUpId = interaction.options.getString("schedgeup-id")
 
-    const message = new Logger(editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")])) // TODO: standarize first reply)
+    const message = new DiscordMessageReplyLogger(interaction)
     await message.logLine("Fetching user info!")
 
     let user
