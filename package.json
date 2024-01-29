@@ -1,6 +1,6 @@
 {
   "name": "forestilling-bot",
-  "version": "2.3.1",
+  "version": "2.3.3",
   "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
     "start": "npm run lint && tsc && node build/main.js",

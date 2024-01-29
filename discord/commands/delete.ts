@@ -1,19 +1,16 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
-import {Logger} from "../../common/logging.js"
+import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
 import {getDeleteableChannels} from "../../database/discord.js"
 import {discordClient} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
-import {editMessage} from "../../common/util.js"
 import {deleteFoodChannelEntries} from "../../database/food.js"
-
-
 
 export const data = new SlashCommandBuilder()
     .setName("delete")
     .setDescription("Check if any channels can be deleted from Discord. If yes, delete them")
+
 export async function execute(interaction: ChatInputCommandInteraction) {
-        const updateMessage = editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")])
-        const logger = new Logger(updateMessage)
+        const logger = new DiscordMessageReplyLogger(interaction)
         await logger.logLine("Starting deletion checks!")
         await checkDeletions(logger)
 }

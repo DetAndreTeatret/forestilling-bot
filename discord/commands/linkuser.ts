@@ -1,7 +1,6 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
 import {addNewUser, fetchUser} from "../../database/user.js"
-import {editMessage} from "../../common/util.js"
-import {Logger} from "../../common/logging.js"
+import {DiscordMessageReplyLogger} from "../../common/logging.js"
 import {scrapeUsers} from "schedgeup-scraper"
 
 export const data =  new SlashCommandBuilder()
@@ -15,7 +14,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const schedgeUpId = interaction.options.getString("schedgeup-id", true)
         const discordUser = interaction.options.getUser("discord-user", true)
         const user = await fetchUser(schedgeUpId, discordUser.id)
-        const message = new Logger(editMessage.bind([await interaction.reply("Ikke tenk på denne meldingen")]))
+        const message = new DiscordMessageReplyLogger(interaction)
         await message.logLine("Trying to link user " + schedgeUpId + " with " + discordUser.tag)
         if(user !== undefined) {
             await message.logLine("User already linked")

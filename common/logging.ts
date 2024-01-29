@@ -1,40 +1,74 @@
-type StringConsumer = (string: string) => Promise<void>
+import {ChatInputCommandInteraction, InteractionResponse} from "discord.js"
 
-export class Logger {
-    constructor(listener: StringConsumer) {
-        this.listener = listener
+export interface Logger {
+    /**
+     * Logs on a new line
+     */
+    logLine(part: string): Promise<void>
+
+    /**
+     * Logging multiple parts will overwrite older parts on same line if logger supports it
+     */
+    logPart(part: string): Promise<void>
+
+    /**
+     * Logs on a new line, menacingly
+     */
+    logWarning(part: string): Promise<void>
+}
+
+export class DelegatingLogger implements Logger {
+
+    private readonly delegatees: Logger[]
+
+    constructor(delegatees: Logger[]) {
+        this.delegatees = delegatees
     }
 
-    private currentLog: string[] = []
+    async logLine(part: string) {
+        this.delegatees.forEach(l => l.logLine(part))
+    }
+    async logPart(part: string) {
+        this.delegatees.forEach(l => l.logPart(part))
+    }
+    async logWarning(part: string) {
+        this.delegatees.forEach(l => l.logWarning(part))
+    }
 
+}
+
+export class DiscordMessageReplyLogger implements Logger {
+
+    private currentLog: string[] = []
     private lastPartInline: string | undefined = undefined
 
-    private readonly listener: StringConsumer
+    private message: Promise<InteractionResponse>
 
-    async logLine(line: string) {
-        this.currentLog.push("\n" + line)
+    constructor(interaction: ChatInputCommandInteraction) {
+        this.message = interaction.reply("Ikke tenk på denne meldingen!")
+    }
+
+    async logLine(part: string) {
+        this.currentLog.push("\n" + part)
         this.lastPartInline = undefined
         await this.renderToListener()
     }
 
-    /**
-     * If the last log was also inline this newpart will replace it
-     */
-    async logPart(newPart: string) {
-        newPart = "\n" + newPart
+    async logPart(part: string) {
+        part = "\n" + part
         const lengthMinusOne = this.currentLog.length - 1
-        if(this.lastPartInline) {
-            this.currentLog[lengthMinusOne] = newPart
-            this.lastPartInline = newPart
+        if (this.lastPartInline) {
+            this.currentLog[lengthMinusOne] = part
+            this.lastPartInline = part
         } else {
-            this.currentLog.push(newPart)
-            this.lastPartInline = newPart
+            this.currentLog.push(part)
+            this.lastPartInline = part
         }
         await this.renderToListener()
     }
 
-    async logWarning(newPart: string) {
-        await this.logLine(newPart) // TODO
+    async logWarning(part: string) {
+        await this.logLine(":warning:WARNING:warning: " + part)
     }
 
     render() {
@@ -50,6 +84,31 @@ export class Logger {
     async renderToListener() {
         const string = this.render()
 
-        await this.listener(string)
+        await this.message.then(m => m.edit(string))
     }
+}
+
+export class ConsoleLogger implements Logger {
+
+    prefix: string
+
+    /**
+     * Prefix prepended to all logged message(one space is put between prefix and message)
+     */
+    constructor(prefix: string) {
+        this.prefix = prefix
+    }
+
+    async logLine(part: string): Promise<void> {
+        console.log(this.prefix + " " + part)
+    }
+
+    async logPart(part: string): Promise<void> {
+        console.log(this.prefix + " " + part)
+    }
+
+    async logWarning(part: string): Promise<void> {
+        console.warn(this.prefix + " " + part)
+    }
+
 }
