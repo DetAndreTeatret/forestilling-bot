@@ -13,7 +13,6 @@ export interface Logger {
 
     /**
      * Logs on a new line, menacingly
-     * @param part
      */
     logWarning(part: string): Promise<void>
 }
@@ -69,7 +68,7 @@ export class DiscordMessageReplyLogger implements Logger {
     }
 
     async logWarning(part: string) {
-        await this.logLine(part) // TODO
+        await this.logLine(":warning:WARNING:warning: " + part)
     }
 
     render() {

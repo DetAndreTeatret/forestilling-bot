@@ -13,6 +13,10 @@ const daemonLogger = new ConsoleLogger("[daemon]")
 
 export async function startDaemon() {
     if(daemonRunning) return
+
+    // If the first update was just ran, we want to run a deletion as well
+    await checkDeletions(daemonLogger)
+
     daemonRunning = true
     let parsedInterval = await fetchSetting("daemon-interval") // Stored in ms
     if(parsedInterval === undefined) {
@@ -21,7 +25,7 @@ export async function startDaemon() {
         parsedInterval = duration
     }
     interval = Number(parsedInterval)
-    console.info("Starting deletion daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
+    console.info("Starting update/delete daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
 
     setTimeout(tickDaemon, interval)
 }
