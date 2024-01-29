@@ -25,7 +25,7 @@ import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
 import {fetchShowDayBySU} from "../database/showday.js"
 import {needSetting, updateSetting} from "../database/settings.js"
-import {Logger} from "../common/logging.js"
+import {ConsoleLogger, Logger} from "../common/logging.js"
 import {handleButtonPress} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
 
@@ -418,4 +418,15 @@ export class DiscordCommandError extends Error {
         super(message)
         this.where = where
     }
+}
+
+/**
+ * Post a log message to the channel specified in .env DEBUG_CHANNEL_SNOWFLAKE
+ */
+export async function postUrgentDebug(message: string) {
+    const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
+    const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
+
+    if(channel) await channel.send(message)
+    else await new ConsoleLogger("URGENT").logWarning(message)
 }
