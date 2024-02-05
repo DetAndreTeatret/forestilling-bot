@@ -18,9 +18,9 @@ export async function start() {
         console.error("Unhandled promise rejection:", error)
     })
     setupConfig()
+    await createTables()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
-    await createTables()
     setupMailServices()
 }
 

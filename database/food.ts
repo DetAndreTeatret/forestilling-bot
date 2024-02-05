@@ -10,14 +10,15 @@ export class FoodOrder {
     ordererSnowflake: Snowflake
     mailConvoId: string
     mailConvoSubject: string
+    createdAtDate: Date
 
-
-    constructor(channelSnowflake: Snowflake, pickupTime: string, whoOrdered: Snowflake, conversationID: string, mailConvoSubject: string) {
+    constructor(channelSnowflake: Snowflake, pickupTime: string, whoOrdered: Snowflake, conversationID: string, mailConvoSubject: string, createdAtEpoch: number) {
         this.channelSnowflake = channelSnowflake
         this.pickupTime = pickupTime
         this.ordererSnowflake = whoOrdered
         this.mailConvoId = conversationID
         this.mailConvoSubject = mailConvoSubject
+        this.createdAtDate = new Date(createdAtEpoch)
     }
 }
 
@@ -28,7 +29,7 @@ export class FoodOrder {
  * @param whoOrdered the user that initiated the order, will receive any mail updates from the restaurant
  */
 export async function markChannelAsOrdered(channel: TextChannel, pickupTime: string, whoOrdered: Snowflake) {
-    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, NO_CONVERSATION_YET, NO_CONVERSATION_YET)
+    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, NO_CONVERSATION_YET, NO_CONVERSATION_YET, Date.now())
 }
 
 /**
@@ -84,7 +85,19 @@ export async function updateFoodConversation(orderer: Snowflake, mailConvoID: st
 export async function fetchFoodOrderByUser(user: Snowflake) {
     const result = await selectEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + user + "\"")
     if (result === undefined) return undefined
-    return new FoodOrder(result["DiscordChannelSnowflake"], result["PickupTime"], result["OrderedByDiscordUserSnowflake"], result["MailConvoID"], result["MailConvoSubject"])
+    return new FoodOrder(result["DiscordChannelSnowflake"], result["PickupTime"], result["OrderedByDiscordUserSnowflake"], result["MailConvoID"], result["MailConvoSubject"], result["CreatedAtEpoch"])
+}
+
+/**
+ * Fetch today's order
+ * @return undefined if there is no shows today or no order has been created yet
+ */
+export async function fetchTodaysFoodOrder() {
+    const showDay = await fetchShowDayByDate(new Date(), false)
+    if (showDay === undefined) return undefined
+    const result = await selectEntry("FoodOrdered", "DiscordChannelSnowflake=\"" + showDay.discordChannelSnowflake + "\"")
+    if (result === undefined) return undefined
+    return new FoodOrder(result["DiscordChannelSnowflake"], result["PickupTime"], result["OrderedByDiscordUserSnowflake"], result["MailConvoID"], result["MailConvoSubject"], result["CreatedAtEpoch"])
 }
 
 /**
