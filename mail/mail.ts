@@ -8,6 +8,7 @@ import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
 import {needNotNullOrUndefined} from "../common/util.js"
 import {postUrgentDebug} from "../discord/discord.js"
+import {renderDateYYYYMMDD} from "../common/date.js"
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -137,6 +138,21 @@ function openInbox(callback: (error: Error, mailbox: Connection.Box) => void) {
 let imap: Connection
 
 let smtp: nodemailer.Transporter<SentMessageInfo>
+
+export async function sendFoodMail(body: string): Promise<Error | null> {
+    return new Promise((resolve) => {
+        const message = {
+            from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
+            to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
+            subject: "Matbestilling fra Det Andre Teatret " + renderDateYYYYMMDD(new Date()),
+            text: body
+        }
+
+        smtp.sendMail(message, (err) => {
+            resolve(err)
+        })
+    })
+}
 
 /**
  * Should reply to today's conversation between orderer and restaurant

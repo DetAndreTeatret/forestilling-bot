@@ -17,9 +17,10 @@ import {fetchShowDayByDiscordChannel} from "../../database/showday.js"
 import {isToday} from "../../common/date.js"
 import {PermissionLevel} from "../permission.js"
 import {hasChannelOrdered, markChannelAsOrdered} from "../../database/food.js"
-import https from "https"
 import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
+import {sendFoodMail} from "../../mail/mail.js"
+import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1900"
 
@@ -85,7 +86,7 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
     if (idTokens[1] === "confirm") {
         const textChannel = needNotNullOrUndefined(interaction.channel as TextChannel, "textchannel")
         if (idTokens[2] === textChannel.id) {
-            await interaction.reply({
+            await interaction.reply({ // TODO convert to logger
                 content: "Forbereder sending av matbestilling...",
                 ephemeral: true
             })
@@ -103,15 +104,21 @@ export async function handleButtonPress(interaction: ButtonInteraction) {
                 phoneNumber = schedgeUpUser.phoneNumber
             }
 
+            const todaysOrders = await fetchTodaysOrders()
+            if (todaysOrders.length === 0) {
+                await interaction.editReply("Det er ingen som har bestilt mat i dag! \nMatbestilling ble ikke sendt")
+                return
+            }
+
             await interaction.editReply({
                 content: "Sender matbestilling...",
             })
-            const req = https.request(needEnvVariable(EnvironmentVariable.FOOD_ORDER_WEBHOOK).replace("%s", pickupTime).replace("%t", encodeURIComponent(phoneNumber)), (res) => {
-                if (res.statusCode === 200) console.log("Food order sent(" + pickupTime + "," + phoneNumber + ") and response received with status code: " + res.statusCode)
-                else needNotNullOrUndefined(interaction.channel, "channel").send(":warning: Uh oh!! :warning: Det har skjedd en feil under avsending av matbestilling(Feilkode " + res.statusCode + ")\n @kingofsquares coman fiks problemene du har skapt")
-            })
-            req.on("error", console.error)
-            req.end()
+
+            const error = await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]), pickupTime, phoneNumber))
+            if(error) {
+                throw error
+            }
+
             await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",
             })
@@ -167,4 +174,20 @@ function createCustomTimeModal() {
     modalBuilder.addComponents(rowBuilder)
 
     return modalBuilder
+}
+
+function createOrderMailBody(orders: string[], orderTime: string, ordererNumber: string) {
+    let body = "Hei! Vi ønsker å bestille følgende:"
+
+    for (let i = 0; i < orders.length; i++) {
+        body += "\n" + orders[i]
+    }
+
+    body += "\n\nAntall bestillinger: " + orders.length
+    body += "\n\n\nVi kommer og henter ca " + orderTime
+    body += "\nOm det oppstår forsinkelser, vennligst ring: " + ordererNumber
+
+    body += "\nMvh\nDet Andre Teatret"
+
+    return body
 }

@@ -16,6 +16,10 @@ export function renderDateYYYYMMDD(date: Date) {
     return "" + date.getFullYear() + "-" + ((date.getMonth() + 1) < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + (date.getDate() < 10 ? "0" : "") + date.getDate()
 }
 
+export function renderDateHHmmss(date: Date) {
+    return date.toLocaleString("default", {hour: "2-digit", minute: "2-digit", second: "2-digit"})
+}
+
 export function tomorrow(date?: Date) {
     return afterDays(1, date)
 }
