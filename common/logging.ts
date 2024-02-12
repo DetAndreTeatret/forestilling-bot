@@ -1,4 +1,4 @@
-import {ChatInputCommandInteraction, InteractionResponse} from "discord.js"
+import {ButtonInteraction, ChatInputCommandInteraction, InteractionResponse} from "discord.js"
 
 export interface Logger {
     /**
@@ -44,7 +44,7 @@ export class DiscordMessageReplyLogger implements Logger {
 
     private message: Promise<InteractionResponse>
 
-    constructor(interaction: ChatInputCommandInteraction) {
+    constructor(interaction: ChatInputCommandInteraction | ButtonInteraction) {
         this.message = interaction.reply("Ikke tenk på denne meldingen!")
     }
 
