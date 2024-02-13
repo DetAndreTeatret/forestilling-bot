@@ -26,10 +26,10 @@ import {fileURLToPath} from "url"
 import {fetchShowDayBySU} from "../database/showday.js"
 import {needSetting, updateSetting} from "../database/settings.js"
 import {ConsoleLogger, Logger} from "../common/logging.js"
-import {handleButtonPress} from "./commands/orderfood.js"
+import {handleFoodOrderButtons} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
 import {fetchFoodOrderByUser, whoOrderedToday} from "../database/food.js"
-import {handleFoodConversation} from "./food.js"
+import {handleFoodConversation, handleFoodMessageButtons} from "./food.js"
 
 export let discordClient: SuperClient
 
@@ -206,8 +206,12 @@ export async function startDiscordClient() {
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
     client.on(Events.InteractionCreate, async function (interaction) {
-        if(interaction.isButton()) {
-            await handleButtonPress(interaction)
+        if(interaction.channel && interaction.isButton()) {
+            if(interaction.channel.isDMBased()) {
+                await handleFoodMessageButtons(interaction)
+            } else {
+                await handleFoodOrderButtons(interaction)
+            }
             return
         }
         else if (!interaction.isChatInputCommand()) return

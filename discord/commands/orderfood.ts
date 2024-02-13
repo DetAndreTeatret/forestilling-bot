@@ -80,7 +80,7 @@ function createConfirmationMessage(channel: TextChannel, time: string) {
     }
 }
 
-export async function handleButtonPress(interaction: ButtonInteraction) {
+export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
     const idTokens = interaction.customId.split("-")
 
     if (idTokens[1] === "confirm") {
