@@ -1,19 +1,17 @@
 import {startDiscordClient} from "./discord/discord.js"
 import {createTables} from "./database/sqlite.js"
 import {setupConfig} from "./common/config.js"
-import {fileURLToPath} from "url"
-import path from "node:path"
-import fs from "node:fs"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
 
 start().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
 
-export let VERSION: string
+export let EDITION: string
 
 export async function start() {
-    VERSION = await findVersion()
-    console.log("Starting forestilling-bot version " + VERSION + "...")
+    EDITION = await findEdition()
+    console.log("Starting forestilling-bot...")
+    console.log("Edition: " + EDITION)
     process.on("unhandledRejection", error => {
         console.error("Unhandled promise rejection:", error)
     })
@@ -25,13 +23,15 @@ export async function start() {
 }
 
 /**
- * Hacky solution to find package.json after build...
+ * Execute git command to find latest commit hash and message
  */
-async function findVersion(): Promise<string> {
-    const __filename = fileURLToPath(import.meta.url)
-    const __dirname = path.dirname(__filename)
-    const packagePath = __dirname.replace("build", "package.json")
-    // importing gives assertion errors...
-    const pjs = JSON.parse(fs.readFileSync(packagePath).toString())
-    return pjs.version
+async function findEdition(): Promise<string> {
+    const exec = (await import("child_process")).exec
+    return await new Promise((resolve, reject) => {
+        exec("git log -1 --oneline", function (error, stdout, stderr) {
+            if (error) {
+                reject(stderr)
+            } else resolve(stdout)
+        })
+    }) as string
 }
