@@ -16,20 +16,20 @@
     "@types/node": "18.15.11",
     "discord.js": "14.14.1",
     "dotenv": "16.4.5",
+    "html-to-text": "9.0.5",
+    "mailparser": "3.6.7",
+    "node-imap": "0.9.6",
+    "nodemailer": "6.9.9",
     "sqlite": "4.2.1",
     "sqlite3": "5.1.7",
     "typescript": "5.3.3",
-    "schedgeup-scraper": "1.4.7",
-    "nodemailer": "6.9.9",
-    "mailparser": "3.6.7",
-    "node-imap": "0.9.6",
-    "html-to-text": "9.0.5"
+    "schedgeup-scraper": "2.0.0"
   },
   "devDependencies": {
-    "eslint-config-dat": "1.0.1",
-    "@types/nodemailer": "6.4.14",
-    "@types/node-imap": "0.9.3",
     "@types/html-to-text": "9.0.4",
-    "@types/mailparser": "3.4.4"
+    "@types/mailparser": "3.4.4",
+    "@types/node-imap": "0.9.3",
+    "@types/nodemailer": "6.4.14",
+    "eslint-config-dat": "1.0.1"
   }
 }

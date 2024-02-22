@@ -109,20 +109,20 @@ export async function update(guild: Guild | null, logger: Logger) {
         if (!showDay) {
 
             // No ShowDay for the given event found, maybe there is one for the given date?
-            const showDay0 = await fetchShowDayByDate(event.date, isEventDaytime)
+            const showDay0 = await fetchShowDayByDate(event.eventStartTime, isEventDaytime)
             if (!showDay0) {
 
                 // No ShowDay anywhere, create a new one
-                await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ")")
+                await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.eventStartTime) + ")")
                 const channel = await client.createNewChannelForEvent(guild, event, isEventDaytime, logger)
                 channelMemberDifferences.push(new ChannelMemberDifference(channel, Array.from(channel.members.values()), []))
-                await createNewShowday(channel.id, event.date, isEventDaytime, event.id)
+                await createNewShowday(channel.id, event.eventStartTime, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
 
             } else {
 
                 // Found a ShowDay for the event date, merge into it
-                await logger.logPart("Adding event(" + event.title + "/" + renderDateYYYYMMDD(event.date) + ") to existing ShowDay")
+                await logger.logPart("Adding event(" + event.title + "/" + renderDateYYYYMMDD(event.eventStartTime) + ") to existing ShowDay")
                 await addEventToShowDay(showDay0, event.id)
                 const channel = channelsMapped.findKey((e, c) => c.id === showDay0.discordChannelSnowflake)
                 if (!channel) {
@@ -157,7 +157,7 @@ export async function update(guild: Guild | null, logger: Logger) {
                 }
 
                 // Update channel members
-                await logger.logLine("Updating ShowDay for " + event.title + "/" + renderDateYYYYMMDD(event.date))
+                await logger.logLine("Updating ShowDay for " + event.title + "/" + renderDateYYYYMMDD(event.eventStartTime))
                 const events = channelsMapped.get(channel)
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
 

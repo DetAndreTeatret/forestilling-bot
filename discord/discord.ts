@@ -89,7 +89,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
      */
     async createNewChannelForEvent(guild: Guild, event: Event, dayTime: boolean, logger: Logger) {
         const channel = await guild.channels.create({
-            name: getDayNameNO(event.date) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
+            name: getDayNameNO(event.eventStartTime) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
             type: ChannelType.GuildText,
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
             parent: (await getCategory(guild)).id,
@@ -324,7 +324,7 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
  */
 async function postEventInfo(channel: TextChannel, event: Event) {
-    const embedToPost = createEventInfoEmbed(event.date, event.title)
+    const embedToPost = createEventInfoEmbed(event.eventStartTime, event.title)
     const sentMessage = await channel.send({embeds: [embedToPost]})
     await channel.messages.pin(sentMessage)
 }
