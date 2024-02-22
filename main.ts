@@ -4,9 +4,10 @@ import {setupConfig} from "./common/config.js"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
 
-start().then(() => console.log("Ready to rumble, use /update in Discord to finalize startup"))
+start().then(() => console.log("Ready to rumble, use /update in Discord to start update/delete daemon"))
 
 export let EDITION: string
+export let STARTING = true
 
 export async function start() {
     EDITION = await findEdition()
@@ -19,7 +20,8 @@ export async function start() {
     await createTables()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
-    setupMailServices()
+    await setupMailServices()
+    STARTING = false
 }
 
 /**

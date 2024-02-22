@@ -41,7 +41,7 @@ import {renderDateYYYYMMDD} from "../common/date.js"
 /**
  * Prepare all mail related shenanigans
  */
-export function setupMailServices() {
+export async function setupMailServices() {
 
     // /==============\
     // I     IMAP     I
@@ -55,13 +55,16 @@ export function setupMailServices() {
         tls: true
     })
 
-    imap.on("ready", () => {
-        openInbox((error, mailbox) => {
-            if (error || !mailbox.permFlags.includes("\\Seen")) {
-                throw new Error("Encountered error while trying to start IMAP server: " + (error === undefined ? "Missing flags" : error))
-            } else {
-                console.log("IMAP Server up and running (name:" + mailbox.name + ",readOnly:" + mailbox.readOnly + ")")
-            }
+    const imapReady = new Promise((resolve, reject) => {
+        imap.on("ready", () => {
+            openInbox((error, mailbox) => {
+                if (error || !mailbox.permFlags.includes("\\Seen")) {
+                    reject("Encountered error while trying to start IMAP server: " + (error === undefined ? "Missing flags" : error))
+                } else {
+                    console.log("IMAP Server up and running (name:" + mailbox.name + ",readOnly:" + mailbox.readOnly + ")")
+                    resolve(true)
+                }
+            })
         })
     })
 
@@ -127,8 +130,9 @@ export function setupMailServices() {
             pass: needEnvVariable(EnvironmentVariable.EMAIL_PASSWORD),
         },
     })
-
     console.log("SMTP Transport created!")
+
+    await imapReady
 }
 
 function openInbox(callback: (error: Error, mailbox: Connection.Box) => void) {

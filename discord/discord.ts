@@ -11,7 +11,7 @@ import {
     Guild,
     GuildMember,
     Message,
-    PermissionsBitField,
+    PermissionsBitField, RepliableInteraction,
     Snowflake,
     TextChannel,
 } from "discord.js"
@@ -30,6 +30,7 @@ import {handleFoodOrderButtons} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
 import {fetchFoodOrderByUser, whoOrderedToday} from "../database/food.js"
 import {handleFoodConversation, handleFoodMessageButtons} from "./food.js"
+import {STARTING} from "../main"
 
 export let discordClient: SuperClient
 
@@ -206,6 +207,14 @@ export async function startDiscordClient() {
     await client.login(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
 
     client.on(Events.InteractionCreate, async function (interaction) {
+        if (STARTING) {
+            if (interaction.isRepliable()) {
+                await (interaction as RepliableInteraction)
+                    .reply("Oops! Denne botten er i startup-fasen og må vente litt med å behandle forespørselen din, prøv igjen om litt:sunglasses::+1:")
+            }
+            return
+        }
+
         if(interaction.channel && interaction.isButton()) {
             if(interaction.channel.isDMBased()) {
                 await handleFoodMessageButtons(interaction)
