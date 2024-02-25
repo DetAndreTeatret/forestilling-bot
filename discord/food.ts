@@ -26,7 +26,7 @@ export async function receiveFoodOrderResponse(body: string, orderer: Snowflake)
     embedBuilder.addFields({name: "Her er meldingen", value: body})
     embedBuilder.setFooter({text: "Hvis du vil svare på meldingen, skriv svaret i denne chatten og send. Du vil bli spurt om bekreftelse før meldingen blir sendt"})
 
-    await postDebug("Mail mottatt fra resturant!\n\n" + body)
+    await postDebug("Mail mottatt fra resturant!\n\n\"" + body + "\"")
     await user.send({embeds: [embedBuilder]})
 }
 

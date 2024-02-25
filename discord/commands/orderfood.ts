@@ -95,7 +95,7 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
             const pickupTime = idTokens[3]
             const user = await fetchUser(undefined, interaction.user.id)
             if (!user) throw new Error("User not found during food order :(") // TODO, find out how to tell command user that error was thrown
-            const schedgeUpUser = (await scrapeUsers()).find(u => u.userId === user.schedgeUpId)
+            const schedgeUpUser = (await scrapeUsers([user.schedgeUpId]))[0]
             if (!schedgeUpUser) throw new Error("SchedgeUpUser not found during food order :(")
             let phoneNumber: string
 
@@ -116,7 +116,7 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
                 content: "Sender matbestilling...",
             })
 
-            const error = await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]), pickupTime, phoneNumber))
+            const error = await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]).sort(), pickupTime, phoneNumber))
             if(error) {
                 throw error
             }
@@ -125,9 +125,8 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",
             })
             await postDebug("Dagens mat er herved bestilt!(Hentetidspunkt: " + pickupTime + ",Bestilt av: " + interaction.user.displayName + ")")
-            await postDebug(await listFood())
-
             await markChannelAsOrdered(textChannel, pickupTime, interaction.user.id)
+            await postDebug(await listFood())
             return
         } else if (idTokens[2] === "custom") {
             await interaction.showModal(createCustomTimeModal())

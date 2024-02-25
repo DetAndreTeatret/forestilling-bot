@@ -23,7 +23,7 @@
     "sqlite": "4.2.1",
     "sqlite3": "5.1.7",
     "typescript": "5.3.3",
-    "schedgeup-scraper": "2.0.0"
+    "schedgeup-scraper": "2.0.1"
   },
   "devDependencies": {
     "@types/html-to-text": "9.0.4",

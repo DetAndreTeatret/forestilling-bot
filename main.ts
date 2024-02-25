@@ -5,7 +5,7 @@ import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
 import {inspect} from "node:util"
 
-start().then(() => console.log("Ready to rumble, use /update in Discord to start update/delete daemon"))
+start().then(() => console.log("Startup finished, use /update in Discord to start update/delete daemon"))
 
 export let EDITION: string
 export let STARTING = true
