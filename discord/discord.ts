@@ -463,3 +463,11 @@ export async function postUrgentDebug(message: string) {
     if(channel) await channel.send(message)
     else await new ConsoleLogger("URGENT").logWarning(message)
 }
+
+export async function postDebug(message: string) {
+    const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
+    const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
+
+    if(channel) return await channel.send(message)
+    else throw new Error("Where did the debug channel go?")
+}

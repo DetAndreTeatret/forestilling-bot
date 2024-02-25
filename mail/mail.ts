@@ -172,7 +172,7 @@ export function replyFoodMail(orderText: string, replyId: string, subject: strin
         subject: subject,
         text: orderText,
         inReplyTo: replyId,
-        // This("references") only appends the Message-ID of the last received email, but seems to work fine on Gmail so I
+        // This("references") only appends the Message-ID of the last received email, but seems to work fine on Gmail, so I
         // won't bother going full RFC 2822(ref: https://datatracker.ietf.org/doc/html/rfc2822#appendix-A.2)
         // Also https://developers.google.com/gmail/api/guides/threads and https://stackoverflow.com/a/29531009
         // (You are actually supposed to keep all reference headers going down the thread)

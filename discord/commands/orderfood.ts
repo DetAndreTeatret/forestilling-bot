@@ -21,6 +21,8 @@ import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
 import {sendFoodMail} from "../../mail/mail.js"
 import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
+import {postDebug} from "../discord.js"
+import {listFood} from "./listFood.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1900"
 
@@ -122,6 +124,9 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
             await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",
             })
+            await postDebug("Dagens mat er herved bestilt!(Hentetidspunkt: " + pickupTime + ",Bestilt av: " + interaction.user.displayName + ")")
+            await postDebug(await listFood())
+
             await markChannelAsOrdered(textChannel, pickupTime, interaction.user.id)
             return
         } else if (idTokens[2] === "custom") {

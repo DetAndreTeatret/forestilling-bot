@@ -12,6 +12,11 @@ export const data = new SlashCommandBuilder()
 
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    const response = await listFood()
+    await interaction.reply({content: response, ephemeral: true})
+}
+
+export async function listFood() {
     const todaysOrders = await fetchTodaysOrders()
 
     let response = ""
@@ -42,5 +47,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
     }
 
-    await interaction.reply({content: response, ephemeral: true})
+    return response
 }

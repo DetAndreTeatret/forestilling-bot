@@ -7,7 +7,7 @@ import {
     Message,
     Snowflake
 } from "discord.js"
-import {discordClient} from "./discord.js"
+import {discordClient, postDebug} from "./discord.js"
 import {getDayNameNO} from "../common/date.js"
 import {replyFoodMail} from "../mail/mail.js"
 import {fetchFoodOrderByUser, FoodOrder, NO_CONVERSATION_YET} from "../database/food.js"
@@ -26,6 +26,7 @@ export async function receiveFoodOrderResponse(body: string, orderer: Snowflake)
     embedBuilder.addFields({name: "Her er meldingen", value: body})
     embedBuilder.setFooter({text: "Hvis du vil svare på meldingen, skriv svaret i denne chatten og send. Du vil bli spurt om bekreftelse før meldingen blir sendt"})
 
+    await postDebug("Mail mottatt fra resturant!\n\n" + body)
     await user.send({embeds: [embedBuilder]})
 }
 
@@ -54,12 +55,13 @@ export async function handleFoodMessageButtons(interaction: ButtonInteraction) {
             replyFoodMail(messageCache, foodOrder.mailConvoId, foodOrder.mailConvoSubject, async (err) => {
                 if (err) {
                     await logger.logWarning("Det skjedde en feil når meldingen skulle bli sendt...\nMeldingen kommer ikke fram til resturanten, prøv igjen senere eller ring resturanten direkte")
-                    disableButtons(interaction, "<<Error>>")
+                    await disableButtons(interaction, "<<Error>>")
                     throw new Error("Encountered error while trying to send reply to restaurant")
                 } else {
                     await logger.logLine("Meldingen din ble sendt! Hvis resturanten svarer igjen får du melding i denne kanalen.")
+                    await postDebug("Matbestiller sendte svar til resturanten:\n\n" + messageCache)
                     messageCache = undefined
-                    disableButtons(interaction, "Melding sendt")
+                    await disableButtons(interaction, "Melding sendt")
                 }
             })
         } else {
@@ -72,7 +74,7 @@ export async function handleFoodMessageButtons(interaction: ButtonInteraction) {
             return
         }
         messageCache = undefined
-        disableButtons(interaction, "Melding avbrutt!")
+        await disableButtons(interaction, "Melding avbrutt!")
         await interaction.reply("Avbrutt! Hvis du vil sende en ny melding kan den skrives nå :pen_ballpoint:")
     } else {
         throw new Error("received invalid button id in food dm conversation")
@@ -80,13 +82,13 @@ export async function handleFoodMessageButtons(interaction: ButtonInteraction) {
 
 }
 
-function disableButtons(interaction: ButtonInteraction, message: string) {
+async function disableButtons(interaction: ButtonInteraction, message: string) {
     const usedBuilder = new ActionRowBuilder<ButtonBuilder>()
     usedBuilder.addComponents(
         new ButtonBuilder().setCustomId("dummy1").setStyle(ButtonStyle.Secondary).setLabel(message).setDisabled(true),
         new ButtonBuilder().setCustomId("dummy2").setStyle(ButtonStyle.Secondary).setLabel(message).setDisabled(true))
 
-    interaction.message.edit({components: [usedBuilder]})
+    await interaction.message.edit({components: [usedBuilder]})
 }
 
 async function confirmMessage(message: Message) {
