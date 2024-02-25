@@ -30,7 +30,7 @@ import {handleFoodOrderButtons} from "./commands/orderfood.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
 import {fetchFoodOrderByUser, whoOrderedToday} from "../database/food.js"
 import {handleFoodConversation, handleFoodMessageButtons} from "./food.js"
-import {STARTING} from "../main"
+import {STARTING} from "../main.js"
 
 export let discordClient: SuperClient
 

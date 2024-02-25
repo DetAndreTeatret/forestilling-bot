@@ -88,7 +88,7 @@ export async function update(guild: Guild | null, logger: Logger) {
 
     const today = new Date()
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
-    const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)))
+    const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)), false)
     const events = await scrapeEvents(eventInfos)
 
     if (guild == null) throw new DiscordCommandError("Guild is null", "update")
