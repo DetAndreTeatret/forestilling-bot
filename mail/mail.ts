@@ -9,6 +9,7 @@ import {receiveFoodOrderResponse} from "../discord/food.js"
 import {needNotNullOrUndefined} from "../common/util.js"
 import {postUrgentDebug} from "../discord/discord.js"
 import {renderDateYYYYMMDD} from "../common/date.js"
+import {Readable} from "node:stream"
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -80,7 +81,7 @@ export async function setupMailServices() {
                     result.on("message", (message) => {
                         message.on("body", (stream) => {
                             console.log("Starting to read email...")
-                            simpleParser(stream, (err, mail) => {
+                            simpleParser(stream as Readable, (err, mail) => {
                                 if (err) {
                                     throw new Error("Encountered error while trying to parse mail: " + err)
                                 }
