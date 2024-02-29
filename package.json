@@ -13,7 +13,7 @@
   "license": "MIT",
   "dependencies": {
     "@tsconfig/node18": "18.2.2",
-    "@types/node": "20.11.22",
+    "@types/node": "20.11.23",
     "discord.js": "^14.12.1",
     "dotenv": "16.4.5",
     "html-to-text": "9.0.5",
