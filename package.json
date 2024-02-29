@@ -17,7 +17,7 @@
     "discord.js": "^14.12.1",
     "dotenv": "16.4.5",
     "html-to-text": "9.0.5",
-    "mailparser": "3.6.7",
+    "mailparser": "3.6.9",
     "node-imap": "0.9.6",
     "nodemailer": "6.9.10",
     "sqlite": "5.1.1",
