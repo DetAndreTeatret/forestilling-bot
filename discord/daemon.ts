@@ -12,14 +12,14 @@ let interval: number
 const daemonLogger = new ConsoleLogger("[daemon]")
 
 export async function startDaemon() {
-    if(daemonRunning) return
+    if (daemonRunning) return
 
     // If the first update was just ran, we want to run a deletion as well
     await checkDeletions(daemonLogger)
 
     daemonRunning = true
     let parsedInterval = await fetchSetting("daemon-interval") // Stored in ms
-    if(parsedInterval === undefined) {
+    if (parsedInterval === undefined) {
         const duration = String(ONE_HOUR_MILLISECONDS)
         await updateSetting("daemon-interval", duration)
         parsedInterval = duration
@@ -33,7 +33,7 @@ export async function startDaemon() {
 const guildsToUpdate: Guild[] = []
 
 export function addGuildToUpdate(guild: Guild) {
-    if(!guildsToUpdate.includes(guild)) guildsToUpdate.push(guild)
+    if (!guildsToUpdate.includes(guild)) guildsToUpdate.push(guild)
 }
 
 async function tickDaemon() {
@@ -47,7 +47,7 @@ async function tickDaemon() {
         await checkDeletions(daemonLogger)
     }
 
-    if(daemonRunning) {
+    if (daemonRunning) {
         setTimeout(tickDaemon, interval)
     }
 }

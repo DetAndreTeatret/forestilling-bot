@@ -215,8 +215,8 @@ export async function startDiscordClient() {
             return
         }
 
-        if(interaction.channel && interaction.isButton()) {
-            if(interaction.channel.isDMBased()) {
+        if (interaction.channel && interaction.isButton()) {
+            if (interaction.channel.isDMBased()) {
                 await handleFoodMessageButtons(interaction)
             } else {
                 await handleFoodOrderButtons(interaction)
@@ -268,7 +268,7 @@ export async function startDiscordClient() {
     })
 
     client.on(Events.MessageCreate, async (message) => {
-        if(!message.guild && message.author.id !== message.client.user.id) {
+        if (!message.guild && message.author.id !== message.client.user.id) {
             // Direct message
             const foodOrder = await fetchFoodOrderByUser(message.author.id)
             if (foodOrder && message.author.id === foodOrder.ordererSnowflake) {
@@ -280,7 +280,7 @@ export async function startDiscordClient() {
 
     // Try to recover any ongoing food convo
     const maybeOrderer = await whoOrderedToday()
-    if(maybeOrderer) {
+    if (maybeOrderer) {
         const user = await client.users.fetch(maybeOrderer)
         await user.createDM()
     }
@@ -460,7 +460,7 @@ export async function postUrgentDebug(message: string) {
     const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
     const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 
-    if(channel) await channel.send(message)
+    if (channel) await channel.send(message)
     else await new ConsoleLogger("URGENT").logWarning(message)
 }
 
@@ -468,6 +468,6 @@ export async function postDebug(message: string) {
     const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
     const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 
-    if(channel) return await channel.send(message)
+    if (channel) return await channel.send(message)
     else throw new Error("Where did the debug channel go?")
 }

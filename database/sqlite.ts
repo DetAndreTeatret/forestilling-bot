@@ -92,7 +92,7 @@ function createUpdateColumnString(columns: string[], newValues: string[]) {
     let result = ""
     for (let i = 0; i < columns.length; i++) {
         result += columns[i] + "=\"" + newValues[i] + "\""
-        if(i + 1 !== columns.length) result += ","
+        if (i + 1 !== columns.length) result += ","
     }
 
     return result

@@ -16,7 +16,7 @@ export function setupConfig() {
  */
 export function needEnvVariable(key: EnvironmentVariable) {
     const result = process.env[key]
-    if(result === undefined) {
+    if (result === undefined) {
         throw new Error("Env variable with key " + key + " not found")
     }
 

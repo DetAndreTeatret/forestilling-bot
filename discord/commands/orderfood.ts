@@ -117,7 +117,7 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
             })
 
             const error = await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]).sort(), pickupTime, phoneNumber))
-            if(error) {
+            if (error) {
                 throw error
             }
 

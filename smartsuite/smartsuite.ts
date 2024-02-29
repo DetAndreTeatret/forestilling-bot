@@ -4,7 +4,7 @@ import {isToday} from "../common/date.js"
 
 const LIST_TABLE_URL_FORMAT = "/%t/records/list/"
 
-export async function sendSmartSuiteRequest(path: string): Promise<any> {
+export async function sendSmartSuiteRequest(path: string): Promise<unknown> {
     return new Promise((resolve, reject) => {
         const req =
             https.request({
@@ -32,6 +32,7 @@ export async function sendSmartSuiteRequest(path: string): Promise<any> {
 }
 
 export async function fetchTodaysOrders(): Promise<[string, Date][]> {
+    // @ts-ignore
     const result = (await sendSmartSuiteRequest(LIST_TABLE_URL_FORMAT.replace("%t", needEnvVariable(EnvironmentVariable.SMARTSUITE_BESTILLINGER_TABLE_ID))))["items"]
 
     const todaysOrders = []

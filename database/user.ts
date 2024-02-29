@@ -61,12 +61,12 @@ export async function fetchAllUsers(columns?: string[]) {
  * Fetch a user from the database given either their SchedgeUp id or Discord snowflake
  */
 export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
-    if(schedgeUpId === undefined && discordUserSnowflake === undefined) {
+    if (schedgeUpId === undefined && discordUserSnowflake === undefined) {
         return undefined
     }
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
-    if(result === undefined) return undefined
+    if (result === undefined) return undefined
     return new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
 }
 
@@ -74,7 +74,7 @@ export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Sno
  * Delete a user given either their SchedgeUp id or Discord snowflake
  */
 export async function deleteUser(schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
-    if(schedgeUpId === undefined && discordUserSnowflake === undefined) {
+    if (schedgeUpId === undefined && discordUserSnowflake === undefined) {
         return undefined
     }
 
@@ -86,11 +86,11 @@ export async function deleteUser(schedgeUpId?: string, discordUserSnowflake?: Sn
  * have a linked account
  */
 export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Promise<Snowflake | null | undefined> {
-    if(worker.id === null) return null
+    if (worker.id === null) return null
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + worker.id + "\"", ["DiscordUserSnowflake"])
 
-    if(result === undefined) {
+    if (result === undefined) {
         await logger.logPart("SchedgeUp user " + worker.who + "(" + worker.id + ") does not have a linked Discord account")
         return undefined
     }
@@ -105,7 +105,7 @@ export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Prom
 export async function getLinkedSchedgeUpUser(member: GuildMember, logger: Logger): Promise<string | undefined> {
     const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
 
-    if(result === undefined) {
+    if (result === undefined) {
         await logger.logPart("Discord user " + member.displayName + " does not have a linked SchedgeUp account")
         return undefined
     }

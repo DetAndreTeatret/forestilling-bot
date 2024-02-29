@@ -12,13 +12,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const templateIdOrShowName = interaction.options.getString("template-id-or-show-name")
     const remove = interaction.options.getBoolean("remove")
 
-    if(!templateIdOrShowName) {
+    if (!templateIdOrShowName) {
         const shows = await fetchAllDayTimeShows()
-        if(shows.length === 0) {
+        if (shows.length === 0) {
             await interaction.reply("No shows stored as day time shows")
         } else await interaction.reply("All current day time shows template ids/show names:\n" + shows.join(", "))
-    } else if(remove) {
-        if(await isDayTimeShow(templateIdOrShowName, "null")) {
+    } else if (remove) {
+        if (await isDayTimeShow(templateIdOrShowName, "null")) {
             await removeDayTimeShow(templateIdOrShowName)
             await interaction.reply("Removed " + templateIdOrShowName.toLowerCase() + " from the list of day time shows")
         } else {
@@ -26,7 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
 
     } else {
-        if(await isDayTimeShow(templateIdOrShowName, "null")) {
+        if (await isDayTimeShow(templateIdOrShowName, "null")) {
             await interaction.reply("That template id or show name **is already** registered in the list!")
         } else {
             await addDayTimeShow(templateIdOrShowName)

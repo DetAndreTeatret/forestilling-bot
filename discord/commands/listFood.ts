@@ -38,7 +38,7 @@ export async function listFood() {
     }
 
     if (lateOrders.length > 0) {
-        if(!todaysMainOrder) throw Error("Race condition")
+        if (!todaysMainOrder) throw Error("Race condition")
         response += "\n\n:warning:Disse bestillingene har kommet inn etter bestillingen ble sendt til resturanten(Bestillingen ble sendt kl " + renderDateHHmmss(todaysMainOrder.createdAtDate) + "):warning:"
 
         for (let i = 0; i < lateOrders.length; i++) {

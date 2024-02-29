@@ -17,21 +17,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await message.logLine("Fetching user info!")
 
     let user
-    if(discordUser) {
+    if (discordUser) {
         user = await fetchUser(undefined, discordUser.id)
-        if(!user) {
+        if (!user) {
             await message.logLine("User " + discordUser.tag + " does not have a linked account :(")
             return
         }
-    } else if(schedgeUpId) {
+    } else if (schedgeUpId) {
         user = await fetchUser(schedgeUpId, undefined)
-        if(!user) {
+        if (!user) {
             await message.logLine("User " + schedgeUpId + " does not have a linked account :(")
             return
         }
     }
 
-    if(user) {
+    if (user) {
         const discordMember = await interaction.guild?.members.fetch(user.discordSnowflake)
         await message.logLine("UserID:" + user.userId + ", SchedgeUpID:" + user.schedgeUpId + ", DiscordDisplayName: " + (discordMember === undefined ? "Error fetching discord member" : discordMember.displayName))
     } else {

@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const schedgeUpId = interaction.options.getString("schedgeup-id")
     const discordUser = interaction.options.getUser("discord-user")
-    if(schedgeUpId != null) {
+    if (schedgeUpId != null) {
         const user = await fetchUser(schedgeUpId)
         if (user === undefined) {
             await interaction.reply("User with SchedgeUp id `" + schedgeUpId + "` does not have a linked user")

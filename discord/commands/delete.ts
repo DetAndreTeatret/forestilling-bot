@@ -20,7 +20,7 @@ export async function checkDeletions(logger: Logger)  {
         const channelIdsToDelete = await getDeleteableChannels()
         for await (const channelsToDeleteElement of channelIdsToDelete) {
                 const channel = await discordClient.channels.fetch(channelsToDeleteElement) as TextChannel
-                if(channel != null) {
+                if (channel != null) {
                         await logger.logLine("Deleting channel " + (channel as TextChannel).name)
                         await channel.delete("Event related to this channel has ended")
                         await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
@@ -29,7 +29,7 @@ export async function checkDeletions(logger: Logger)  {
                         await logger.logWarning("Tried to delete channel found in database that does not exist on the Discord server")
                 }
         }
-        if(!channelIdsToDelete || channelIdsToDelete.length === 0) await logger.logLine("No channels to delete")
+        if (!channelIdsToDelete || channelIdsToDelete.length === 0) await logger.logLine("No channels to delete")
 
         // Skip the full #update cycle, just remove channels we've already deleted
         discordClient.channelCache = discordClient.channelCache.filter((ids, channel) => !channelIdsToDelete.includes(channel.id))

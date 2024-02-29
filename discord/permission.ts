@@ -11,7 +11,7 @@ export enum PermissionLevel {
 export async function checkPermission(member: GuildMember, permission: PermissionLevel): Promise<boolean> {
     switch (permission) {
         case PermissionLevel.ADMINISTRATOR: {
-            if(member.user.bot || member.permissions.has("Administrator")) return true
+            if (member.user.bot || member.permissions.has("Administrator")) return true
             const adminRole = needNotNullOrUndefined(await member.guild.roles.fetch(await needSetting("admin_role_snowflake")), "adminRole")
             return (member.roles.cache.some((role, snowflake) => snowflake === adminRole.id))
         }

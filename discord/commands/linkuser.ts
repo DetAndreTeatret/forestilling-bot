@@ -16,11 +16,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const user = await fetchUser(schedgeUpId, discordUser.id)
         const message = new DiscordMessageReplyLogger(interaction)
         await message.logLine("Trying to link user " + schedgeUpId + " with " + discordUser.tag)
-        if(user !== undefined) {
+        if (user !== undefined) {
             await message.logLine("User already linked")
             return
         }
-        if(schedgeUpId.match(new RegExp("^\\d+$"))) {
+        if (schedgeUpId.match(new RegExp("^\\d+$"))) {
             await addNewUser(schedgeUpId, discordUser.id)
             await message.logLine("User linked!(" + schedgeUpId + "/" + discordUser.tag + ")")
         } else {
@@ -28,7 +28,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
             const users = await scrapeUsers()
             const user = users.find(u => u.displayName.toLowerCase().trim() === schedgeUpId.toLowerCase().trim())
-            if(user) {
+            if (user) {
                 await addNewUser(user.userId, discordUser.id)
                 await message.logLine("User linked!(" + user.userId + "(" + user.displayName + ")/" + discordUser.tag + ")")
             } else {
