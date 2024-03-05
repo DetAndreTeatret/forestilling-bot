@@ -11,9 +11,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node16"
+    "moduleResolution": "node16",
+    "sourceMap": false,
+    "declaration": false
   },
-  "exclude": [
-    "node_modules, build"
+  "include": [
+    "src"
   ]
 }
