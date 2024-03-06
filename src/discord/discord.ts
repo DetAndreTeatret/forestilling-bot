@@ -19,7 +19,7 @@ import path from "node:path"
 import fs from "node:fs"
 import {Event, Worker} from "schedgeup-scraper"
 import {getLinkedDiscordUser} from "../database/user.js"
-import {getDayNameNO} from "../common/date.js"
+import {formatLength, getDayNameNO} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
@@ -31,6 +31,7 @@ import {checkPermission, PermissionLevel} from "./permission.js"
 import {fetchFoodOrderByUser, whoOrderedToday} from "../database/food.js"
 import {handleFoodConversation, handleFoodMessageButtons} from "./food.js"
 import {STARTING} from "../main.js"
+import {pickRandomFOHMessage} from "../common/util.js"
 
 export let discordClient: SuperClient
 
@@ -97,7 +98,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         })
 
         await postEventInfo(channel, event)
-        await postCastList(channel, event.workers, dayTime)
+        await postCastList(channel, [event], dayTime)
 
         for await (const worker of event.workers) {
             const user = await getLinkedDiscordUser(worker, logger)
@@ -356,46 +357,74 @@ function createEventInfoEmbed(eventDate: Date, shows: string) {
 }
 
 /**
- * Post a cast list embed in the given channel, with the given workers
+ * Post a cast list embed in the given channel, with the workers from the given events
  */
-async function postCastList(channel: TextChannel, workers: Worker[], daytimeshow: boolean) {
-    const embedBuilder = createCastList(workers, daytimeshow)
+async function postCastList(channel: TextChannel, events: Event[], daytimeshow: boolean) {
+    const map = new Map<Event, Worker[]>()
+    for (const event1 of events) {
+        map.set(event1, event1.workers)
+    }
+    const embedBuilder = createCastList(map, daytimeshow)
     const message = await channel.send({embeds: [embedBuilder]})
     await channel.messages.pin(message)
 }
 
 /**
- * Update the cast list in a given channel, will replace the whole cast with the given workers
+ * Update the cast list in a given channel, will replace the whole cast with workers from the given events
  */
-export async function updateCastList(channel: TextChannel, workers: Worker[], daytimeshow: boolean) {
+export async function updateCastList(channel: TextChannel, events: Event[], daytimeshow: boolean) {
+    const map = new Map<Event, Worker[]>()
+    for (const event1 of events) {
+        map.set(event1, event1.workers)
+    }
     const messages = await channel.messages.fetchPinned()
     const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.CAST_LIST, messages)
-    await pinnedMessage.edit({embeds: [createCastList(workers, daytimeshow)]})
+    await pinnedMessage.edit({embeds: [createCastList(map, daytimeshow)]})
 }
 
+const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar"]
+
 /**
- * Create a cast list embed from a list of workers
+ * Create a cast list embed from a list of workers mapped to their respective events
  */
-function createCastList(workers: Worker[], daytimeshow: boolean) {
+function createCastList(workers: Map<Event, Worker[]>, daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
-    const addedWorkers: Worker[] = []
     embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld") + "?")
     if (!daytimeshow) {
         embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
     }
-    const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
-    createCastList("Husansvarlig")
-    createCastList("Frivillig")
-    createCastList("Skuespiller")
-    createCastList("Lydimprovisatør")
-    createCastList("Lysimprovisatør")
-    createCastList("Regissør")
-    const workersRest = workers.filter(w => !addedWorkers.includes(w))
-    const createCastListAgain = createCastEmbedField.bind([workersRest, [], embedBuilder])
-    const restRoles = workersRest.map(w => w.role)
-    restRoles.filter((item, index) => restRoles.indexOf(item) === index).forEach(role => {
-        createCastListAgain(role)
+
+    // First, search for all workers of roles that (probably) always work on all shows in a given show day
+    const allWorkers = Array.from(workers.values()).flat()
+    const allWorkersFiltered: Worker[] = []
+    allWorkers.forEach(worker => {
+        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who) && wholeDayRoles.includes(worker.role)) {
+            allWorkersFiltered.push(worker)
+        }
     })
+    const createWholeDayCastList = createCastEmbedField.bind([allWorkersFiltered, [], embedBuilder])
+    embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage(), inline: false})
+    createWholeDayCastList("Husansvarlig")
+    createWholeDayCastList("Frivillig")
+    createWholeDayCastList("Bar")
+
+    for (const entry of workers.entries()) {
+        const addedWorkers: Worker[] = []
+        const event = entry[0]
+        const workers = entry[1]
+        embedBuilder.addFields({name: "=====" + event.title + "=====", value: formatLength(event.eventStartTime, event.eventEndTime), inline: false})
+        const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
+        createCastList("Skuespiller")
+        createCastList("Lydimprovisatør")
+        createCastList("Lysimprovisatør")
+        createCastList("Regissør")
+        const workersRest = workers.filter(w => !addedWorkers.includes(w))
+        const createCastListAgain = createCastEmbedField.bind([workersRest, [], embedBuilder])
+        const restRoles = workersRest.map(w => w.role)
+        restRoles.filter((item, index) => restRoles.indexOf(item) === index && !wholeDayRoles.includes(item)).forEach(role => {
+            createCastListAgain(role)
+        })
+    }
 
     return embedBuilder
 }
@@ -411,7 +440,7 @@ function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: st
     if (workersFiltered.length === 0) return
     const workerList = workersFiltered.map(w => w.who).join("\n")
     workersFiltered.forEach(w => this[1].push(w))
-    this[2].addFields({name: role, value: workerList, inline: true})
+    this[2].addFields({name: "**" + role + "**", value: workerList, inline: true})
 }
 
 function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Collection<string, Message<true>>) {

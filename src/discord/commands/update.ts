@@ -5,7 +5,7 @@ import {
     SlashCommandBuilder,
     TextChannel
 } from "discord.js"
-import {getEventInfos, scrapeEvents, Event, Worker, DateRange} from "schedgeup-scraper"
+import {getEventInfos, scrapeEvents, Event, DateRange} from "schedgeup-scraper"
 import {
     ChannelMemberDifference,
     DiscordCommandError,
@@ -137,13 +137,14 @@ export async function update(guild: Guild | null, logger: Logger) {
 
                     // Update pinned info messages
                     await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
-                    await updateCastList(channel, filterDistinctWorkers(events), showDay0.dayTimeShows)
+                    await updateCastList(channel, events, showDay0.dayTimeShows)
                 }
 
             }
         } else {
 
             // Update showday
+            // TODO can be fetched with discord api instead probably
             const channel = channelsMapped.findKey((e, c) => c.id === showDay.discordChannelSnowflake)
             if (!channel) {
                 throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay.when))
@@ -164,10 +165,9 @@ export async function update(guild: Guild | null, logger: Logger) {
                 // Update members in channel
                 channelMemberDifferences.push(await client.updateMembersForChannel(channel, events, logger))
 
-
                 // Update pinned info messages
                 await updateShowsInEventInfoMessage(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
-                await updateCastList(channel, filterDistinctWorkers(events), showDay.dayTimeShows)
+                await updateCastList(channel, events, showDay.dayTimeShows)
 
             }
 
@@ -178,19 +178,6 @@ export async function update(guild: Guild | null, logger: Logger) {
     return channelMemberDifferences
 }
 
-/**
- * Returns a list of all workers present in the given events, ignoring any duplicates
- */
-function filterDistinctWorkers(events: Event[]) {
-    const allWorkers = events.map(e => e.workers).flat()
-    const allWorkersFiltered: Worker[] = []
-    allWorkers.forEach(worker => {
-        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who)) {
-            allWorkersFiltered.push(worker)
-        }
-    })
-    return allWorkersFiltered
-}
 
 async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, events: Event[]) {
     const channelsMapped: Collection<TextChannel, Event[]> = new Collection<TextChannel, Event[]>()
