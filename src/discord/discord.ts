@@ -19,7 +19,7 @@ import path from "node:path"
 import fs from "node:fs"
 import {Event, Worker} from "schedgeup-scraper"
 import {getLinkedDiscordUser} from "../database/user.js"
-import {formatLength, getDayNameNO} from "../common/date.js"
+import {formatLength, getDayNameNO, renderDatehhmm} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {selectEntry} from "../database/sqlite.js"
 import {fileURLToPath} from "url"
@@ -403,7 +403,7 @@ function createCastList(workers: Map<Event, Worker[]>, daytimeshow: boolean) {
         }
     })
     const createWholeDayCastList = createCastEmbedField.bind([allWorkersFiltered, [], embedBuilder])
-    embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage(), inline: false})
+    embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage() + "\nOppmøte for frivillige er 1 time før første forestilling", inline: false})
     createWholeDayCastList("Husansvarlig")
     createWholeDayCastList("Frivillig")
     createWholeDayCastList("Bar")
@@ -412,7 +412,9 @@ function createCastList(workers: Map<Event, Worker[]>, daytimeshow: boolean) {
         const addedWorkers: Worker[] = []
         const event = entry[0]
         const workers = entry[1]
-        embedBuilder.addFields({name: "=====" + event.title + "=====", value: formatLength(event.eventStartTime, event.eventEndTime), inline: false})
+        const callTime = "Oppmøte: " + renderDatehhmm(event.eventCallTime)
+        const showTime = "Varighet: " + formatLength(event.eventStartTime, event.eventEndTime)
+        embedBuilder.addFields({name: "=====" + event.title + "=====", value: callTime + "\n" + showTime, inline: false})
         const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
         createCastList("Skuespiller")
         createCastList("Lydimprovisatør")
