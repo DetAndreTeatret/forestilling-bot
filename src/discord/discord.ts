@@ -387,34 +387,41 @@ const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar"]
 /**
  * Create a cast list embed from a list of workers mapped to their respective events
  */
-function createCastList(workers: Map<Event, Worker[]>, daytimeshow: boolean) {
+function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld") + "?")
     if (!daytimeshow) {
         embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
     }
 
-    // First, search for all workers of roles that (probably) always work on all shows in a given show day
-    const allWorkers = Array.from(workers.values()).flat()
-    const allWorkersFiltered: Worker[] = []
-    allWorkers.forEach(worker => {
-        if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who) && wholeDayRoles.includes(worker.role)) {
-            allWorkersFiltered.push(worker)
-        }
-    })
-    const createWholeDayCastList = createCastEmbedField.bind([allWorkersFiltered, [], embedBuilder])
-    embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage() + "\nOppmøte for frivillige er 1 time før første forestilling", inline: false})
-    createWholeDayCastList("Husansvarlig")
-    createWholeDayCastList("Frivillig")
-    createWholeDayCastList("Bar")
-
-    for (const entry of workers.entries()) {
-        const addedWorkers: Worker[] = []
+    let first = true
+    for (const entry of workersAndEvents.entries()) {
         const event = entry[0]
         const workers = entry[1]
+
+        if (first) {
+            // First, search for all workers of roles that (probably) always work on all shows in a given show day
+            const allWorkers = Array.from(workersAndEvents.values()).flat()
+            const allWorkersFiltered: Worker[] = []
+            allWorkers.forEach(worker => {
+                if (!allWorkersFiltered.some(worker0 => worker0.who === worker.who) && wholeDayRoles.includes(worker.role)) {
+                    allWorkersFiltered.push(worker)
+                }
+            })
+            const createWholeDayCastList = createCastEmbedField.bind([allWorkersFiltered, [], embedBuilder])
+            const fohCallTime = new Date(event.eventStartTime)
+            fohCallTime.setHours(fohCallTime.getHours() - 1)
+            embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage() + "\nOppmøte " + renderDatehhmm(fohCallTime) + " (1 time før første show)", inline: false})
+            createWholeDayCastList("Husansvarlig")
+            createWholeDayCastList("Frivillig")
+            createWholeDayCastList("Bar")
+            first = false
+        }
+
+        const addedWorkers: Worker[] = []
         const callTime = "Oppmøte: " + renderDatehhmm(event.eventCallTime)
         const showTime = "Varighet: " + formatLength(event.eventStartTime, event.eventEndTime)
-        embedBuilder.addFields({name: "=====" + event.title + "=====", value: callTime + "\n" + showTime, inline: false})
+        embedBuilder.addFields({name: "=====\n" + event.title + "\n=====", value: callTime + "\n" + showTime, inline: false})
         const createCastList = createCastEmbedField.bind([workers, addedWorkers, embedBuilder])
         createCastList("Skuespiller")
         createCastList("Lydimprovisatør")
