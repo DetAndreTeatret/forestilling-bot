@@ -210,7 +210,7 @@ export async function startDiscordClient() {
         if (STARTING) {
             if (interaction.isRepliable()) {
                 await (interaction as RepliableInteraction)
-                    .reply("Oops! Denne botten er i startup-fasen og må vente litt med å behandle forespørselen din, prøv igjen om litt:sunglasses::+1:")
+                    .reply({content: "Oops! Denne botten er i startup-fasen og må vente litt med å behandle forespørselen din, prøv igjen om litt:sunglasses::+1:", ephemeral: true})
             }
             return
         }
