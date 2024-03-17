@@ -22,7 +22,7 @@
     "nodemailer": "6.9.11",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
-    "typescript": "5.3.3",
+    "typescript": "5.4.2",
     "schedgeup-scraper": "3.0.1",
     "app-root-path": "3.1.0"
   },
