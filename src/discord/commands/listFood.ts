@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
 import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
 import {PermissionLevel} from "../permission.js"
 import {fetchTodaysFoodOrder} from "../../database/food.js"
-import {renderDateHHmmss} from "../../common/date.js"
+import {renderDatehhmmss} from "../../common/date.js"
 
 export const permissionLevel = PermissionLevel.HUSANSVARLIG
 
@@ -25,7 +25,7 @@ export async function listFood() {
     const todaysMainOrder = await fetchTodaysFoodOrder()
 
     if (todaysMainOrder) {
-        response += "\n:man_cook:Disse bestillingene ble sendt inn til restauranten kl " + renderDateHHmmss(todaysMainOrder.createdAtDate) + ":woman_cook:"
+        response += "\n:man_cook:Disse bestillingene ble sendt inn til restauranten kl " + renderDatehhmmss(todaysMainOrder.createdAtDate) + ":woman_cook:"
     } else response += "Dagens bestillinger så langt (Ikke sendt inn til restauranten enda :detective:)"
 
     const lateOrders = []
@@ -39,11 +39,11 @@ export async function listFood() {
 
     if (lateOrders.length > 0) {
         if (!todaysMainOrder) throw Error("Race condition")
-        response += "\n\n:warning:Disse bestillingene har kommet inn etter bestillingen ble sendt til resturanten(Bestillingen ble sendt kl " + renderDateHHmmss(todaysMainOrder.createdAtDate) + "):warning:"
+        response += "\n\n:warning:Disse bestillingene har kommet inn etter bestillingen ble sendt til resturanten(Bestillingen ble sendt kl " + renderDatehhmmss(todaysMainOrder.createdAtDate) + "):warning:"
 
         for (let i = 0; i < lateOrders.length; i++) {
             const order = lateOrders[i]
-            response += "\n- " + order[0] + " (Sendt inn kl **" + renderDateHHmmss(order[1]) + "**)"
+            response += "\n- " + order[0] + " (Sendt inn kl **" + renderDatehhmmss(order[1]) + "**)"
         }
     }
 

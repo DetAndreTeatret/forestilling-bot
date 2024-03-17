@@ -23,13 +23,14 @@
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.3.3",
-    "schedgeup-scraper": "2.1.0"
+    "schedgeup-scraper": "3.0.1",
+    "app-root-path": "3.1.0"
   },
   "devDependencies": {
     "@types/html-to-text": "9.0.4",
     "@types/mailparser": "3.4.4",
     "@types/node-imap": "0.9.3",
     "@types/nodemailer": "6.4.14",
-    "eslint-config-dat": "1.1.1"
+    "eslint-config-dat": "1.1.2"
   }
 }

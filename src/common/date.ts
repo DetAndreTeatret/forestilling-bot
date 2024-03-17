@@ -16,8 +16,13 @@ export function renderDateYYYYMMDD(date: Date) {
     return "" + date.getFullYear() + "-" + ((date.getMonth() + 1) < 10 ? "0" : "")  + (date.getMonth() + 1) + "-" + (date.getDate() < 10 ? "0" : "") + date.getDate()
 }
 
-export function renderDateHHmmss(date: Date) {
+export function renderDatehhmmss(date: Date) {
     return date.toLocaleString("default", {hour: "2-digit", minute: "2-digit", second: "2-digit"})
+}
+
+export function renderDatehhmm(date: Date) {
+    return date.toLocaleString("default", {hour: "2-digit", minute: "2-digit"})
+
 }
 
 export function tomorrow(date?: Date) {
@@ -98,4 +103,31 @@ export function getDayNameNO(date: Date) {
 export function isToday(date: Date) {
     const now = new Date()
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate()
+}
+
+/**
+ * Creates a pretty string for under 24H durations in the same day.
+ * TODO account for durations past midnight..
+ * e.g. 1900-2100 (1 time og 15 minutter)
+ * @param dateFrom
+ * @param dateTo
+ */
+export function formatLength(dateFrom: Date, dateTo: Date) {
+    let lengthMinutes = (dateTo.getTime() - dateFrom.getTime()) / 1000 / 60
+    let lengthString = ""
+
+    if (lengthMinutes >= 60) {
+        let hours = 0
+        while (lengthMinutes >= 60) {
+            hours++
+            lengthMinutes-= 60
+        }
+        lengthString = hours + " time" + (hours > 1 ? "r" : "")
+    }
+
+    if (lengthMinutes > 0) {
+        lengthString += " og " + lengthMinutes + " minutt" + (lengthMinutes > 1 ? "er" : "")
+    }
+
+    return dateFrom.toLocaleString("default", {hour: "2-digit", minute: "2-digit"}) + "-" + dateTo.toLocaleString("default", {hour: "2-digit", minute: "2-digit"}) + "(" + lengthString + ")"
 }
