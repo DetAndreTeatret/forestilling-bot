@@ -17,11 +17,11 @@ export function renderDateYYYYMMDD(date: Date) {
 }
 
 export function renderDatehhmmss(date: Date) {
-    return date.toLocaleString("default", {hour: "2-digit", minute: "2-digit", second: "2-digit"})
+    return date.toLocaleString("nb-NO", {hour: "2-digit", minute: "2-digit", second: "2-digit"})
 }
 
 export function renderDatehhmm(date: Date) {
-    return date.toLocaleString("default", {hour: "2-digit", minute: "2-digit"})
+    return date.toLocaleString("nb-NO", {hour: "2-digit", minute: "2-digit"})
 
 }
 
@@ -129,5 +129,5 @@ export function formatLength(dateFrom: Date, dateTo: Date) {
         lengthString += " og " + lengthMinutes + " minutt" + (lengthMinutes > 1 ? "er" : "")
     }
 
-    return dateFrom.toLocaleString("default", {hour: "2-digit", minute: "2-digit"}) + "-" + dateTo.toLocaleString("default", {hour: "2-digit", minute: "2-digit"}) + "(" + lengthString + ")"
+    return renderDatehhmm(dateFrom) + "-" + renderDatehhmm(dateTo) + "(" + lengthString + ")"
 }
