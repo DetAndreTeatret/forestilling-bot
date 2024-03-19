@@ -390,9 +390,6 @@ const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar"]
 function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boolean) {
     const embedBuilder = new EmbedBuilder()
     embedBuilder.setTitle("Hvem gjør hva i " + (daytimeshow ? "dag" : "kveld") + "?")
-    if (!daytimeshow) {
-        embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen, 55 minutter før første forestilling")
-    }
 
     let first = true
     for (const entry of workersAndEvents.entries()) {
@@ -415,6 +412,12 @@ function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boo
             createWholeDayCastList("Husansvarlig")
             createWholeDayCastList("Frivillig")
             createWholeDayCastList("Bar")
+
+            if (!daytimeshow) {
+                fohCallTime.setMinutes(fohCallTime.getMinutes() + 5)
+                embedBuilder.setDescription("Fellessamling for alle i denne kanalen på hovedscenen " + renderDatehhmm(fohCallTime) + "\n(55 minutter før første show)")
+            }
+
             first = false
         }
 
@@ -495,6 +498,7 @@ export class DiscordCommandError extends Error {
  * Post a log message to the channel specified in .env DEBUG_CHANNEL_SNOWFLAKE
  */
 export async function postUrgentDebug(message: string) {
+    if (!discordClient) await new ConsoleLogger("URGENT").logWarning(message)
     const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
     const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 
@@ -503,6 +507,7 @@ export async function postUrgentDebug(message: string) {
 }
 
 export async function postDebug(message: string) {
+    if (!discordClient) await new ConsoleLogger("URGENT").logWarning(message)
     const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
     const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 

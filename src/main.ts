@@ -19,9 +19,9 @@ export async function start() {
     process.on("unhandledRejection", error => {
         console.error("Unhandled promise rejection!")
         postUrgentDebug(inspect(error))
-
-        console.error(error)
+        process.exit(110)
     })
+
     process.on("uncaughtException", error => {
         console.error("Uncaught exception!")
         postUrgentDebug(error.message)
@@ -31,6 +31,7 @@ export async function start() {
         console.error(error.message)
         console.error(error.cause)
         console.error(error.stack)
+        process.exit(111)
     })
 
     setupConfig()
