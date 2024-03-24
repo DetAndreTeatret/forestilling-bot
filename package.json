@@ -12,7 +12,7 @@
   "author": "Simon Mørland",
   "license": "MIT",
   "dependencies": {
-    "@tsconfig/node18": "18.2.2",
+    "@tsconfig/node18": "18.2.3",
     "@types/node": "20.11.28",
     "discord.js": "14.14.1",
     "dotenv": "16.4.5",
