@@ -3,6 +3,7 @@ import {update} from "./commands/update.js"
 import {fetchSetting, updateSetting} from "../database/settings.js"
 import {ConsoleLogger} from "../common/logging.js"
 import {checkDeletions} from "./commands/delete.js"
+import {postUrgentDebug} from "./discord.js"
 
 const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 
@@ -41,8 +42,8 @@ async function tickDaemon() {
         try {
             await update(guild, daemonLogger)
         } catch (error) {
-            console.error("Encountered error during update: " + error)
-            throw error
+            console.error(error)
+            await postUrgentDebug("Encountered error during update " + error)
         }
         await checkDeletions(daemonLogger)
     }
