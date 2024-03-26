@@ -19,7 +19,7 @@
     "html-to-text": "9.0.5",
     "mailparser": "3.6.9",
     "node-imap": "0.9.6",
-    "nodemailer": "6.9.12",
+    "nodemailer": "6.9.13",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.4.3",
