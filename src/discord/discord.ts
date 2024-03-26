@@ -189,15 +189,14 @@ export async function startDiscordClient() {
 
         if ("data" in command && "execute" in command) {
             client.commands.set(command.data.name, command)
-            console.log("Found Discord command " + command.data.name)
         } else {
-            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`)
+            console.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`)
         }
 
     }
-    /* let commands = ""
-    client.commands.forEach(name => commands = commands + name + ",")
-    console.log("Parsed " + client.commands.size + " Discord commands [" + commands + "]") */ // TODO
+
+    const parsedCommands = Array.from(client.commands.keys())
+    console.log("Found " + parsedCommands.length + " Discord commands [" + parsedCommands.join(",") + "]")
 
     client.once(Events.ClientReady, async c => {
         console.log(`Discord client ready! Logged in as ${c.user.tag}`)
