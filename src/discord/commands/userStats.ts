@@ -30,8 +30,7 @@ async function unlinkedUserStats(interaction: ChatInputCommandInteraction) {
     const guild = needNotNullOrUndefined(interaction.guild, "unlinkedUserStats#guild")
     const members = Array.from((await guild.members.fetch()).values())
     const users = await fetchAllUsers()
-    const unlinkedMembers = members.filter(async m => !users.find(u => u.discordSnowflake === m.id))
-
+    const unlinkedMembers = members.filter(m => users.find(u => u.discordSnowflake === m.id) === undefined)
     const unlinkedMembersText = unlinkedMembers.map(m => m.user.toString()).join(", ")
     await logger.logLine("Discord users that are currently not linked to an user:")
     await logger.logLine(unlinkedMembersText)
