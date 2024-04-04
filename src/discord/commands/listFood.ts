@@ -29,13 +29,17 @@ export async function listFood() {
     } else response += "Dagens bestillinger så langt (Ikke sendt inn til restauranten enda :detective:)"
 
     const lateOrders = []
+    const sentOrders = []
     for (let i = 0; i < todaysOrders.length; i++) {
         const order = todaysOrders[i]
 
         if (todaysMainOrder && todaysMainOrder.createdAtDate < order[1]) {
             lateOrders.push(order)
-        } else response += "\n- " + order[0]
+        } sentOrders.push(order[0])
     }
+
+    sentOrders.sort()
+    sentOrders.forEach(o => response += "\n- " + o)
 
     if (lateOrders.length > 0) {
         if (!todaysMainOrder) throw Error("Race condition")
