@@ -1,6 +1,6 @@
 import {GuildMember, Snowflake} from "discord.js"
 import {Worker} from "schedgeup-scraper"
-import {addEntry, deleteEntries, selectAllEntires, selectEntry} from "./sqlite.js"
+import {addEntry, deleteEntries, selectAllEntires, selectEntries, selectEntry} from "./sqlite.js"
 import {Logger} from "../common/logging.js"
 
 /**
@@ -111,4 +111,39 @@ export async function getLinkedSchedgeUpUser(member: GuildMember, logger: Logger
     }
 
     return result["SchedgeUpId"]
+}
+
+/**
+ * Add a Discord user as a guest user to some showday.
+ * @param guestMember the user to be added to the guest table
+ * @param showChannel the channel they should be guest in
+ * @returns nothing if everything went ok, null if there is no showday with the given showChannel
+ */
+export async function addShowGuest(guestMember: Snowflake, showChannel: Snowflake) {
+    const result = await selectEntry("ShowDays", "DiscordChannelSnowflake=\"" + showChannel + "\"", ["DiscordChannelSnowflake"])
+
+    if (result === undefined) return null
+
+    await addEntry("ShowDayGuests", showChannel, guestMember)
+}
+
+/**
+ * Get all guest users currently assigned to the given showDay channel.
+ * @returns empty but not undefined if no matches
+ */
+export async function getShowGuestsForChannel(showChannel: Snowflake): Promise<Snowflake[]> {
+    const result =  await selectEntries("ShowDayGuests", "DiscordChannelSnowflake=\"" + showChannel + "\"")
+
+    return result.map(e => e["DiscordUserSnowflake"])
+}
+
+export async function deleteShowGuest(guestMember: Snowflake, showChannel: Snowflake) {
+    await deleteEntries("ShowDayGuests", "DiscordChannelSnowflake=\"" + showChannel + "\" AND DiscordUserSnowflake=\"" + guestMember + "\"")
+}
+
+/**
+ * Delete all guest entries for a given channel, should be called when deleting a channel.
+ */
+export async function deleteShowGuestsForChannel(showChannel: Snowflake) {
+    await deleteEntries("ShowDayGuests", "DiscordChannelSnowflake=\"" + showChannel + "\"")
 }

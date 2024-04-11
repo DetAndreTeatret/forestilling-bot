@@ -112,3 +112,25 @@ export class ConsoleLogger implements Logger {
     }
 
 }
+
+/**
+ * A logger which does nothing with logs
+ */
+export class DummyLogger implements Logger {
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    logLine(part: string): Promise<void> {
+        return Promise.resolve(undefined)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    logPart(part: string): Promise<void> {
+        return Promise.resolve(undefined)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    logWarning(part: string): Promise<void> {
+        return Promise.resolve(undefined)
+    }
+
+}

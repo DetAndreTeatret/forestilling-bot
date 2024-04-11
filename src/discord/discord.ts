@@ -18,7 +18,7 @@ import {
 import path from "node:path"
 import fs from "node:fs"
 import {Event, Worker} from "schedgeup-scraper"
-import {getLinkedDiscordUser} from "../database/user.js"
+import {getLinkedDiscordUser, getShowGuestsForChannel} from "../database/user.js"
 import {formatLength, getDayNameNO, renderDatehhmm} from "../common/date.js"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
 import {selectEntry} from "../database/sqlite.js"
@@ -155,8 +155,10 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
             membersAdded.push(fetchedMember)
         }
 
+        const guestUsersForChannel = await getShowGuestsForChannel(channel.id)
+
         const usersToRemove = usersFromDiscord.filter((value) => {
-            return !usersFromSchedgeUp.includes(value.id)
+            return !usersFromSchedgeUp.includes(value.id) && !guestUsersForChannel.includes(value.id)
         })
 
         const membersRemoved: GuildMember[] = []
