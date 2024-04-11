@@ -4,6 +4,7 @@ import {getDeleteableChannels} from "../../database/discord.js"
 import {discordClient} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
 import {deleteFoodChannelEntries} from "../../database/food.js"
+import {deleteShowGuestsForChannel} from "../../database/user.js"
 
 export const data = new SlashCommandBuilder()
     .setName("delete")
@@ -25,6 +26,7 @@ export async function checkDeletions(logger: Logger)  {
                         await channel.delete("Event related to this channel has ended")
                         await deleteEntries("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
                         await deleteFoodChannelEntries(channel)
+                        await deleteShowGuestsForChannel(channel.id)
                 } else {
                         await logger.logWarning("Tried to delete channel found in database that does not exist on the Discord server")
                 }
