@@ -1,15 +1,12 @@
 import sqlite3 from "sqlite3"
 import {open} from "sqlite"
 import path from "node:path"
-import {fileURLToPath} from "url"
+import appRootPath from "app-root-path"
 
 sqlite3.verbose()
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 const db = await open({
-    filename: path.join(__dirname, "database.db"),
+    filename: path.join(appRootPath.toString(), "database.db"),
     driver: sqlite3.cached.Database
 })
 

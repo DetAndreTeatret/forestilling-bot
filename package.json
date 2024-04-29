@@ -2,11 +2,11 @@
   "name": "forestilling-bot",
   "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
-    "start": "rm -r build && npm run lint && tsc && node build/main.js",
+    "start": "rm -r -f build && npm run lint && tsc && node build/main.js",
     "lint": "eslint . --ext .ts",
     "lintFix": "eslint . --ext .ts --fix",
     "transpile": "tsc",
-    "deployCommands": "rm -r build && tsc && node ./build/discord/deployCommands.js"
+    "deployCommands": "rm -r -f build && tsc && node ./build/discord/deployCommands.js"
   },
   "type": "module",
   "author": "Simon Mørland",
