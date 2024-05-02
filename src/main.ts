@@ -16,21 +16,18 @@ export async function start() {
     console.log("Edition: " + EDITION)
 
     // An attempt to log unhandled rejections and errors to discord debug channels
-    process.on("unhandledRejection", error => {
+    process.on("unhandledRejection", async error => {
         console.error("Unhandled promise rejection!")
-        postUrgentDebug(inspect(error))
+        await postUrgentDebug(inspect(error))
         process.exit(110)
     })
 
-    process.on("uncaughtException", error => {
+    process.on("uncaughtException", async error => {
         console.error("Uncaught exception!")
-        postUrgentDebug(error.message)
-        postUrgentDebug(inspect(error.cause))
-        if (error.stack) postUrgentDebug(error.stack)
+        await postUrgentDebug(error.message)
+        await postUrgentDebug(inspect(error.cause))
+        if (error.stack) await postUrgentDebug(error.stack)
 
-        console.error(error.message)
-        console.error(error.cause)
-        console.error(error.stack)
         process.exit(111)
     })
 
