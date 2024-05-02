@@ -104,6 +104,6 @@ export async function fetchTodaysFoodOrder() {
  * Should be called when a channel is deleted to remove the entry from this table as well
  * @param channel the channel that is to be deleted
  */
-export async function deleteFoodChannelEntries(channel: TextChannel) {
-    await deleteEntries("FoodOrdered", "DiscordChannelSnowflake=\"" + channel.id + "\"")
+export async function deleteFoodChannelEntries(channel: Snowflake) {
+    await deleteEntries("FoodOrdered", "DiscordChannelSnowflake=\"" + channel + "\"")
 }
