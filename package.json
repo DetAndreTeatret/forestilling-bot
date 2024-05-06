@@ -29,7 +29,7 @@
     "@types/html-to-text": "9.0.4",
     "@types/mailparser": "3.4.4",
     "@types/node-imap": "0.9.3",
-    "@types/nodemailer": "6.4.14",
+    "@types/nodemailer": "6.4.15",
     "eslint-config-dat": "1.1.3"
   }
 }
