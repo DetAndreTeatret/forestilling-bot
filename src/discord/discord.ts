@@ -94,7 +94,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
             name: getDayNameNO(event.eventStartTime) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
             type: ChannelType.GuildText,
             topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
-            parent: (await getCategory(guild)).id,
+            parent: (await getShowsCategory(guild)).id,
         })
 
         await postEventInfo(channel, event)
@@ -291,7 +291,7 @@ export async function startDiscordClient() {
     return client
 }
 
-async function getCategory(guild: Guild) {
+async function getShowsCategory(guild: Guild) {
     const storedCategoryId = await selectEntry("Settings", "SettingKey=\"category_id\"", ["SettingValue"])
 
     let category: CategoryChannel
@@ -457,10 +457,23 @@ function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: st
 }
 
 function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Collection<string, Message<true>>) {
-    const pinnedMessage = pinnedMessages.at(message)
+    const offset = pinnedMessages.size - SYSTEM_PINNED_MESSAGES_AMOUNT
+    const pinnedMessage = pinnedMessages.at(message + offset)
     if (!pinnedMessage) {
         throw new Error("Could not find pinned embed message " + message)
     } else return pinnedMessage
+}
+
+// Used in case a user pins a message in show channel after creation as an offset since pinned messages is fetched with an index
+// Should be incremented if any enums is added in PinnedEmbedMessages
+const SYSTEM_PINNED_MESSAGES_AMOUNT = 2
+
+/**
+ * Pinned messages are fetched from newest to oldest. (First in, last out)
+ */
+enum PinnedEmbedMessages {
+    CAST_LIST,
+    EVENT_STATUS
 }
 
 /**
@@ -475,23 +488,6 @@ export class ChannelMemberDifference {
         this.channel = channel
         this.membersAdded = membersAdded
         this.membersRemoved = membersRemoved
-    }
-}
-
-/**
- * Pinned messages are fetched from newest to oldest. (First in, last out)
- */
-enum PinnedEmbedMessages {
-    CAST_LIST,
-    EVENT_STATUS
-}
-
-export class DiscordCommandError extends Error {
-    private where: string
-
-    constructor(message: string, where: string) {
-        super(message)
-        this.where = where
     }
 }
 

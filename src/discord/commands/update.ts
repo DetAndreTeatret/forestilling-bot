@@ -8,7 +8,6 @@ import {
 import {getEventInfos, scrapeEvents, Event, DateRange} from "schedgeup-scraper"
 import {
     ChannelMemberDifference,
-    DiscordCommandError,
     SuperClient,
     updateCastList,
     updateShowsInEventInfoMessage
@@ -24,6 +23,7 @@ import {
 } from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
 import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
+import {needNotNullOrUndefined} from "../../common/util.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -31,15 +31,14 @@ export const data = new SlashCommandBuilder()
     .setDescription("Update show channels in Discord(delete/create/update")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    if (interaction.guild == null) {
-        throw new DiscordCommandError("Guild is null", "update/#execute")
-    }
+    const guild = needNotNullOrUndefined(interaction.guild, "guild")
 
     // First time stuff
-    addGuildToUpdate(interaction.guild)
+    addGuildToUpdate(guild)
     const roleSnowflake = await fetchSetting("admin_role_snowflake")
     if (roleSnowflake === undefined) {
-        const role = await interaction.guild.roles.create({
+        console.info("Did not find admin role! Creating a new one...")
+        const role = await guild.roles.create({
             name: "SchedgeUps Utvalgte",
             color: "Red",
             reason: "Admin role for SchedgeUpBot",
@@ -53,7 +52,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const logger = new DiscordMessageReplyLogger(interaction)
     await logger.logLine("Starting update!")
     try {
-        const memberDifference = await update(interaction.guild, logger)
+        const guild = needNotNullOrUndefined(interaction.guild, "guild")
+        const memberDifference = await update(guild, logger)
         if (interaction.channel !== null) await interaction.channel.send(formatMemberDifference(memberDifference))
     } catch (error) {
         await logger.logWarning("Encountered error during update + " + error)
@@ -83,7 +83,7 @@ function formatMemberDifference(differences: ChannelMemberDifference[]) {
  * Look for changes in SchedgeUp
  * @return All members removed or added during the update
  */
-export async function update(guild: Guild | null, logger: Logger) {
+export async function update(guild: Guild, logger: Logger) {
     await logger.logLine("Fetching SchedgeUp Events...")
 
     const today = new Date()
@@ -91,7 +91,6 @@ export async function update(guild: Guild | null, logger: Logger) {
     const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)), false)
     const events = await scrapeEvents(eventInfos)
 
-    if (guild == null) throw new DiscordCommandError("Guild is null", "update")
     const client = guild.client as SuperClient
 
     await logger.logLine("Mapping currently running Discord channels...")
