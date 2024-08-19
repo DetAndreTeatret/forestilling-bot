@@ -10,6 +10,15 @@ import {needNotNullOrUndefined} from "../common/util.js"
 import {postUrgentDebug} from "../discord/discord.js"
 import {renderDateYYYYMMDD} from "../common/date.js"
 import {Readable} from "node:stream"
+import {google} from "googleapis"
+import {authenticate} from "@google-cloud/local-auth"
+import path from "node:path"
+import appRootPath from "app-root-path"
+
+const gmail = google.gmail({
+    version: "v1",
+    auth: needEnvVariable(EnvironmentVariable.GOOGLE_API_KEY)
+})
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -38,113 +47,57 @@ import {Readable} from "node:stream"
 //                  /            )  (            \
 //                  `==========='    `==========='  hjw
 
-
 /**
  * Prepare all mail related shenanigans
  */
 export async function setupMailServices() {
 
-    // /==============\
-    // I     IMAP     I
-    // \==============/
-
-    imap = new Connection({
-        user: needEnvVariable(EnvironmentVariable.EMAIL_USERNAME),
-        password: needEnvVariable(EnvironmentVariable.EMAIL_PASSWORD),
-        host: needEnvVariable(EnvironmentVariable.EMAIL_IMAP_HOST),
-        port: 993,
-        tls: true
+    const auth = await authenticate({
+        keyfilePath: path.join(appRootPath.path, "google_secrets.json"),
+        scopes: [
+            "https://mail.google.com/",
+            "https://www.googleapis.com/auth/gmail.metadata",
+            "https://www.googleapis.com/auth/gmail.modify",
+            "https://www.googleapis.com/auth/gmail.readonly",
+        ],
     })
 
-    const imapReady = new Promise((resolve, reject) => {
-        imap.on("ready", () => {
-            openInbox((error, mailbox) => {
-                if (error || !mailbox.permFlags.includes("\\Seen")) {
-                    reject("Encountered error while trying to start IMAP server: " + (error === undefined ? "Missing flags" : error))
-                } else {
-                    console.log("IMAP Server up and running (name:" + mailbox.name + ",readOnly:" + mailbox.readOnly + ")")
-                    resolve(true)
-                }
-            })
-        })
-    })
+    google.options({auth})
 
-    imap.on("mail", () => {
-        openInbox((error) => {
-            if (error) {
-                throw new Error("Encountered error while trying to connect to IMAP server: " + error)
-            } else {
-                imap.search(["UNSEEN", ["FROM", needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER)]], (error, uids) => {
-                    if (error) throw new Error("Error while searching through new mails: " + error)
-                    console.log("Email received from restaurant! Fetching...")
-                    const result = imap.fetch(uids, {markSeen: true, bodies: ""})
-                    result.on("message", (message) => {
-                        message.on("body", (stream) => {
-                            console.log("Starting to read email...")
-                            simpleParser(stream as unknown as Readable, (err, mail) => {
-                                if (err) {
-                                    throw new Error("Encountered error while trying to parse mail: " + err)
-                                }
-                                console.log("Successfully parsed email!")
-                                if (mail.text) {
-                                    receiveFoodMail(mail.text, needNotNullOrUndefined(mail.messageId, "mail message id text"), needNotNullOrUndefined(mail.subject, "mail subject text")).then(() => console.log("Mail processed(text)"))
-                                } else if (mail.html) {
-                                    receiveFoodMail(htmlToText(mail.html), needNotNullOrUndefined(mail.messageId, "mail message id html"), needNotNullOrUndefined(mail.subject, "mail subject html")).then(() => console.log("Mail processed(html)"))
-                                } else {
-                                    throw new Error("Unable to extract text from mail")
-                                }
-                            })
-                        })
-                    })
-                    result.once("end", () => {
-                        imap.addFlags(uids, "\\\\Seen", () => {
-                            // For the current mail host it seems to always throw an error while setting this flag
-                            // even though it's actually working(marked as seen).
-                            // For now, we just ignore the error, praying that the false positive never will be true
-                        })
-                    })
-                })
-            }
-        })
-    })
-
-    imap.on("error", function (err) {
-        console.error("IMAP Error: " + err)
-    })
-
-    imap.on("end", function () {
-        console.error("IMAP connection closed?")
-    })
-
-    imap.connect()
-
-    // /==============\
-    // I     SMTP     I
-    // \==============/
-
-    smtp = nodemailer.createTransport({
-        host: needEnvVariable(EnvironmentVariable.EMAIL_SMTP_HOST),
-        port: 587,
-        secure: false, // upgrade later with STARTTLS ???
-        auth: {
-            user: needEnvVariable(EnvironmentVariable.EMAIL_USERNAME),
-            pass: needEnvVariable(EnvironmentVariable.EMAIL_PASSWORD),
+    const res = await gmail.users.watch({
+        userId: "me",
+        requestBody: {
+            // Replace with `projects/${PROJECT_ID}/topics/${TOPIC_NAME}`
+            topicName: "projects/matmail-433010/topics/gmail",
         },
     })
-    console.log("SMTP Transport created!")
+    console.log(res.data)
 
-    await imapReady
 }
-
-function openInbox(callback: (error: Error, mailbox: Connection.Box) => void) {
-    imap.openBox("INBOX", false, callback)
-}
-
-let imap: Connection
-
-let smtp: nodemailer.Transporter<SentMessageInfo>
 
 export async function sendFoodMail(body: string): Promise<Error | null> {
+    // Obtain user credentials to use for the request
+    const auth = await authenticate({
+        keyfilePath: path.join(__dirname, '../oauth2.keys.json'),
+        scopes: [
+            'https://mail.google.com/',
+            'https://www.googleapis.com/auth/gmail.modify',
+            'https://www.googleapis.com/auth/gmail.compose',
+            'https://www.googleapis.com/auth/gmail.send',
+        ],
+    })
+
+    google.options({auth})
+
+
+    const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+
+        },
+    })
+    console.log(res.data)
+
     return new Promise((resolve) => {
         const message = {
             from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),

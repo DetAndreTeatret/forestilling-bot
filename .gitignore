@@ -1,5 +1,6 @@
 #Environment files
 .env
+google_secrets.json
 
 #TypeScript generated files
 *.js
