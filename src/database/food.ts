@@ -68,13 +68,19 @@ export async function whoOrderedToday() {
 }
 
 /**
- * Call to update conversation info, should be called when restaurant replies to the initial food order
+ * Call to update conversation info, should be called every time the restaurant replies in the food order convo
  * @param orderer the user which originally ordered the food
  * @param mailConvoID the Message-ID of the first reply
  * @param mailConvoSubject the subject of the mail thread
  */
 export async function updateFoodConversation(orderer: Snowflake, mailConvoID: string, mailConvoSubject: string) {
-    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", ["MailConvoID", "MailConvoSubject"], [mailConvoID, mailConvoSubject])
+    const result = await selectEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", ["MailConvoID"])
+    if (result === undefined) throw Error("Invalid food convo state, tried to update non-existing convo")
+
+    const ids = result["MailConvoID"].split(",")
+    ids.push(mailConvoID)
+
+    await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", ["MailConvoID", "MailConvoSubject"], [ids.join(","), mailConvoSubject])
 }
 
 /**

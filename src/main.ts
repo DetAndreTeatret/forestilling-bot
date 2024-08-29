@@ -1,9 +1,8 @@
-import {postUrgentDebug, startDiscordClient} from "./discord/discord.js"
+import {startDiscordClient} from "./discord/discord.js"
 import {createTables} from "./database/sqlite.js"
 import {setupConfig} from "./common/config.js"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
-import {inspect} from "node:util"
 
 start().then(() => console.log("Startup finished, use /update in Discord to start update/delete daemon"))
 
@@ -15,19 +14,16 @@ export async function start() {
     console.log("Starting forestilling-bot...")
     console.log("Edition: " + EDITION)
 
-    // An attempt to log unhandled rejections and errors to discord debug channels
+    // An attempt to log unhandled rejections and errors more effectively
     process.on("unhandledRejection", async error => {
         console.error("Unhandled promise rejection!")
-        await postUrgentDebug(inspect(error))
+        console.dir(error, {depth: 30})
         process.exit(110)
     })
 
     process.on("uncaughtException", async error => {
         console.error("Uncaught exception!")
-        await postUrgentDebug(error.message)
-        await postUrgentDebug(inspect(error.cause))
-        if (error.stack) await postUrgentDebug(error.stack)
-
+        console.dir(error, {depth: 30})
         process.exit(111)
     })
 

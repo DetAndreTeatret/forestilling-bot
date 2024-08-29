@@ -18,7 +18,7 @@ export async function createTables() {
     await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(40), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
     await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
-    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), MailConvoID varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)")
+    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), MailConvoID varchar(100)/*TODO Ideally all IDs are stored in a different table, we dont know how many replies there will be... */, MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)")
     await db.exec("CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))")
     console.log("Database tables up and running")
 }
