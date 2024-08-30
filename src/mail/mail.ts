@@ -14,7 +14,7 @@ import {OAuth2Client} from "google-auth-library"
 import {PubSub} from "@google-cloud/pubsub"
 import fs from "node:fs"
 import {simpleParser} from "mailparser"
-import {startDaemon} from "./deamon.js"
+import {startDaemon} from "./daemon.js"
 
 export let gmail: APIEndpoint
 
