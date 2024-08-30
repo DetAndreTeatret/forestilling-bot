@@ -14,8 +14,9 @@ import {OAuth2Client} from "google-auth-library"
 import {PubSub} from "@google-cloud/pubsub"
 import fs from "node:fs"
 import {simpleParser} from "mailparser"
+import {startDaemon} from "./deamon.js"
 
-let gmail: APIEndpoint
+export let gmail: APIEndpoint
 
 const CREDENTIALS_PATH = path.join(appRootPath.path, "google_creds.json")
 const TOKEN_PATH = path.join(appRootPath.path, "google_token.json")
@@ -65,13 +66,15 @@ export async function setupMailServices() {
         userId: "me",
     })
 
-    await gmail.users.watch({ // TODO Figure out how to refresh this
+    await gmail.users.watch({
         userId: "me",
         requestBody: {
             topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmail",
             labelIds: ["INBOX"],
         },
     })
+
+    startDaemon() // This refreshes the watch request once every day
 
     const pubsub = new PubSub({projectId: needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID), keyFilename: path.join(appRootPath.path, "google_token.json")})
     const sub = pubsub.subscription("gmail-sub")
