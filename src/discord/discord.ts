@@ -383,7 +383,7 @@ export async function updateCastList(channel: TextChannel, events: Event[], dayt
     await pinnedMessage.edit({embeds: [createCastList(map, daytimeshow)]})
 }
 
-const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar", "Bakvakt"]
+const wholeDayRoles = ["Husansvarlig", "Frivillig", "Bar", "Bakvakt"]
 
 /**
  * Create a cast list embed from a list of workers mapped to their respective events
@@ -410,9 +410,7 @@ function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boo
             const fohCallTime = new Date(event.eventStartTime)
             fohCallTime.setHours(fohCallTime.getHours() - 1)
             embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage() + "\nOppmøte " + renderDatehhmm(fohCallTime) + " (1 time før første show)", inline: false})
-            createWholeDayCastList("Husansvarlig")
-            createWholeDayCastList("Frivillig")
-            createWholeDayCastList("Bar")
+            wholeDayRoles.forEach(role => createWholeDayCastList(role))
 
             if (!daytimeshow) {
                 fohCallTime.setMinutes(fohCallTime.getMinutes() + 5)
