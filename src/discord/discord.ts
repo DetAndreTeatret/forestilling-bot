@@ -383,7 +383,7 @@ export async function updateCastList(channel: TextChannel, events: Event[], dayt
     await pinnedMessage.edit({embeds: [createCastList(map, daytimeshow)]})
 }
 
-const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar"]
+const wholeDayRoles = ["Frivillig", "Husansvarlig", "Bar", "Bakvakt"]
 
 /**
  * Create a cast list embed from a list of workers mapped to their respective events

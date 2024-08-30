@@ -81,7 +81,7 @@ export async function setupMailServices() {
                     result.on("message", (message) => {
                         message.on("body", (stream) => {
                             console.log("Starting to read email...")
-                            simpleParser(stream as Readable, (err, mail) => {
+                            simpleParser(stream as unknown as Readable, (err, mail) => {
                                 if (err) {
                                     throw new Error("Encountered error while trying to parse mail: " + err)
                                 }
