@@ -55,12 +55,11 @@ const TOKEN_PATH = path.join(appRootPath.path, "google_token.json")
 export async function setupMailServices() {
     const auth = await authorize()
 
-    gmail = google.gmail({
-        version: "v1",
-        auth: auth
-    })
-
     google.options({auth: auth})
+
+    gmail = google.gmail({
+        version: "v1"
+    })
 
     await gmail.users.stop({
         userId: "me",
