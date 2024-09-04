@@ -30,6 +30,6 @@
     "@types/mailparser": "3.4.4",
     "@types/node-imap": "0.9.3",
     "@types/nodemailer": "6.4.15",
-    "eslint-config-dat": "1.1.4"
+    "eslint-config-dat": "1.1.5"
   }
 }
