@@ -1,4 +1,5 @@
 import {
+    ChannelType,
     ChatInputCommandInteraction,
     Collection,
     Guild,
@@ -54,7 +55,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     try {
         const guild = needNotNullOrUndefined(interaction.guild, "guild")
         const memberDifference = await update(guild, logger)
-        if (interaction.channel !== null) await interaction.channel.send(formatMemberDifference(memberDifference))
+        const channel = interaction.channel
+        if (channel !== null && channel.type === ChannelType.GuildText) await channel.send(formatMemberDifference(memberDifference))
     } catch (error) {
         await logger.logWarning("Encountered error during update + " + error)
         throw error
