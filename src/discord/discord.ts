@@ -407,8 +407,13 @@ function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boo
                 }
             })
             const createWholeDayCastList = createCastEmbedField.bind([allWorkersFiltered, [], embedBuilder])
+
             const fohCallTime = new Date(event.eventStartTime)
             fohCallTime.setHours(fohCallTime.getHours() - 1)
+            if (daytimeshow) {
+                fohCallTime.setMinutes(fohCallTime.getMinutes() - 30)
+            }
+
             embedBuilder.addFields({name: "<>-<>-<>" + "Front of House" + "<>-<>-<>", value: pickRandomFOHMessage() + "\nOppmøte " + renderDatehhmm(fohCallTime) + " (1 time før første show)", inline: false})
             wholeDayRoles.forEach(role => createWholeDayCastList(role))
 
