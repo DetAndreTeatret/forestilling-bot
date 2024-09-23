@@ -338,7 +338,7 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
 export async function postEventInfo(channel: TextChannel, eventDate: Date, showTitles: string) {
     const embedToPost = createEventInfoEmbed(eventDate, showTitles)
     const id = "EVENT_STATUS"
-    if (SYSTEM_PINNED_MESSAGES_INDEXES.includes(id)) {
+    if (SYSTEM_PINNED_MESSAGES.includes(id)) {
         const sentMessage = await channel.send({embeds: [embedToPost]})
         await pinSystemMessage(sentMessage, channel, id)
     } else {
@@ -371,7 +371,7 @@ export async function postCastList(channel: TextChannel, events: Event[], daytim
     }
     const embedToSend = createCastList(map, daytimeshow)
     const id = "CAST_LIST"
-    if (SYSTEM_PINNED_MESSAGES_INDEXES.includes(id)) {
+    if (SYSTEM_PINNED_MESSAGES.includes(id)) {
         const pinnedMessage = await fetchSystemMessage(channel, id)
         await pinnedMessage.edit({embeds: [embedToSend]})
     } else {
@@ -456,23 +456,23 @@ function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: st
     this[2].addFields({name: "**" + role + "**", value: workerList, inline: true})
 }
 
-// Used in case a user pins a message in show channel after creation as an offset since pinned messages is fetched with an index
-let SYSTEM_PINNED_MESSAGES_AMOUNT = 0
-
-const SYSTEM_PINNED_MESSAGES_INDEXES: string[] = []
+const SYSTEM_PINNED_MESSAGES: string[] = []
 
 async function pinSystemMessage(message: Message, channel: TextChannel, id: string) {
     await channel.messages.pin(message)
     // Since pinned messages are fetched from newest to oldest the indexes have to match this logic (FILO)
-    SYSTEM_PINNED_MESSAGES_INDEXES.unshift(id)
-    SYSTEM_PINNED_MESSAGES_AMOUNT++
+    // (Backwards since we care about indexes)
+    SYSTEM_PINNED_MESSAGES.unshift(id)
 }
 
 async function fetchSystemMessage(channel: TextChannel, id: string) {
     // Pinned messages are fetched from newest to oldest. (First in, last out)
     const pinnedMessages = await channel.messages.fetchPinned()
-    const offset = pinnedMessages.size - SYSTEM_PINNED_MESSAGES_AMOUNT
-    const message = SYSTEM_PINNED_MESSAGES_INDEXES.indexOf(id)
+
+    // Used in case a user pins a message in show channel after creation as an offset since pinned messages is fetched with an index
+    // We can assume the pinned messages are always at the bottom since they are sent before any members get a chance to
+    const offset = pinnedMessages.size - SYSTEM_PINNED_MESSAGES.length
+    const message = SYSTEM_PINNED_MESSAGES.indexOf(id)
     const pinnedMessage = pinnedMessages.at(message + offset)
     if (!pinnedMessage) {
         throw new Error("Could not find pinned embed message " + message)
