@@ -97,7 +97,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
             parent: (await getShowsCategory(guild)).id,
         })
 
-        await postEventInfo(channel, event)
+        await postEventInfo(channel, event.eventStartTime, event.title)
         await postCastList(channel, [event], dayTime)
 
         for await (const worker of event.workers) {
@@ -295,7 +295,9 @@ async function getShowsCategory(guild: Guild) {
     const storedCategoryId = await selectEntry("Settings", "SettingKey=\"category_id\"", ["SettingValue"])
 
     let category: CategoryChannel
-    if (storedCategoryId === undefined) {
+    if (storedCategoryId !== undefined) {
+        category = await guild.channels.fetch(storedCategoryId["SettingValue"]) as CategoryChannel
+    } else {
         // No category yet, create one please
         const adminRoleSnowflake = await needSetting("admin_role_snowflake")
         category = await guild.channels.create({
@@ -314,8 +316,6 @@ async function getShowsCategory(guild: Guild) {
         })
 
         await updateSetting("category_id", category.id)
-    } else {
-        category = await guild.channels.fetch(storedCategoryId["SettingValue"]) as CategoryChannel
     }
 
     return category
@@ -332,18 +332,21 @@ export async function removeMemberFromChannel(channel: TextChannel, member: Guil
 }
 
 /**
- * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
+ * Create an event status message for the current channel.
+ * If the message has been sent for the given channel it will update the existing message
  */
-async function postEventInfo(channel: TextChannel, event: Event) {
-    const embedToPost = createEventInfoEmbed(event.eventStartTime, event.title)
-    const sentMessage = await channel.send({embeds: [embedToPost]})
-    await channel.messages.pin(sentMessage)
-}
-
-export async function updateShowsInEventInfoMessage(channel: TextChannel, eventDate: Date, showTitles: string) {
-    const messages = await channel.messages.fetchPinned()
-    const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.EVENT_STATUS, messages)
-    await pinnedMessage.edit({embeds: [createEventInfoEmbed(eventDate, showTitles)]})
+export async function postEventInfo(channel: TextChannel, eventDate: Date, showTitles: string) {
+    const embedToPost = createEventInfoEmbed(eventDate, showTitles)
+    const id = "EVENT_STATUS"
+    if (SYSTEM_PINNED_MESSAGES_INDEXES.includes(id)) {
+        const sentMessage = await channel.send({embeds: [embedToPost]})
+        await pinSystemMessage(sentMessage, channel, id)
+    } else {
+        const pinnedMessage = await fetchSystemMessage(channel, id)
+        // Try to avoid updating original message if no titles have changed
+        if (pinnedMessage.embeds[0].title!.match(showTitles)) return
+        await pinnedMessage.edit({embeds: [embedToPost]})
+    }
 }
 
 function createEventInfoEmbed(eventDate: Date, shows: string) {
@@ -359,28 +362,22 @@ function createEventInfoEmbed(eventDate: Date, shows: string) {
 
 /**
  * Post a cast list embed in the given channel, with the workers from the given events
+ * If the cast list has been sent for the given channel it will update the existing message
  */
-async function postCastList(channel: TextChannel, events: Event[], daytimeshow: boolean) {
+export async function postCastList(channel: TextChannel, events: Event[], daytimeshow: boolean) {
     const map = new Map<Event, Worker[]>()
     for (const event1 of events) {
         map.set(event1, event1.workers)
     }
-    const embedBuilder = createCastList(map, daytimeshow)
-    const message = await channel.send({embeds: [embedBuilder]})
-    await channel.messages.pin(message)
-}
-
-/**
- * Update the cast list in a given channel, will replace the whole cast with workers from the given events
- */
-export async function updateCastList(channel: TextChannel, events: Event[], daytimeshow: boolean) {
-    const map = new Map<Event, Worker[]>()
-    for (const event1 of events) {
-        map.set(event1, event1.workers)
+    const embedToSend = createCastList(map, daytimeshow)
+    const id = "CAST_LIST"
+    if (SYSTEM_PINNED_MESSAGES_INDEXES.includes(id)) {
+        const pinnedMessage = await fetchSystemMessage(channel, id)
+        await pinnedMessage.edit({embeds: [embedToSend]})
+    } else {
+        const message = await channel.send({embeds: [embedToSend]})
+        await pinSystemMessage(message, channel, id)
     }
-    const messages = await channel.messages.fetchPinned()
-    const pinnedMessage = findPinnedEmbedMessage(PinnedEmbedMessages.CAST_LIST, messages)
-    await pinnedMessage.edit({embeds: [createCastList(map, daytimeshow)]})
 }
 
 const wholeDayRoles = ["Husansvarlig", "Frivillig", "Bar", "Bakvakt"]
@@ -459,24 +456,27 @@ function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: st
     this[2].addFields({name: "**" + role + "**", value: workerList, inline: true})
 }
 
-function findPinnedEmbedMessage(message: PinnedEmbedMessages, pinnedMessages: Collection<string, Message<true>>) {
+// Used in case a user pins a message in show channel after creation as an offset since pinned messages is fetched with an index
+let SYSTEM_PINNED_MESSAGES_AMOUNT = 0
+
+const SYSTEM_PINNED_MESSAGES_INDEXES: string[] = []
+
+async function pinSystemMessage(message: Message, channel: TextChannel, id: string) {
+    await channel.messages.pin(message)
+    // Since pinned messages are fetched from newest to oldest the indexes have to match this logic (FILO)
+    SYSTEM_PINNED_MESSAGES_INDEXES.unshift(id)
+    SYSTEM_PINNED_MESSAGES_AMOUNT++
+}
+
+async function fetchSystemMessage(channel: TextChannel, id: string) {
+    // Pinned messages are fetched from newest to oldest. (First in, last out)
+    const pinnedMessages = await channel.messages.fetchPinned()
     const offset = pinnedMessages.size - SYSTEM_PINNED_MESSAGES_AMOUNT
+    const message = SYSTEM_PINNED_MESSAGES_INDEXES.indexOf(id)
     const pinnedMessage = pinnedMessages.at(message + offset)
     if (!pinnedMessage) {
         throw new Error("Could not find pinned embed message " + message)
     } else return pinnedMessage
-}
-
-// Used in case a user pins a message in show channel after creation as an offset since pinned messages is fetched with an index
-// Should be incremented if any enums is added in PinnedEmbedMessages
-const SYSTEM_PINNED_MESSAGES_AMOUNT = 2
-
-/**
- * Pinned messages are fetched from newest to oldest. (First in, last out)
- */
-enum PinnedEmbedMessages {
-    CAST_LIST,
-    EVENT_STATUS
 }
 
 /**
