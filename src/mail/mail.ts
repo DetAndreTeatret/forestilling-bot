@@ -140,8 +140,6 @@ export async function setupMailServices() {
 }
 
 export async function sendFoodMail(body: string) {
-    // TODO check for auth refresh?
-
     const mail = new MailComposer({
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
@@ -164,22 +162,20 @@ export async function sendFoodMail(body: string) {
 /**
  * Should reply to today's conversation between orderer and restaurant
  * @param orderText The text to send as mail body
- * @param replyId The id of the mail to reply to
+ * @param referenceIDs The reference headers of this mail thread
  * @param subject the subject of this mail thread(important for threading)
  * @param callback returns errors if any arise
  */
-export async function replyFoodMail(orderText: string, replyId: string, subject: string, callback: (err: Error | null) => void) {
+export async function replyFoodMail(orderText: string, referenceIDs: string[], subject: string, callback: (err: Error | null) => void) {
     const mail = new MailComposer({
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
         subject: subject,
         text: orderText,
-        inReplyTo: replyId,
-        // This("references") only appends the Message-ID of the last received email, but seems to work fine on Gmail, so I
-        // won't bother going full RFC 2822(ref: https://datatracker.ietf.org/doc/html/rfc2822#appendix-A.2)
+        inReplyTo: referenceIDs[referenceIDs.length - 1],
+        // This should now conform to RFC 2822(ref: https://datatracker.ietf.org/doc/html/rfc2822#appendix-A.2)
         // Also https://developers.google.com/gmail/api/guides/threads and https://stackoverflow.com/a/29531009
-        // (You are actually supposed to keep all reference headers going down the thread)
-        references: replyId
+        references: referenceIDs.join(" ")
     })
 
     const builtMail = await mail.compile().build()
@@ -263,17 +259,14 @@ function saveCredentials(client: OAuth2Client) {
  */
 async function authorize() {
     let client = loadSavedCredentialsIfExist()
-    if (client) { // TODO Start here, how to refresh Oauth access?
+    if (client) {
         return client
     }
     client = await authenticate({
         scopes: [
             "https://mail.google.com/",
-            "https://www.googleapis.com/auth/gmail.modify",
-            "https://www.googleapis.com/auth/gmail.compose",
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/cloud-platform",
             "https://www.googleapis.com/auth/pubsub",
+            "https://www.googleapis.com/auth/cloud-platform",
         ],
         keyfilePath: CREDENTIALS_PATH,
     })
