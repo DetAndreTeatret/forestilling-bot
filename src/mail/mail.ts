@@ -232,6 +232,7 @@ function loadSavedCredentialsIfExist(): OAuth2Client | null {
         const credentials = JSON.parse(content)
         return google.auth.fromJSON(credentials) as OAuth2Client
     } catch (err) {
+        console.log("Could not load credentials because of " + err)
         return null
     }
 }
