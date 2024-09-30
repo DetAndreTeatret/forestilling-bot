@@ -116,10 +116,7 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
                 content: "Sender matbestilling...",
             })
 
-            const error = await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]).sort(), pickupTime, phoneNumber))
-            if (error) {
-                throw error
-            }
+            await sendFoodMail(createOrderMailBody(todaysOrders.map(o => o[0]).sort(), pickupTime, phoneNumber))
 
             await interaction.editReply({
                 content: "Matbestilling er sent av gårde med hentetidspunkt **" + pickupTime + "**!",

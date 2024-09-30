@@ -31,6 +31,7 @@ export async function checkDeletions(logger: Logger)  {
                         } else {
                                 await logger.logWarning("Tried to delete channel found in database but ChannelManager returns null")
                         }
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (e) {
                         // Will error if channel does not exist, is probably left over from some update or other abnormality
                         // Probably safe to delete from database

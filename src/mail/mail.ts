@@ -1,15 +1,25 @@
-import Connection from "node-imap"
-import nodemailer, {SentMessageInfo} from "nodemailer"
 import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
-import {htmlToText} from "html-to-text"
-import {simpleParser} from "mailparser"
+import MailComposer from "nodemailer/lib/mail-composer/index.js"
 import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
-import {needNotNullOrUndefined} from "../common/util.js"
 import {postUrgentDebug} from "../discord/discord.js"
 import {renderDateYYYYMMDD} from "../common/date.js"
-import {Readable} from "node:stream"
+import {google} from "googleapis"
+import {authenticate} from "@google-cloud/local-auth"
+import path from "node:path"
+import appRootPath from "app-root-path"
+import {APIEndpoint} from "googleapis-common"
+import {OAuth2Client} from "google-auth-library"
+import {PubSub} from "@google-cloud/pubsub"
+import fs from "node:fs"
+import {simpleParser} from "mailparser"
+import {startDaemon} from "./daemon.js"
+
+export let gmail: APIEndpoint
+
+const CREDENTIALS_PATH = path.join(appRootPath.path, "google_creds.json")
+const TOKEN_PATH = path.join(appRootPath.path, "google_token.json")
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -43,146 +53,141 @@ import {Readable} from "node:stream"
  * Prepare all mail related shenanigans
  */
 export async function setupMailServices() {
+    const auth = await authorize()
 
-    // /==============\
-    // I     IMAP     I
-    // \==============/
+    google.options({auth: auth})
 
-    imap = new Connection({
-        user: needEnvVariable(EnvironmentVariable.EMAIL_USERNAME),
-        password: needEnvVariable(EnvironmentVariable.EMAIL_PASSWORD),
-        host: needEnvVariable(EnvironmentVariable.EMAIL_IMAP_HOST),
-        port: 993,
-        tls: true
+    gmail = google.gmail({
+        version: "v1"
     })
 
-    const imapReady = new Promise((resolve, reject) => {
-        imap.on("ready", () => {
-            openInbox((error, mailbox) => {
-                if (error || !mailbox.permFlags.includes("\\Seen")) {
-                    reject("Encountered error while trying to start IMAP server: " + (error === undefined ? "Missing flags" : error))
-                } else {
-                    console.log("IMAP Server up and running (name:" + mailbox.name + ",readOnly:" + mailbox.readOnly + ")")
-                    resolve(true)
-                }
-            })
-        })
+    await gmail.users.stop({
+        userId: "me",
     })
 
-    imap.on("mail", () => {
-        openInbox((error) => {
-            if (error) {
-                throw new Error("Encountered error while trying to connect to IMAP server: " + error)
-            } else {
-                imap.search(["UNSEEN", ["FROM", needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER)]], (error, uids) => {
-                    if (error) throw new Error("Error while searching through new mails: " + error)
-                    console.log("Email received from restaurant! Fetching...")
-                    const result = imap.fetch(uids, {markSeen: true, bodies: ""})
-                    result.on("message", (message) => {
-                        message.on("body", (stream) => {
-                            console.log("Starting to read email...")
-                            simpleParser(stream as unknown as Readable, (err, mail) => {
-                                if (err) {
-                                    throw new Error("Encountered error while trying to parse mail: " + err)
-                                }
-                                console.log("Successfully parsed email!")
-                                if (mail.text) {
-                                    receiveFoodMail(mail.text, needNotNullOrUndefined(mail.messageId, "mail message id text"), needNotNullOrUndefined(mail.subject, "mail subject text")).then(() => console.log("Mail processed(text)"))
-                                } else if (mail.html) {
-                                    receiveFoodMail(htmlToText(mail.html), needNotNullOrUndefined(mail.messageId, "mail message id html"), needNotNullOrUndefined(mail.subject, "mail subject html")).then(() => console.log("Mail processed(html)"))
-                                } else {
-                                    throw new Error("Unable to extract text from mail")
-                                }
-                            })
-                        })
-                    })
-                    result.once("end", () => {
-                        imap.addFlags(uids, "\\\\Seen", () => {
-                            // For the current mail host it seems to always throw an error while setting this flag
-                            // even though it's actually working(marked as seen).
-                            // For now, we just ignore the error, praying that the false positive never will be true
-                        })
-                    })
-                })
-            }
-        })
-    })
-
-    imap.on("error", function (err) {
-        console.error("IMAP Error: " + err)
-    })
-
-    imap.on("end", function () {
-        console.error("IMAP connection closed?")
-    })
-
-    imap.connect()
-
-    // /==============\
-    // I     SMTP     I
-    // \==============/
-
-    smtp = nodemailer.createTransport({
-        host: needEnvVariable(EnvironmentVariable.EMAIL_SMTP_HOST),
-        port: 587,
-        secure: false, // upgrade later with STARTTLS ???
-        auth: {
-            user: needEnvVariable(EnvironmentVariable.EMAIL_USERNAME),
-            pass: needEnvVariable(EnvironmentVariable.EMAIL_PASSWORD),
+    await gmail.users.watch({
+        userId: "me",
+        requestBody: {
+            topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmail",
+            labelIds: ["INBOX"],
         },
     })
-    console.log("SMTP Transport created!")
 
-    await imapReady
-}
+    startDaemon() // This refreshes the watch request once every day
 
-function openInbox(callback: (error: Error, mailbox: Connection.Box) => void) {
-    imap.openBox("INBOX", false, callback)
-}
+    const pubsub = new PubSub({projectId: needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID), keyFilename: path.join(appRootPath.path, "google_token.json")})
+    const sub = pubsub.subscription("gmail-sub")
 
-let imap: Connection
+    sub.on("message", async function(message) {
+        message.ack()
 
-let smtp: nodemailer.Transporter<SentMessageInfo>
+        console.log("Gmail notification! Checking for cool and relevant emails")
 
-export async function sendFoodMail(body: string): Promise<Error | null> {
-    return new Promise((resolve) => {
-        const message = {
-            from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
-            to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
-            subject: "Matbestilling fra Det Andre Teatret " + renderDateYYYYMMDD(new Date()),
-            text: body
+        // fetching since history id in notification is kinda broken?? gmail api decides randomly when to include the message history
+        // when using users#history#list
+        // We do a wide search for unread messages from interesting mail addresses instead
+        const mails = await gmail.users.messages.list({
+            userId: "me",
+            q: "from:" + needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER) + ";label:unread"
+        })
+
+        const messageInfos: {id: string, threadId: string }[] = [] // TODO Make type
+        if (mails.data.messages) {
+            for (let i = 0; i < mails.data.messages.length; i++) {
+                mails.data.messages.forEach((message: {id: string, threadId: string}) => {messageInfos.push(message)})
+            }
+        }
+        if (messageInfos.length === 0) {
+            console.log("No interesting mails... ")
+            return
         }
 
-        smtp.sendMail(message, (err) => {
-            resolve(err)
-        })
+        console.log("Found cool and relevant mail, proceeding with fetching etc..")
+
+        // Fetch and parse the actual messages
+        for (const messageInfo of messageInfos) {
+            const message = await gmail.users.messages.get({
+                userId: "me",
+                id: messageInfo.id,
+                format: "RAW"})
+            if (!message.data.raw) {
+                throw new Error("missing raw >:(")
+            }
+            // TODO can prob switch to message part format to avoid having to parse raw b64 here
+            // See https://developers.google.com/gmail/api/reference/rest/v1/users.messages#MessagePart
+            // and https://developers.google.com/gmail/api/reference/rest/v1/users.messages/get at the format param
+            const parsed = await simpleParser(Buffer.from(message.data.raw, "base64url").toString("utf-8"))
+
+            if (!parsed.text || !parsed.subject || !parsed.messageId) {
+                throw new Error("Error parsing mail " + parsed)
+            }
+
+            await receiveFoodMail(parsed.text, parsed.messageId, parsed.subject)
+
+            // Remove the unread label so the same mail won't be returned next fetch
+            await gmail.users.messages.modify({
+                userId: "me",
+                id: messageInfo.id,
+                removeLabelIds: ["UNREAD"]
+            })
+        }
     })
+
+    sub.on("error", function(error: Error) {
+        postUrgentDebug("Gmail Pub/Sub error!! "  + error)
+    })
+
+}
+
+export async function sendFoodMail(body: string) {
+    const mail = new MailComposer({
+        from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
+        to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
+        subject: "Matbestilling fra Det Andre Teatret " + renderDateYYYYMMDD(new Date()),
+        text: body
+    })
+
+    const builtMail = await mail.compile().build()
+
+    await gmail.users.messages.send({
+        userId: "me",
+        requestBody: {
+            raw: builtMail.toString("base64")
+        },
+    })
+
+    console.log("Sent mail to restaurant! ")
 }
 
 /**
  * Should reply to today's conversation between orderer and restaurant
  * @param orderText The text to send as mail body
- * @param replyId The id of the mail to reply to
+ * @param referenceIDs The reference headers of this mail thread
  * @param subject the subject of this mail thread(important for threading)
  * @param callback returns errors if any arise
  */
-export function replyFoodMail(orderText: string, replyId: string, subject: string, callback: (err: Error | null) => void) {
-    const message = {
+export async function replyFoodMail(orderText: string, referenceIDs: string[], subject: string, callback: (err: Error | null) => void) {
+    const mail = new MailComposer({
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER),
         subject: subject,
         text: orderText,
-        inReplyTo: replyId,
-        // This("references") only appends the Message-ID of the last received email, but seems to work fine on Gmail, so I
-        // won't bother going full RFC 2822(ref: https://datatracker.ietf.org/doc/html/rfc2822#appendix-A.2)
+        inReplyTo: referenceIDs[referenceIDs.length - 1],
+        // This should now conform to RFC 2822(ref: https://datatracker.ietf.org/doc/html/rfc2822#appendix-A.2)
         // Also https://developers.google.com/gmail/api/guides/threads and https://stackoverflow.com/a/29531009
-        // (You are actually supposed to keep all reference headers going down the thread)
-        references: replyId
-    }
-
-    smtp.sendMail(message, (err) => {
-        callback(err)
+        references: referenceIDs.join(" ")
     })
+
+    const builtMail = await mail.compile().build()
+
+    await gmail.users.messages.send({
+        userId: "me",
+        requestBody: {
+            raw: builtMail.toString("base64")
+        },
+    })
+
+    callback(null)
 }
 
 /**
@@ -193,6 +198,10 @@ export function replyFoodMail(orderText: string, replyId: string, subject: strin
  */
 async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubject: string) {
     const showDay = await fetchShowDayByDate(new Date(), false)
+
+    // Remove the "replied to" part in the email, we only want the actual response.
+    // Mostly because we easily hit the max char limit for embed text if we include the earlier messages in the email thread
+    body = body.split("\n").filter(s => !s.startsWith(">")).join("\n")
     if (!showDay) {
         // Uh oh, rogue email
         await handleRogueMail(body, "Mail mottatt fra resturant uten at det er noen oppførte forestillinger i dag")
@@ -212,5 +221,59 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
 
 async function handleRogueMail(body: string, reason: string) {
     await postUrgentDebug(reason + "\n\n\"" + body + "\"")
+}
+
+/**
+ * Reads previously authorized credentials from the save file.
+ */
+function loadSavedCredentialsIfExist(): OAuth2Client | null {
+    try {
+        const content = fs.readFileSync(TOKEN_PATH).toString()
+        const credentials = JSON.parse(content)
+        return google.auth.fromJSON(credentials) as OAuth2Client
+    } catch (err) {
+        console.log("Could not load credentials because of " + err)
+        return null
+    }
+}
+
+/**
+ * Serializes credentials to a file compatible with GoogleAuth.fromJSON.
+ * // TODO find page that gave you this preset? Link here
+ */
+function saveCredentials(client: OAuth2Client) {
+    const content = fs.readFileSync(CREDENTIALS_PATH).toString()
+    const keys = JSON.parse(content)
+    const key = keys.installed || keys.web
+    const payload = JSON.stringify({
+        type: "authorized_user",
+        client_id: key.client_id,
+        client_secret: key.client_secret,
+        refresh_token: client.credentials.refresh_token,
+    })
+    fs.writeFileSync(TOKEN_PATH, payload)
+}
+
+/**
+ * Load or request or authorization to call APIs.
+ *
+ */
+async function authorize() {
+    let client = loadSavedCredentialsIfExist()
+    if (client) {
+        return client
+    }
+    client = await authenticate({
+        scopes: [
+            "https://mail.google.com/",
+            "https://www.googleapis.com/auth/pubsub",
+            "https://www.googleapis.com/auth/cloud-platform",
+        ],
+        keyfilePath: CREDENTIALS_PATH,
+    })
+    if (client.credentials) {
+        saveCredentials(client)
+    }
+    return client
 }
 

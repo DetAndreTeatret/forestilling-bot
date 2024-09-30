@@ -498,19 +498,24 @@ export class ChannelMemberDifference {
  * Post a log message to the channel specified in .env DEBUG_CHANNEL_SNOWFLAKE
  */
 export async function postUrgentDebug(message: string) {
-    if (!discordClient) await new ConsoleLogger("URGENT").logWarning(message)
-    const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
-    const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
+    if (!discordClient || !discordClient.guilds) await new ConsoleLogger("URGENT").logWarning(message)
+    else {
+        const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
+        const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 
-    if (channel) await channel.send(message)
-    else await new ConsoleLogger("URGENT").logWarning(message)
+        if (channel) await channel.send(message)
+        else await new ConsoleLogger("URGENT").logWarning(message)
+    }
 }
 
 export async function postDebug(message: string) {
-    if (!discordClient) await new ConsoleLogger("URGENT").logWarning(message)
-    const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
-    const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
+    if (!discordClient || !discordClient.guilds) await new ConsoleLogger("DEBUG").logLine(message) // TODO create these loggers once...
+    else {
+        const guild = await discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
+        const channel = await guild.channels.fetch(needEnvVariable(EnvironmentVariable.DEBUG_CHANNEL_SNOWFLAKE)) as TextChannel
 
-    if (channel) return await channel.send(message)
-    else throw new Error("Where did the debug channel go?")
+        if (channel) return await channel.send(message)
+        else throw new Error("Where did the debug channel go?")
+    }
+
 }

@@ -10,20 +10,26 @@ const db = await open({
     driver: sqlite3.cached.Database
 })
 
+const TABLE_STRINGS = [
+    "CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))",
+    "CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))",
+    "CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(40), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)",
+    "CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))",
+    "CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), ReferenceTable varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)",
+    "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))"
+]
+
 /**
  * Create the database tables necessary for this bot to run, if not already created.
  */
 export async function createTables() {
-    await db.exec("CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))")
-    await db.exec("CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))")
-    await db.exec("CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(40), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)")
-    await db.exec("CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))")
-    await db.exec("CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), MailConvoID varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)")
-    await db.exec("CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))")
+    for await (const t of TABLE_STRINGS) {
+        await db.exec(t)
+    }
     console.log("Database tables up and running")
 }
 
-type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered" | "ShowDayGuests"
+type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered" | "ShowDayGuests" | string
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified
@@ -82,6 +88,11 @@ export async function deleteEntries(table: DatabaseTables, condition: string) {
 
 export async function updateEntry(table: DatabaseTables, condition: string, columns: string[], newValues: string[]) {
     const query = "UPDATE " + table + " SET " + createUpdateColumnString(columns, newValues) + " WHERE " + condition
+    debugLogQuery(query)
+    return await db.exec(query)
+}
+
+export async function executeQuery(query: string) {
     debugLogQuery(query)
     return await db.exec(query)
 }

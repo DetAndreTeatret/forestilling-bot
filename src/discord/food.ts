@@ -8,7 +8,7 @@ import {
     Snowflake
 } from "discord.js"
 import {discordClient, postDebug} from "./discord.js"
-import {getDayNameNO} from "../common/date.js"
+import {getDayNameNO, renderDateYYYYMMDD} from "../common/date.js"
 import {replyFoodMail} from "../mail/mail.js"
 import {fetchFoodOrderByUser, FoodOrder, NO_CONVERSATION_YET} from "../database/food.js"
 import {DiscordMessageReplyLogger} from "../common/logging.js"
@@ -31,7 +31,7 @@ export async function receiveFoodOrderResponse(body: string, orderer: Snowflake)
 }
 
 export async function handleFoodConversation(message: Message, foodOrder: FoodOrder) {
-    if (foodOrder.mailConvoId === NO_CONVERSATION_YET && messageCache === undefined) {
+    if (foodOrder.mailConvoSubject === NO_CONVERSATION_YET && messageCache === undefined) {
         await message.reply(":warning: Resturangen har ikke svart på bestillingen enda :warning:" +
             "\n Er du sikker på at du skal sende en ny melding med en gang?")
     }
@@ -52,7 +52,13 @@ export async function handleFoodMessageButtons(interaction: ButtonInteraction) {
         if (messageCache !== undefined) {
             const logger = new DiscordMessageReplyLogger(interaction)
             await logger.logLine("Sender svar til resturanten...")
-            replyFoodMail(messageCache, foodOrder.mailConvoId, foodOrder.mailConvoSubject, async (err) => {
+
+            // Edge case:
+            // If this message is sent before the restaurant replies we don't have any references yet to retain the original mail thread (TODO)
+            // Therefore we manually inject a fitting subject here to signal that this mail belongs to the original mail.
+            const subject = foodOrder.mailConvoSubject === NO_CONVERSATION_YET ? "Ekstra angående matbestilling fra Det Andre Teatret " + renderDateYYYYMMDD(new Date()) : foodOrder.mailConvoSubject
+
+            replyFoodMail(messageCache, foodOrder.mailConvoIDs, subject, async (err) => {
                 if (err) {
                     await logger.logWarning("Det skjedde en feil når meldingen skulle bli sendt...\nMeldingen kommer ikke fram til resturanten, prøv igjen senere eller ring resturanten direkte")
                     await disableButtons(interaction, "<<Error>>")
