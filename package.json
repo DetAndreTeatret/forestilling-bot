@@ -21,7 +21,7 @@
     "mailparser": "3.7.1",
     "node-imap": "0.9.6",
     "nodemailer": "6.9.15",
-    "schedgeup-scraper": "3.1.4",
+    "schedgeup-scraper": "3.1.5",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.5.4"
