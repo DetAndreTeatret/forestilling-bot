@@ -19,7 +19,6 @@
     "dotenv": "16.4.5",
     "googleapis": "144.0.0",
     "mailparser": "3.7.1",
-    "node-imap": "0.9.6",
     "nodemailer": "6.9.16",
     "schedgeup-scraper": "3.1.5",
     "sqlite": "5.1.1",
