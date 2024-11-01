@@ -11,7 +11,8 @@ import {
     Guild,
     GuildMember,
     Message,
-    PermissionsBitField, RepliableInteraction,
+    PermissionsBitField,
+    RepliableInteraction,
     Snowflake,
     TextChannel,
 } from "discord.js"
@@ -351,6 +352,7 @@ function createEventInfoEmbed(eventDate: Date, shows: string) {
     embedBuilder.setTitle("Kanal for " + getDayNameNO(eventDate) + "s forestillinger(" + shows + ")")
     embedBuilder.setDescription("Velkommen hit! :handshake:\nOBS: Denne kanalen forsvinner når forestillingen(e) er over!")
     embedBuilder.addFields({name: "Husk å bestille mat!", value: needEnvVariable(EnvironmentVariable.FOOD_ORDER_LINK)})
+    embedBuilder.addFields({name: "Skal du levere forestillingsrapport?", value: needEnvVariable(EnvironmentVariable.SHOW_REPORT_LINK)})
     embedBuilder.setColor("Random")
     embedBuilder.setImage("https://www.detandreteatret.no/uploads/assets/images/Stemning/_800x800_crop_center-center_82_none/andre-teatret-logo.png")
 
