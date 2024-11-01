@@ -2,6 +2,7 @@ import sqlite3 from "sqlite3"
 import {open} from "sqlite"
 import path from "node:path"
 import appRootPath from "app-root-path"
+import {ConsoleLogger} from "../common/logging.js"
 
 sqlite3.verbose()
 
@@ -19,6 +20,8 @@ const TABLE_STRINGS = [
     "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))"
 ]
 
+const logger = new ConsoleLogger("[SQLite]")
+
 /**
  * Create the database tables necessary for this bot to run, if not already created.
  */
@@ -26,7 +29,7 @@ export async function createTables() {
     for await (const t of TABLE_STRINGS) {
         await db.exec(t)
     }
-    console.log("Database tables up and running")
+    logger.logLine("Database tables up and running")
 }
 
 type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered" | "ShowDayGuests" | string
@@ -108,5 +111,5 @@ function createUpdateColumnString(columns: string[], newValues: string[]) {
 }
 
 function debugLogQuery(query: string) {
-    console.debug("[Debug] Sent SQL Query: " + query) // TODO move to logger
+    logger.logLine("Sent SQL Query: " + query) // TODO move to logger
 }

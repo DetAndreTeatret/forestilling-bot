@@ -15,11 +15,14 @@ import {PubSub} from "@google-cloud/pubsub"
 import fs from "node:fs"
 import {simpleParser} from "mailparser"
 import {startDaemon} from "./daemon.js"
+import {ConsoleLogger} from "../common/logging.js"
 
 export let gmail: APIEndpoint
 
 const CREDENTIALS_PATH = path.join(appRootPath.path, "google_creds.json")
 const TOKEN_PATH = path.join(appRootPath.path, "google_token.json")
+
+const logger = new ConsoleLogger("[Mail]")
 
 //                      ,---.           ,---.
 //                     / /"`.\.--"""--./,'"\ \
@@ -81,7 +84,7 @@ export async function setupMailServices() {
     sub.on("message", async function(message) {
         message.ack()
 
-        console.log("Gmail notification! Checking for cool and relevant emails")
+        await logger.logLine("Gmail notification! Checking for cool and relevant emails")
 
         // fetching since history id in notification is kinda broken?? gmail api decides randomly when to include the message history
         // when using users#history#list
@@ -98,11 +101,11 @@ export async function setupMailServices() {
             }
         }
         if (messageInfos.length === 0) {
-            console.log("No interesting mails... ")
+            logger.logLine("No interesting mails... ")
             return
         }
 
-        console.log("Found cool and relevant mail, proceeding with fetching etc..")
+        logger.logLine("Found cool and relevant mail, proceeding with fetching etc..")
 
         // Fetch and parse the actual messages
         for (const messageInfo of messageInfos) {
@@ -134,6 +137,7 @@ export async function setupMailServices() {
     })
 
     sub.on("error", function(error: Error) {
+        logger.logWarning("Gmail Pub/Sub error!! "  + error)
         postUrgentDebug("Gmail Pub/Sub error!! "  + error)
     })
 
@@ -156,7 +160,7 @@ export async function sendFoodMail(body: string) {
         },
     })
 
-    console.log("Sent mail to restaurant! ")
+    logger.logLine("Sent mail to restaurant! ")
 }
 
 /**
@@ -220,7 +224,9 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
 }
 
 async function handleRogueMail(body: string, reason: string) {
-    await postUrgentDebug(reason + "\n\n\"" + body + "\"")
+    const warning = reason + "\n\n\"" + body + "\""
+    logger.logWarning(warning)
+    await postUrgentDebug(warning)
 }
 
 /**
@@ -232,7 +238,7 @@ function loadSavedCredentialsIfExist(): OAuth2Client | null {
         const credentials = JSON.parse(content)
         return google.auth.fromJSON(credentials) as OAuth2Client
     } catch (err) {
-        console.log("Could not load credentials because of " + err)
+        logger.logWarning("Could not load credentials because of " + err)
         return null
     }
 }

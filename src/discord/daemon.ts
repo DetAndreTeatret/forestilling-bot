@@ -10,7 +10,7 @@ const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 let daemonRunning = false
 let interval: number
 
-const daemonLogger = new ConsoleLogger("[daemon]")
+const daemonLogger = new ConsoleLogger("[Update.d]")
 
 export async function startDaemon() {
     if (daemonRunning) return

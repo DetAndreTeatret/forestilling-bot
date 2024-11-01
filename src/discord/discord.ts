@@ -44,6 +44,8 @@ const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
 const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+R?$")
 const DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX = "dagtid"
 
+const logger = new ConsoleLogger("[Discord]")
+
 export class SuperClient extends Client { // TODO look over methods inside/outside SuperClient
     commands = new Collection()
 
@@ -88,9 +90,9 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
      * @param guild
      * @param event
      * @param dayTime Is this channel for daytime events? (barnelørdag osv...)
-     * @param logger
+     * @param discordLogger the logger that's used in the update command to log to the discord channel
      */
-    async createNewChannelForEvent(guild: Guild, event: Event, dayTime: boolean, logger: Logger) {
+    async createNewChannelForEvent(guild: Guild, event: Event, dayTime: boolean, discordLogger: Logger) {
         const channel = await guild.channels.create({
             name: getDayNameNO(event.eventStartTime) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
             type: ChannelType.GuildText,
@@ -102,12 +104,12 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         await postCastList(channel, [event], dayTime)
 
         for await (const worker of event.workers) {
-            const user = await getLinkedDiscordUser(worker, logger)
+            const user = await getLinkedDiscordUser(worker, discordLogger)
             if (user) {
                 const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
-                await addMemberToChannel(channel, fetchedMember, logger)
+                await addMemberToChannel(channel, fetchedMember, discordLogger)
             } else if (user === null) {
-                await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
             }
 
         }
@@ -118,12 +120,12 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
     /**
      * @param channel channel to update
      * @param events The current events to check against, will add users not found in current channel.
-     * @param logger
+     * @param discordLogger the logger that's used in the update command to log to the discord channel
      *
      * @return returns all members added to this channel
      */
-    async updateMembersForChannel(channel: TextChannel, events: Event[], logger: Logger) {
-        await logger.logLine("Updating members for channel " + channel.name + " (" + events.map(e => e.title) + ")")
+    async updateMembersForChannel(channel: TextChannel, events: Event[], discordLogger: Logger) {
+        await discordLogger.logLine("Updating members for channel " + channel.name + " (" + events.map(e => e.title) + ")")
         const usersFromDiscord: GuildMember[] = []
         for await (const member of channel.members.values()) {
             usersFromDiscord.push(member)
@@ -132,10 +134,10 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         const usersFromSchedgeUp: Snowflake[] = []
         for (let i = 0; i < events.length; i++) {
             for await (const worker of events[i].workers) {
-                const user = await getLinkedDiscordUser(worker, logger)
+                const user = await getLinkedDiscordUser(worker, discordLogger)
                 // User is null if Guest
                 if (user === null) {
-                    await logger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                    await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
                 } else if (user !== undefined && !usersFromSchedgeUp.includes(user)) {
                     usersFromSchedgeUp.push(user)
                 }
@@ -152,7 +154,7 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         for (let i = 0; i < usersToAdd.length; i++) {
             const user = usersToAdd[i]
             const fetchedMember = await channel.guild.members.fetch(String(user)) // Why javascript :'(
-            await addMemberToChannel(channel, fetchedMember, logger)
+            await addMemberToChannel(channel, fetchedMember, discordLogger)
             membersAdded.push(fetchedMember)
         }
 
@@ -165,8 +167,8 @@ export class SuperClient extends Client { // TODO look over methods inside/outsi
         const membersRemoved: GuildMember[] = []
         for await (const member of usersToRemove) {
             if (await checkPermission(member, PermissionLevel.ADMINISTRATOR)) continue
-            await logger.logPart("Removing user " + member.displayName + " from channel")
-            await removeMemberFromChannel(channel, member, logger)
+            await discordLogger.logPart("Removing user " + member.displayName + " from channel")
+            await removeMemberFromChannel(channel, member, discordLogger)
             membersRemoved.push(member)
         }
 
@@ -182,7 +184,7 @@ export async function startDiscordClient() {
     try {
         commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"))
     } catch (e) {
-        console.error("Error reading command files: " + e)
+        logger.logWarning("Error reading command files: " + e)
         throw e
     }
 
@@ -193,16 +195,16 @@ export async function startDiscordClient() {
         if ("data" in command && "execute" in command) {
             client.commands.set(command.data.name, command)
         } else {
-            console.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`)
+            logger.logWarning("[WARNING] The command at " + filePath + " is missing a required \"data\" or \"execute\" property.")
         }
 
     }
 
     const parsedCommands = Array.from(client.commands.keys())
-    console.log("Found " + parsedCommands.length + " Discord commands [" + parsedCommands.join(",") + "]")
+    logger.logLine("Found " + parsedCommands.length + " Discord commands [" + parsedCommands.join(",") + "]")
 
     client.once(Events.ClientReady, async c => {
-        console.log(`Discord client ready! Logged in as ${c.user.tag}`)
+        logger.logLine("Discord client ready! Logged in as " + c.user.tag)
     })
 
     client.on(Events.Error, console.error)
@@ -231,7 +233,7 @@ export async function startDiscordClient() {
         const command = (interaction.client as SuperClient).commands.get(interaction.commandName)
 
         if (!command) {
-            console.error(`No command matching ${interaction.commandName} was found.`)
+            logger.logWarning("No command matching " + interaction.commandName + " was found.")
             return
         }
 
@@ -322,13 +324,13 @@ async function getShowsCategory(guild: Guild) {
     return category
 }
 
-export async function addMemberToChannel(channel: TextChannel, member: GuildMember, logger: Logger) {
-    await logger.logPart("Adding member " + member.displayName + " to channel " + channel.name)
+export async function addMemberToChannel(channel: TextChannel, member: GuildMember, discordLogger: Logger) {
+    await discordLogger.logPart("Adding member " + member.displayName + " to channel " + channel.name)
     await channel.permissionOverwrites.edit(member, {SendMessages: true, ViewChannel: true})
 }
 
-export async function removeMemberFromChannel(channel: TextChannel, member: GuildMember, logger: Logger) {
-    await logger.logPart("Removing member " + member.displayName + " from channel " + channel.name)
+export async function removeMemberFromChannel(channel: TextChannel, member: GuildMember, discordLogger: Logger) {
+    await discordLogger.logPart("Removing member " + member.displayName + " from channel " + channel.name)
     await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
 }
 

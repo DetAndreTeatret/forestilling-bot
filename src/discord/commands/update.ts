@@ -23,13 +23,15 @@ import {
     isDayTimeShow
 } from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
-import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
+import {ConsoleLogger, DelegatingLogger, DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
 import {needNotNullOrUndefined} from "../../common/util.js"
 
 
 export const data = new SlashCommandBuilder()
     .setName("update")
     .setDescription("Update show channels in Discord(delete/create/update")
+
+const logger = new ConsoleLogger("[Update]")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const guild = needNotNullOrUndefined(interaction.guild, "guild")
@@ -50,15 +52,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await updateSetting("admin_role_snowflake", role.id)
     }
 
-    const logger = new DiscordMessageReplyLogger(interaction)
-    await logger.logLine("Starting update!")
+    const delegatingLogger = new DelegatingLogger([new DiscordMessageReplyLogger(interaction), logger])
+    await delegatingLogger.logLine("Starting update!")
     try {
         const guild = needNotNullOrUndefined(interaction.guild, "guild")
-        const memberDifference = await update(guild, logger)
+        const memberDifference = await update(guild, delegatingLogger)
         const channel = interaction.channel
         if (channel !== null && channel.type === ChannelType.GuildText) await channel.send(formatMemberDifference(memberDifference))
     } catch (error) {
-        await logger.logWarning("Encountered error during update + " + error)
+        await delegatingLogger.logWarning("Encountered error during update + " + error)
         throw error
     }
 
