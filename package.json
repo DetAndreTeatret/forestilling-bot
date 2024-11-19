@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/mailparser": "3.4.5",
-    "@types/nodemailer": "6.4.16",
+    "@types/nodemailer": "6.4.17",
     "eslint-config-dat": "1.1.6"
   }
 }
