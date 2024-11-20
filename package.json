@@ -3,8 +3,8 @@
   "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
     "start": "rm -r -f build && npm run lint && tsc && node build/main.js",
-    "lint": "eslint . --ext .ts",
-    "lintFix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lintFix": "eslint . --fix",
     "transpile": "tsc",
     "deployCommands": "rm -r -f build && tsc && node ./build/discord/deployCommands.js"
   },
