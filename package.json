@@ -20,7 +20,7 @@
     "googleapis": "144.0.0",
     "mailparser": "3.7.1",
     "nodemailer": "6.9.16",
-    "schedgeup-scraper": "3.1.5",
+    "schedgeup-scraper": "3.1.6",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.6.3"
@@ -28,6 +28,6 @@
   "devDependencies": {
     "@types/mailparser": "3.4.5",
     "@types/nodemailer": "6.4.17",
-    "eslint-config-dat": "1.1.6"
+    "eslint-config-dat": "1.1.7"
   }
 }
