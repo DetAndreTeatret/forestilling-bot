@@ -1,8 +1,8 @@
-import {startDiscordClient} from "./discord/discord.js"
 import {createTables} from "./database/sqlite.js"
 import {setupConfig} from "./common/config.js"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
+import {startDiscordClient} from "./discord/client.js"
 
 start().then(() => console.log("Startup finished, use /update in Discord to start update/delete daemon"))
 

@@ -21,8 +21,8 @@ import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
 import {sendFoodMail} from "../../mail/mail.js"
 import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
-import {postDebug} from "../discord.js"
 import {listFood} from "./listFood.js"
+import {postDebug} from "../client.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1900"
 

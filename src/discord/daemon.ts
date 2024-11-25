@@ -3,14 +3,14 @@ import {update} from "./commands/update.js"
 import {fetchSetting, updateSetting} from "../database/settings.js"
 import {ConsoleLogger} from "../common/logging.js"
 import {checkDeletions} from "./commands/delete.js"
-import {postUrgentDebug} from "./discord.js"
+import {postUrgentDebug} from "./client.js"
 
 const ONE_HOUR_MILLISECONDS = 1000 * 60 * 60
 
 let daemonRunning = false
 let interval: number
 
-const daemonLogger = new ConsoleLogger("[Update.d]")
+const daemonLogger = new ConsoleLogger("[DiscordUpdate.d]")
 
 export async function startDaemon() {
     if (daemonRunning) return
