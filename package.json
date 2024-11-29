@@ -18,7 +18,7 @@
     "discord.js": "^14.12.1",
     "dotenv": "16.4.5",
     "googleapis": "144.0.0",
-    "mailparser": "3.7.1",
+    "mailparser": "3.7.2",
     "nodemailer": "6.9.16",
     "schedgeup-scraper": "3.1.6",
     "sqlite": "5.1.1",
