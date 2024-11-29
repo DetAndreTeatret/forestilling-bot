@@ -26,7 +26,7 @@ export async function startDaemon() {
         parsedInterval = duration
     }
     interval = Number(parsedInterval)
-    console.info("Starting update/delete daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
+    daemonLogger.logLine("Starting update/delete daemon!(Interval: " + (interval / 1000 / 60) + " minutes)")
 
     setTimeout(tickDaemon, interval)
 }
