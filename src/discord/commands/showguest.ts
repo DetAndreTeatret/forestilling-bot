@@ -1,8 +1,8 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
 import {addShowGuest, deleteShowGuest} from "../../database/user.js"
-import {addMemberToChannel, removeMemberFromChannel} from "../discord.js"
 import {DummyLogger} from "../../common/logging.js"
 import {needNotNullOrUndefined} from "../../common/util.js"
+import {addMemberToChannel, removeMemberFromChannel} from "../channels.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -10,7 +10,7 @@ export const data = new SlashCommandBuilder()
     .setDescription("Legg til en bruker som gjest i en forestillingskanal(De får komme inn uten å være på SchedgeUp)")
     .addUserOption((option) => option.setName("gjestebruker").setDescription("Brukeren som du vil legge til som gjest").setRequired(true))
     .addChannelOption((option) => option.setName("forestillings-kanal").setDescription("Kanalen som du vil legge de til").setRequired(true))
-    .addBooleanOption((option) => option.setName("add-or-remove").setDescription("False hvis du vil gjerne en gjestebruker fra en gitt kanal"))
+    .addBooleanOption((option) => option.setName("add-or-remove").setDescription("False hvis du vil fjerne en gjestebruker fra en gitt kanal"))
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const guestUser = interaction.options.getUser("gjestebruker", true)

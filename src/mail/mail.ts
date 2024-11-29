@@ -3,7 +3,6 @@ import MailComposer from "nodemailer/lib/mail-composer/index.js"
 import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
-import {postUrgentDebug} from "../discord/discord.js"
 import {renderDateYYYYMMDD} from "../common/date.js"
 import {google} from "googleapis"
 import {authenticate} from "@google-cloud/local-auth"
@@ -16,6 +15,7 @@ import fs from "node:fs"
 import {simpleParser} from "mailparser"
 import {startDaemon} from "./daemon.js"
 import {ConsoleLogger} from "../common/logging.js"
+import {postUrgentDebug} from "../discord/client.js"
 
 export let gmail: APIEndpoint
 

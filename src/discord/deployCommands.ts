@@ -4,6 +4,11 @@ import fs from "node:fs"
 import path from "node:path"
 import {EnvironmentVariable, needEnvVariable, setupConfig} from "../common/config.js"
 
+// STANDALONE SCRIPT
+// Used to deploy slash commends when any are added/removed/changed
+// Is never ran along the main bot, and is expected to be run as a standalone node script
+// use "npm run deployCommands" to run this code
+
 setupConfig()
 
 const commands = []

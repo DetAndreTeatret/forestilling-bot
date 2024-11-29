@@ -1,10 +1,10 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
 import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
 import {getDeleteableChannels} from "../../database/discord.js"
-import {discordClient} from "../discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
 import {deleteFoodChannelEntries} from "../../database/food.js"
 import {deleteShowGuestsForChannel} from "../../database/user.js"
+import {discordClient} from "../client.js"
 
 export const data = new SlashCommandBuilder()
     .setName("delete")
@@ -42,9 +42,6 @@ export async function checkDeletions(logger: Logger)  {
                 }
         }
         if (!channelIdsToDelete || channelIdsToDelete.length === 0) await logger.logLine("No channels to delete")
-
-        // Skip the full #update cycle, just remove channels we've already deleted
-        discordClient.channelCache = discordClient.channelCache.filter((ids, channel) => !channelIdsToDelete.includes(channel.id))
 
         await logger.logLine("Deletions are done!")
 

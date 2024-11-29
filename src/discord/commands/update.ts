@@ -8,11 +8,9 @@ import {
 } from "discord.js"
 import {getEventInfos, scrapeEvents, Event, DateRange} from "schedgeup-scraper"
 import {
-    ChannelMemberDifference,
-    SuperClient,
     updateCastList,
-    updateShowsInEventInfoMessage
-} from "../discord.js"
+    updateEventInfo
+} from "../embeds.js"
 import {afterDays, renderDateYYYYMMDD} from "../../common/date.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {
@@ -25,6 +23,12 @@ import {
 import {fetchSetting, updateSetting} from "../../database/settings.js"
 import {ConsoleLogger, DelegatingLogger, DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
 import {needNotNullOrUndefined} from "../../common/util.js"
+import {
+    ChannelMemberDifference,
+    createNewChannelForEvent,
+    mapRunningChannels,
+    updateMembersForChannel
+} from "../channels.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -107,10 +111,8 @@ export async function update(guild: Guild, logger: Logger) {
     const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)), false)
     const events = await scrapeEvents(eventInfos)
 
-    const client = guild.client as SuperClient
-
     await logger.logLine("Mapping currently running Discord channels...")
-    const channels = await client.mapRunningChannels(guild)
+    const channels = await mapRunningChannels(guild)
     const channelsMapped = await mapChannelsToEvents(channels, events)
 
     const daysUpdated: TextChannel[] = []
@@ -129,7 +131,7 @@ export async function update(guild: Guild, logger: Logger) {
 
                 // No ShowDay anywhere, create a new one
                 await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.eventStartTime) + ")")
-                const channel = await client.createNewChannelForEvent(guild, event, isEventDaytime, logger)
+                const channel = await createNewChannelForEvent(guild, event, isEventDaytime, logger)
                 channelMemberDifferences.push(new ChannelMemberDifference(channel, Array.from(channel.members.values()), []))
                 await createNewShowday(channel.id, event.eventStartTime, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
@@ -146,10 +148,10 @@ export async function update(guild: Guild, logger: Logger) {
                     events.push(event)
 
                     // Merge successful, now update channel with new members
-                    channelMemberDifferences.push(await client.updateMembersForChannel(channel, events, logger))
+                    channelMemberDifferences.push(await updateMembersForChannel(channel, events, logger))
 
                     // Update pinned info messages
-                    await updateShowsInEventInfoMessage(channel, showDay0.when, events.map(e => e.title).join(", "))
+                    await updateEventInfo(channel, showDay0.when, events.map(e => e.title).join(", "))
                     await updateCastList(channel, events, showDay0.dayTimeShows)
                 } else {
                     throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay0.when))
@@ -176,10 +178,10 @@ export async function update(guild: Guild, logger: Logger) {
                 if (!events) throw new Error("Could not find any events mapped to channel " + channel)
 
                 // Update members in channel
-                channelMemberDifferences.push(await client.updateMembersForChannel(channel, events, logger))
+                channelMemberDifferences.push(await updateMembersForChannel(channel, events, logger))
 
                 // Update pinned info messages
-                await updateShowsInEventInfoMessage(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
+                await updateEventInfo(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
                 await updateCastList(channel, events, showDay.dayTimeShows)
 
             } else {

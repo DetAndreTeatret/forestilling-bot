@@ -1,7 +1,7 @@
 import {Snowflake, TextChannel} from "discord.js"
 import {addEntry, deleteEntries, executeQuery, selectAllEntires, selectEntry, updateEntry} from "./sqlite.js"
 import {fetchShowDayByDate} from "./showday.js"
-import {postUrgentDebug} from "../discord/discord.js"
+import {postUrgentDebug} from "../discord/client.js"
 
 export const NO_CONVERSATION_YET = "not_yet"
 
