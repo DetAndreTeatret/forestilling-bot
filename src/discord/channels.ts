@@ -101,7 +101,14 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
     for await (const worker of event.workers) {
         const user = await getLinkedDiscordUser(worker, discordLogger)
         if (user) {
-            const fetchedMember = await guild.members.fetch(String(user)) // Why javascript :'(
+            let fetchedMember
+            try {
+                fetchedMember = await channel.guild.members.fetch(String(user)) // Why javascript :'(
+            } catch (e) {
+                const SUInfo = await getLinkedSchedgeUpUser(user, discordLogger)
+                await discordLogger.logWarning("Got error when trying to fetch Discord user!\n Context: {discordID:" + user + ",SchedgeUpInfo:" + SUInfo + "}\n" + e)
+                continue
+            }
             await addMemberToChannel(channel, fetchedMember, discordLogger)
         } else if (user === null) {
             await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
