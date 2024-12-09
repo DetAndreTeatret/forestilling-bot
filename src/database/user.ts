@@ -103,7 +103,7 @@ export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Prom
  * does not have a linked account
  */
 export async function getLinkedSchedgeUpUser(member: Snowflake, logger: Logger): Promise<string | undefined> {
-    const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member + "\"", ["SchedgeUpId"])
+    const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member + "\"", ["SchedgeUpID"])
 
     if (result === undefined) {
         await logger.logPart("Discord user " + member + " does not have a linked SchedgeUp account")
