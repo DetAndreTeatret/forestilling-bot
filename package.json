@@ -20,7 +20,7 @@
     "googleapis": "144.0.0",
     "mailparser": "3.7.2",
     "nodemailer": "6.9.16",
-    "schedgeup-scraper": "3.1.8",
+    "schedgeup-scraper": "3.1.9",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.7.2"
