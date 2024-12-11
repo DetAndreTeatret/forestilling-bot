@@ -55,7 +55,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const names = Array.from(map.keys())
     console.log("Result:")
-    console.dir(names.sort((name, name2) => Number(map.get(name)! > map.get(name2)!)).map(name => [name, map.get(name)!]))
+    console.dir(names.sort((name, name2) => cmp(map.get(name)!, map.get(name2)!)).map(name => [name, map.get(name)!]))
 }
 
 let map: Map<Snowflake, number> = new Map()
@@ -68,4 +68,11 @@ function doStats(message: Message<true>) {
     // Mld per person (per kanal)
     // topp 10
     // siste år
+}
+
+function cmp (a: number, b: number){
+    if (isNaN(a) || isNaN(b) || a === b) return 0
+    if (a > b) return 1
+    if (a < b) return -1
+    return 0
 }
