@@ -10,10 +10,12 @@ import {
 
 export const data = new SlashCommandBuilder().setName("stats").setDescription("stats")
 
-
+let totalM = 0
 export async function execute(interaction: ChatInputCommandInteraction) {
     map = new Map()
     const channels = interaction.guild!.channels.cache.values()
+    totalM = 0
+
 
     await interaction.reply("doing it")
     const lastYear = new Date()
@@ -56,14 +58,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const names = Array.from(map.keys())
     console.log("Result:")
     console.dir(names.sort((name, name2) => cmp(map.get(name)!, map.get(name2)!)).map(name => [name, map.get(name)!]))
+    console.log("Total messages: " + totalM)
 }
 
 let map: Map<Snowflake, number> = new Map()
 
 function doStats(message: Message<true>) {
     if (message.author.bot) return
-    const b = map.get(message.author.displayName)
+    const b = map.get(message.author.username)
     map.set(message.author.displayName, (b === undefined ? 0 : b) + 1)
+    totalM++
 
     // Mld per person (per kanal)
     // topp 10
@@ -72,7 +76,7 @@ function doStats(message: Message<true>) {
 
 function cmp (a: number, b: number){
     if (isNaN(a) || isNaN(b) || a === b) return 0
-    if (a > b) return 1
-    if (a < b) return -1
+    if (a > b) return -1
+    if (a < b) return 1
     return 0
 }
