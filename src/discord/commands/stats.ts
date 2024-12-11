@@ -55,7 +55,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const names = Array.from(map.keys())
     console.log("Result:")
-    console.dir(names.sort((name) => map.get(name)!).map(name => [name, map.get(name)!]))
+    console.dir(names.sort((name, name2) => Number(map.get(name)! > map.get(name2)!)).map(name => [name, map.get(name)!]))
 }
 
 let map: Map<Snowflake, number> = new Map()
