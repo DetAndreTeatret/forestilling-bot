@@ -1,4 +1,4 @@
-import {GuildMember, Snowflake} from "discord.js"
+import {Snowflake} from "discord.js"
 import {Worker} from "schedgeup-scraper"
 import {addEntry, deleteEntries, selectAllEntires, selectEntries, selectEntry} from "./sqlite.js"
 import {Logger} from "../common/logging.js"
@@ -102,11 +102,11 @@ export async function getLinkedDiscordUser(worker: Worker, logger: Logger): Prom
  * Get the SchedgeUp id linked to the user that is linked to the given Discord user. Returns undefined and logs to logger if user
  * does not have a linked account
  */
-export async function getLinkedSchedgeUpUser(member: GuildMember, logger: Logger): Promise<string | undefined> {
-    const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member.id + "\"", ["SchedgeUpId"])
+export async function getLinkedSchedgeUpUser(member: Snowflake, logger: Logger): Promise<string | undefined> {
+    const result = await selectEntry("UserList", "DiscordUserSnowflake=\"" + member + "\"", ["SchedgeUpID"])
 
     if (result === undefined) {
-        await logger.logPart("Discord user " + member.displayName + " does not have a linked SchedgeUp account")
+        await logger.logPart("Discord user " + member + " does not have a linked SchedgeUp account")
         return undefined
     }
 
