@@ -188,6 +188,15 @@ export async function updateMembersForChannel(channel: TextChannel, events: Even
         membersRemoved.push(member)
     }
 
+    for (const event of events) {
+        if (event.title.includes("Micetro") || event.title.includes("Maestro")) {
+            // Special case for Micetro! Include the specified role id
+            const role = await channel.guild.roles.fetch(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))
+            if (!role) throw new Error("Error fetching Micetro role...")
+            await addRoleToChannel(channel, role, discordLogger)
+        }
+    }
+
     return new ChannelMemberDifference(channel, membersAdded, membersRemoved)
 }
 
