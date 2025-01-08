@@ -5,6 +5,7 @@ import {
     Guild,
     GuildMember,
     PermissionsBitField,
+    Role,
     Snowflake,
     TextChannel
 } from "discord.js"
@@ -113,7 +114,13 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
         } else if (user === null) {
             await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
         }
+    }
 
+    if (event.title.includes("Micetro") || event.title.includes("Maestro")) {
+        // Special case for Micetro! Include the specified role id
+        const role = await channel.guild.roles.fetch(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))
+        if (!role) throw new Error("Error fetching Micetro role...")
+        await addRoleToChannel(channel, role, discordLogger)
     }
 
     return channel
@@ -192,6 +199,16 @@ export async function addMemberToChannel(channel: TextChannel, member: GuildMemb
 export async function removeMemberFromChannel(channel: TextChannel, member: GuildMember, discordLogger: Logger) {
     await discordLogger.logPart("Removing member " + member.displayName + " from channel " + channel.name)
     await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
+}
+
+export async function addRoleToChannel(channel: TextChannel, role: Role, discordLogger: Logger) {
+    await discordLogger.logPart("Adding role " + role.name + " to channel " + channel.name)
+    await channel.permissionOverwrites.edit(role, {SendMessages: true, ViewChannel: true})
+}
+
+export async function removeRoleFromChannel(channel: TextChannel, role: Role, discordLogger: Logger) {
+    await discordLogger.logPart("Removing role " + role.name + " from channel " + channel.name)
+    await channel.permissionOverwrites.edit(role, {SendMessages: false, ViewChannel: false})
 }
 
 /**
