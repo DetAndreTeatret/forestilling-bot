@@ -23,7 +23,7 @@
     "schedgeup-scraper": "3.1.10",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
-    "typescript": "5.7.2"
+    "typescript": "5.7.3"
   },
   "devDependencies": {
     "@types/mailparser": "3.4.5",
