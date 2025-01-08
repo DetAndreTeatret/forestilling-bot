@@ -182,7 +182,7 @@ export async function updateMembersForChannel(channel: TextChannel, events: Even
 
     const membersRemoved: GuildMember[] = []
     for await (const member of usersToRemove) {
-        if (await checkPermission(member, PermissionLevel.ADMINISTRATOR)) continue
+        if (await checkPermission(member, PermissionLevel.ADMINISTRATOR) || member.roles.cache.has(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))) continue
         await discordLogger.logPart("Removing user " + member.displayName + " from channel")
         await removeMemberFromChannel(channel, member, discordLogger)
         membersRemoved.push(member)
