@@ -19,8 +19,8 @@
     "dotenv": "16.4.7",
     "googleapis": "144.0.0",
     "mailparser": "3.7.2",
-    "nodemailer": "6.10.0",
-    "schedgeup-scraper": "3.1.10",
+    "nodemailer": "6.9.16",
+    "schedgeup-scraper": "3.2.0",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "typescript": "5.7.2"
@@ -30,6 +30,6 @@
     "@types/nodemailer": "6.4.17",
     "eslint-config-dat": "1.1.8",
     "@eslint/eslintrc": "3.2.0",
-    "@eslint/js": "9.19.0"
+    "@eslint/js": "9.17.0"
   }
 }

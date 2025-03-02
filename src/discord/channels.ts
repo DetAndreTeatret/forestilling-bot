@@ -182,6 +182,7 @@ export async function updateMembersForChannel(channel: TextChannel, events: Even
 
     const membersRemoved: GuildMember[] = []
     for await (const member of usersToRemove) {
+        // TODO Expand Micetro check to see if the channel has the role added
         if (await checkPermission(member, PermissionLevel.ADMINISTRATOR) || member.roles.cache.has(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))) continue
         await discordLogger.logPart("Removing user " + member.displayName + " from channel")
         await removeMemberFromChannel(channel, member, discordLogger)

@@ -128,7 +128,7 @@ function createCastList(workersAndEvents: Map<Event, Worker[]>, daytimeshow: boo
 function createCastEmbedField(this: [Worker[], Worker[], EmbedBuilder], role: string) {
     const workersFiltered = this[0].filter(w => w.role === role)
     if (workersFiltered.length === 0) return
-    const workerList = workersFiltered.map(w => w.who).join("\n")
+    const workerList = workersFiltered.map(w => w.who + (w.secondaryRole ? " (_" + w.secondaryRole + "_)" : "")).join("\n")
     workersFiltered.forEach(w => this[1].push(w))
     this[2].addFields({name: "**" + role + "**", value: workerList, inline: true})
 }
