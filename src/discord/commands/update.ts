@@ -72,31 +72,50 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 }
 
 function formatMemberDifference(differences: ChannelMemberDifference[]) {
-    let result = "Members added/removed during update:"
-    let isResult = false
+    let membersBuilder = ""
 
     differences.forEach(difference => {
-        let s = "\n\n#" + difference.channel.name
-        let anything = false
+        const channelPrefix = "\n\n#" + difference.channel.name
+        let s = "" + channelPrefix
 
         if (difference.membersAdded.length !== 0) {
             s += ", Added: " + difference.membersAdded.map(member => member.nickname !== null ? member.nickname : member.displayName).join(",")
-            anything = true
         }
 
 
         if (difference.membersRemoved.length !== 0) {
             s += ", Removed: " + difference.membersRemoved.map(member => member.nickname !== null ? member.nickname : member.displayName).join(",")
-            anything = true
         }
 
-        if (anything) {
-            result += s
-            isResult = true
+        if (s !== channelPrefix) {
+            membersBuilder += s
         }
     })
 
-    return isResult ? result : "No members was added or removed from any channels in this update"
+    let rolesBuilder = ""
+
+    differences.forEach(difference => {
+        const channelPrefix = "\n\n#" + difference.channel.name
+        let s = "" + channelPrefix
+
+        if (difference.rolesAdded.length !== 0) {
+            s += ", Added: " + difference.rolesAdded.map(role => role.name).join(",")
+        }
+
+        if (difference.rolesRemoved.length !== 0) {
+            s += ", Removed: " + difference.rolesRemoved.map(role => role.name).join(",")
+        }
+
+        if (s !== channelPrefix) {
+            rolesBuilder += s
+        }
+    })
+
+    const result =
+        (membersBuilder !== "" ? "Members added/removed during update:" + membersBuilder : "") +
+        (rolesBuilder !== "" ? (membersBuilder !== "" ? "\n\n" : "") + "Roles added/removed during update:" + rolesBuilder : "")
+
+    return result !== "" ? result : "No members or roles was added or removed from any channels in this update"
 }
 
 /**
@@ -132,7 +151,7 @@ export async function update(guild: Guild, logger: Logger) {
                 // No ShowDay anywhere, create a new one
                 await logger.logPart("Creating new ShowDay(" + event.title + "/" + renderDateYYYYMMDD(event.eventStartTime) + ")")
                 const channel = await createNewChannelForEvent(guild, event, isEventDaytime, logger)
-                channelMemberDifferences.push(new ChannelMemberDifference(channel, Array.from(channel.members.values()), []))
+                channelMemberDifferences.push(new ChannelMemberDifference(channel, Array.from(channel.members.values()), [], [], [])) // TODO get added roles in here
                 await createNewShowday(channel.id, event.eventStartTime, isEventDaytime, event.id)
                 channelsMapped.set(channel, [event])
 

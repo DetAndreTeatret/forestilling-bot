@@ -3,7 +3,7 @@ import {
     ChannelType,
     Collection,
     Guild,
-    GuildMember,
+    GuildMember, PermissionOverwrites,
     PermissionsBitField,
     Role,
     Snowflake,
@@ -99,6 +99,8 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
     await postEventInfo(channel, event)
     await postCastList(channel, [event], dayTime)
 
+    let roles: Collection<Snowflake, Role> | undefined
+
     for await (const worker of event.workers) {
         const user = await getLinkedDiscordUser(worker, discordLogger)
         if (user) {
@@ -112,15 +114,15 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
             }
             await addMemberToChannel(channel, fetchedMember, discordLogger)
         } else if (user === null) {
-            await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+            // ///////////////////////////////////////////////////////////////////////////////////////////////////
+            // Secret function, if the guest name is equal to an existing role the role is added to the channel //
+            // ///////////////////////////////////////////////////////////////////////////////////////////////////
+            if (!roles) roles = await guild.roles.fetch()
+            const roleMaybe = Array.from(roles.values()).find(r => r.name === worker.who)
+            if (roleMaybe) {
+                await addRoleToChannel(channel, roleMaybe, discordLogger)
+            } else await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
         }
-    }
-
-    if (event.title.includes("Micetro") || event.title.includes("Maestro")) {
-        // Special case for Micetro! Include the specified role id
-        const role = await channel.guild.roles.fetch(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))
-        if (!role) throw new Error("Error fetching Micetro role...")
-        await addRoleToChannel(channel, role, discordLogger)
     }
 
     return channel
@@ -128,31 +130,68 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
 
 /**
  * @param channel channel to update
- * @param events The current events to check against, will add users not found in current channel.
+ * @param events The current events to check against, this method will add users not found in current channel.
  * @param discordLogger the logger that's used in the update command to log to the discord channel
  *
  * @return returns all members added to this channel
  */
 export async function updateMembersForChannel(channel: TextChannel, events: Event[], discordLogger: Logger) {
     await discordLogger.logLine("Updating members for channel " + channel.name + " (" + events.map(e => e.title) + ")")
-    const usersFromDiscord: GuildMember[] = []
-    for await (const member of channel.members.values()) {
-        usersFromDiscord.push(member)
+
+    // We have to complete the role pass before the user pass, so we don't accidentally remove users twice
+    const currentRolesFromDiscord: Role[] = []
+    for await (const permissionEntry of channel.permissionOverwrites.cache.map((v, k): [Role | undefined, PermissionOverwrites] => [channel.guild.roles.cache.get(k), v])) {
+        if (permissionEntry[0] && permissionEntry[1].allow.has(PermissionsBitField.Flags.ViewChannel)) {
+            currentRolesFromDiscord.push(permissionEntry[0])
+        }
     }
 
     const usersFromSchedgeUp: Snowflake[] = []
+    let allRoles: Role[] | undefined
+    const rolesInChannel: Role[] = []
+    const rolesAdded: Role[] = []
+
     for (let i = 0; i < events.length; i++) {
         for await (const worker of events[i].workers) {
             const user = await getLinkedDiscordUser(worker, discordLogger)
             // User is null if Guest
             if (user === null) {
-                await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                // ///////////////////////////////////////////////////////////////////////////////////////////////////
+                // Secret function, if the guest name is equal to an existing role the role is added to the channel //
+                // ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+                // We don't need to do anything if the role already is in the channel
+                const match = currentRolesFromDiscord.find(r => r.name.toLowerCase() === worker.who.toLowerCase())
+                if (!match) {
+                    if (!allRoles) allRoles = Array.from((await channel.guild.roles.fetch()).values())
+                    const roleMaybe = allRoles.find(r => r.name.toLowerCase() === worker.who.toLowerCase())
+                    if (roleMaybe) {
+                        await addRoleToChannel(channel, roleMaybe, discordLogger)
+                        rolesAdded.push(roleMaybe)
+                        rolesInChannel.push(roleMaybe)
+                    } else await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
+                } else {
+                    rolesInChannel.push(match)
+                }
             } else if (user !== undefined && !usersFromSchedgeUp.includes(user)) {
                 usersFromSchedgeUp.push(user)
             }
         }
     }
 
+    const adminSnowflake = await needSetting("admin_role_snowflake")
+    const rolesToRemove = currentRolesFromDiscord.filter(role => {
+        return role.id !== adminSnowflake && !rolesInChannel.some(r => r.id === role.id)
+    })
+
+    for await (const role of rolesToRemove) {
+        await removeRoleFromChannel(channel, role, discordLogger)
+    }
+
+    const usersFromDiscord: GuildMember[] = []
+    for await (const member of channel.members.values()) {
+        usersFromDiscord.push(member)
+    }
 
     // Subtract users already in discord
     const usersToAdd = usersFromSchedgeUp.filter((value) => {
@@ -177,28 +216,20 @@ export async function updateMembersForChannel(channel: TextChannel, events: Even
     const guestUsersForChannel = await getShowGuestsForChannel(channel.id)
 
     const usersToRemove = usersFromDiscord.filter((value) => {
-        return !usersFromSchedgeUp.includes(value.id) && !guestUsersForChannel.includes(value.id)
+        return !usersFromSchedgeUp.includes(value.id) && // Don't remove if user is listed on SchedgeUp
+            !guestUsersForChannel.includes(value.id) && // Don't remove if user is explicitly added as a guest
+            !rolesInChannel.map(r => value.roles.cache.has(r.id)).includes(true) // Don't remove if user has any of the roles added to this channel
     })
 
     const membersRemoved: GuildMember[] = []
     for await (const member of usersToRemove) {
-        // TODO Expand Micetro check to see if the channel has the role added
-        if (await checkPermission(member, PermissionLevel.ADMINISTRATOR) || member.roles.cache.has(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))) continue
+        if (await checkPermission(member, PermissionLevel.ADMINISTRATOR)) continue
         await discordLogger.logPart("Removing user " + member.displayName + " from channel")
         await removeMemberFromChannel(channel, member, discordLogger)
         membersRemoved.push(member)
     }
 
-    for (const event of events) {
-        if (event.title.includes("Micetro") || event.title.includes("Maestro")) {
-            // Special case for Micetro! Include the specified role id
-            const role = await channel.guild.roles.fetch(needEnvVariable(EnvironmentVariable.MICETRO_ROLE_SNOWFLAKE))
-            if (!role) throw new Error("Error fetching Micetro role...")
-            await addRoleToChannel(channel, role, discordLogger)
-        }
-    }
-
-    return new ChannelMemberDifference(channel, membersAdded, membersRemoved)
+    return new ChannelMemberDifference(channel, membersAdded, membersRemoved, rolesAdded, rolesToRemove)
 }
 
 export async function addMemberToChannel(channel: TextChannel, member: GuildMember, discordLogger: Logger) {
@@ -208,7 +239,7 @@ export async function addMemberToChannel(channel: TextChannel, member: GuildMemb
 
 export async function removeMemberFromChannel(channel: TextChannel, member: GuildMember, discordLogger: Logger) {
     await discordLogger.logPart("Removing member " + member.displayName + " from channel " + channel.name)
-    await channel.permissionOverwrites.edit(member, {SendMessages: false, ViewChannel: false})
+    await channel.permissionOverwrites.delete(member)
 }
 
 export async function addRoleToChannel(channel: TextChannel, role: Role, discordLogger: Logger) {
@@ -218,7 +249,7 @@ export async function addRoleToChannel(channel: TextChannel, role: Role, discord
 
 export async function removeRoleFromChannel(channel: TextChannel, role: Role, discordLogger: Logger) {
     await discordLogger.logPart("Removing role " + role.name + " from channel " + channel.name)
-    await channel.permissionOverwrites.edit(role, {SendMessages: false, ViewChannel: false})
+    await channel.permissionOverwrites.delete(role)
 }
 
 /**
@@ -228,10 +259,14 @@ export class ChannelMemberDifference {
     channel: TextChannel
     membersAdded: GuildMember[]
     membersRemoved: GuildMember[]
+    rolesAdded: Role[]
+    rolesRemoved: Role[]
 
-    constructor(channel: TextChannel, membersAdded: GuildMember[], membersRemoved: GuildMember[]) {
+    constructor(channel: TextChannel, membersAdded: GuildMember[], membersRemoved: GuildMember[], rolesAdded: Role[], rolesRemoved: Role[]) {
         this.channel = channel
         this.membersAdded = membersAdded
         this.membersRemoved = membersRemoved
+        this.rolesAdded = rolesAdded
+        this.rolesRemoved = rolesRemoved
     }
 }
