@@ -99,7 +99,7 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
     await postEventInfo(channel, event)
     await postCastList(channel, [event], dayTime)
 
-    let roles: Collection<Snowflake, Role> | undefined
+    let allRoles: Role[] | undefined
 
     for await (const worker of event.workers) {
         const user = await getLinkedDiscordUser(worker, discordLogger)
@@ -117,8 +117,8 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
             // ///////////////////////////////////////////////////////////////////////////////////////////////////
             // Secret function, if the guest name is equal to an existing role the role is added to the channel //
             // ///////////////////////////////////////////////////////////////////////////////////////////////////
-            if (!roles) roles = await guild.roles.fetch()
-            const roleMaybe = Array.from(roles.values()).find(r => r.name === worker.who)
+            if (!allRoles) allRoles = Array.from((await guild.roles.fetch()).values())
+            const roleMaybe = allRoles.find(r => r.name.toLowerCase() === worker.who.toLowerCase())
             if (roleMaybe) {
                 await addRoleToChannel(channel, roleMaybe, discordLogger)
             } else await discordLogger.logPart("Skipped adding Guest user " + worker.who + " to Discord channel " + channel.name)
