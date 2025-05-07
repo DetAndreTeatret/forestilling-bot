@@ -1,23 +1,12 @@
+import { defineConfig } from "eslint/config"
+import datConfig from "eslint-config-dat"
 
-import path from "node:path"
-import {fileURLToPath} from "node:url"
-import js from "@eslint/js"
-import {FlatCompat} from "@eslint/eslintrc"
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
-})
-
-export default [
+export default defineConfig([
     {
         files: ["**/*.ts"],
+        extends: [datConfig]
     },
     {
         ignores: ["build/*"] // node_modules ignored by default
     },
-    ...compat.extends("eslint-config-dat")
-]
+])
