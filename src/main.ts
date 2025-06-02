@@ -1,10 +1,23 @@
 import {createTables} from "./database/sqlite.js"
-import {setupConfig} from "./common/config.js"
+import {EnvironmentVariable, isDebugEnabled, needEnvVariable, setupConfig} from "./common/config.js"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
-import {startDiscordClient} from "./discord/client.js"
+import {discordClient, startDiscordClient} from "./discord/client.js"
+import {update} from "./discord/commands/update.js"
+import {ConsoleLogger} from "./common/logging.js"
 
-start().then(() => console.log("Startup finished, use /update in Discord to start update/delete daemon"))
+start().then(() => {
+    if (isDebugEnabled()) {
+        console.log("[Debug] Startup finished, use /update in Discord to start update/delete daemon")
+    } else {
+        console.log("Startup finished, starting first update...")
+        discordClient.guilds.fetch(needEnvVariable(EnvironmentVariable.GUILD_ID))
+            .then(guild => {
+                update(guild, new ConsoleLogger("[FirstUpdate]"))
+                    .then(() => console.log("Finished first update and startup of update/delete daemon"))
+            })
+    }
+})
 
 export let EDITION: string
 export let STARTING = true
@@ -36,7 +49,7 @@ export async function start() {
 }
 
 /**
- * Execute git command to find latest commit hash and message
+ * Execute git command to find the latest commit hash and message
  */
 async function findEdition(): Promise<string> {
     const exec = (await import("child_process")).exec

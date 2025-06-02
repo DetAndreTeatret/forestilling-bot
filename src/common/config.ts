@@ -23,7 +23,16 @@ export function needEnvVariable(key: EnvironmentVariable) {
     return result
 }
 
+export function isDebugEnabled() {
+    const result = needEnvVariable(EnvironmentVariable.DEBUG).toLowerCase()
+
+    if (result === "false" || result === "0") return false
+
+    return Boolean(result)
+}
+
 export enum EnvironmentVariable {
+    DEBUG = "DEBUG",
     BOT_TOKEN = "BOT_TOKEN",
     APPLICATION_ID = "APPLICATION_ID",
     GUILD_ID = "GUILD_ID",
@@ -40,5 +49,4 @@ export enum EnvironmentVariable {
     SMARTSUITE_BESTILLINGER_TABLE_ID = "SMARTSUITE_BESTILLINGER_TABLE_ID",
     SMARTSUITE_BESTILLINGER_FIELD_ID = "SMARTSUITE_BESTILLINGER_FIELD_ID",
     SHOW_REPORT_LINK = "SHOW_REPORT_LINK",
-    MICETRO_ROLE_SNOWFLAKE = "MICETRO_ROLE_SNOWFLAKE",
 }

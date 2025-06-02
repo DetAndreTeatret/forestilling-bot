@@ -1,16 +1,6 @@
-import {
-    ChannelType,
-    ChatInputCommandInteraction,
-    Collection,
-    Guild,
-    SlashCommandBuilder,
-    TextChannel
-} from "discord.js"
-import {getEventInfos, scrapeEvents, Event, DateRange} from "schedgeup-scraper"
-import {
-    updateCastList,
-    updateEventInfo
-} from "../embeds.js"
+import {ChannelType, ChatInputCommandInteraction, Collection, Guild, SlashCommandBuilder, TextChannel} from "discord.js"
+import {DateRange, Event, getEventInfos, scrapeEvents} from "schedgeup-scraper"
+import {updateCastList, updateEventInfo} from "../embeds.js"
 import {afterDays, renderDateYYYYMMDD} from "../../common/date.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {
@@ -38,24 +28,6 @@ export const data = new SlashCommandBuilder()
 const logger = new ConsoleLogger("[Update]")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const guild = needNotNullOrUndefined(interaction.guild, "guild")
-
-    // First time stuff
-    addGuildToUpdate(guild)
-    const roleSnowflake = await fetchSetting("admin_role_snowflake")
-    if (roleSnowflake === undefined) {
-        console.info("Did not find admin role! Creating a new one...")
-        const role = await guild.roles.create({
-            name: "SchedgeUps Utvalgte",
-            color: "Red",
-            reason: "Admin role for SchedgeUpBot",
-            mentionable: false,
-            hoist: false
-        })
-
-        await updateSetting("admin_role_snowflake", role.id)
-    }
-
     const delegatingLogger = new DelegatingLogger([new DiscordMessageReplyLogger(interaction), logger])
     await delegatingLogger.logLine("Starting update!")
     try {
@@ -67,8 +39,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await delegatingLogger.logWarning("Encountered error during update + " + error)
         throw error
     }
-
-    startDaemon() // Only start daemon after first update to ensure local channelCache is updated
 }
 
 function formatMemberDifference(differences: ChannelMemberDifference[]) {
@@ -123,6 +93,22 @@ function formatMemberDifference(differences: ChannelMemberDifference[]) {
  * @return All members removed or added during the update
  */
 export async function update(guild: Guild, logger: Logger) {
+    // First time stuff
+    addGuildToUpdate(guild)
+    const roleSnowflake = await fetchSetting("admin_role_snowflake")
+    if (roleSnowflake === undefined) {
+        console.info("Did not find admin role! Creating a new one...")
+        const role = await guild.roles.create({
+            name: "SchedgeUps Utvalgte",
+            color: "Red",
+            reason: "Admin role for SchedgeUpBot",
+            mentionable: false,
+            hoist: false
+        })
+
+        await updateSetting("admin_role_snowflake", role.id)
+    }
+
     await logger.logLine("Fetching SchedgeUp Events...")
 
     const today = new Date()
@@ -211,6 +197,8 @@ export async function update(guild: Guild, logger: Logger) {
     }
 
     await logger.logLine("Update is done!")
+    startDaemon() // Only start daemon after first update to ensure local channelCache is updated
+
     return channelMemberDifferences
 }
 
