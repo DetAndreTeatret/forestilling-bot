@@ -19,7 +19,7 @@
     "dotenv": "17.2.0",
     "googleapis": "161.0.0",
     "mailparser": "3.7.4",
-    "nodemailer": "7.0.5",
+    "nodemailer": "7.0.6",
     "schedgeup-scraper": "3.2.1",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/mailparser": "3.4.6",
-    "@types/nodemailer": "6.4.17",
+    "@types/nodemailer": "7.0.2",
     "eslint-config-dat": "2.0.1"
   }
 }
