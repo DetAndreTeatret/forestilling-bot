@@ -11,16 +11,16 @@ import {
     TextInputBuilder,
     TextInputStyle
 } from "discord.js"
-import {needNotNullOrUndefined} from "../../common/util.js"
-import {EnvironmentVariable, needEnvVariable} from "../../common/config.js"
+import {needNotNullOrUndefined} from "../../util/util.js"
+import {EnvironmentVariable, needEnvVariable} from "../../util/config.js"
 import {fetchShowDayByDiscordChannel} from "../../database/showday.js"
-import {isToday} from "../../common/date.js"
+import {isToday} from "../../util/date.js"
 import {PermissionLevel} from "../permission.js"
 import {hasChannelOrdered, markChannelAsOrdered} from "../../database/food.js"
 import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
 import {sendFoodMail} from "../../mail/mail.js"
-import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
+import {fetchTodaysOrders} from "../../smartsuite/smartsuiteLegacy.js"
 import {listFood} from "./listFood.js"
 import {postDebug} from "../client.js"
 

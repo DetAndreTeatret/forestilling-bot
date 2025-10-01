@@ -1,9 +1,9 @@
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
+import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
 import MailComposer from "nodemailer/lib/mail-composer/index.js"
 import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
-import {renderDateYYYYMMDD} from "../common/date.js"
+import {renderDateYYYYMMDD} from "../util/date.js"
 import {google} from "googleapis"
 import path from "node:path"
 import appRootPath from "app-root-path"
@@ -11,7 +11,7 @@ import {APIEndpoint} from "googleapis-common"
 import {PubSub} from "@google-cloud/pubsub"
 import {simpleParser} from "mailparser"
 import {startDaemon} from "./daemon.js"
-import {ConsoleLogger} from "../common/logging.js"
+import {ConsoleLogger} from "../util/logging.js"
 import {postUrgentDebug} from "../discord/client.js"
 
 export let gmail: APIEndpoint
@@ -34,7 +34,7 @@ const logger = new ConsoleLogger("[Mail]")
 // | .---------\         /----------------- \         /------------. |
 // | |          `-`--`--'                    `--'--'-'             | |
 // | |                                                             | |
-// | |   Handles mail logic between food orderer and restaurant    | |
+// | |   Handles mail logic for food ordering and nagging          | |
 // | |                                                             | |
 // | |                                                             | |
 // | |_____________________________________________________________| |
@@ -221,6 +221,26 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
     await updateFoodConversation(orderer, mailConvoID, mailConvoSubject)
 
     await receiveFoodOrderResponse(body, orderer)
+}
+
+export async function sendNagMail(toWho: string, where: string, nagger: string) {
+    const mail = new MailComposer({
+        from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM), // TODO ikke fra matbestilling...
+        to: toWho,
+        subject: `${nagger} har lagt ut en kunngjøring på Discord og trenger svar fra deg`,
+        text: "masmasmas, please svar bby\n" + where + "\n\n Svar leses ikke"
+    })
+
+    const builtMail = await mail.compile().build()
+
+    await gmail.users.messages.send({
+        userId: "me",
+        requestBody: {
+            raw: builtMail.toString("base64")
+        },
+    })
+
+    logger.logLine("Sent nagging mail to " + toWho + " for " + where + " from " + nagger)
 }
 
 async function handleRogueMail(body: string, reason: string) {

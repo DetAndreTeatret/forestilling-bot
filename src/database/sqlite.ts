@@ -2,7 +2,7 @@ import sqlite3 from "sqlite3"
 import {open} from "sqlite"
 import path from "node:path"
 import appRootPath from "app-root-path"
-import {ConsoleLogger} from "../common/logging.js"
+import {ConsoleLogger} from "../util/logging.js"
 
 sqlite3.verbose()
 
@@ -12,12 +12,13 @@ const db = await open({
 })
 
 const TABLE_STRINGS = [
-    "CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))",
+    "CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64), SmartSuiteRecordID varchar)",
     "CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))",
     "CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(40), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)",
     "CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))",
     "CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), ReferenceTable varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)",
-    "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))"
+    "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))",
+    "CREATE TABLE IF NOT EXISTS Announcements(AnnouncementID INTEGER PRIMARY KEY, DiscordUserSnowflake varchar(64), AnnouncementDiscordChannelSnowflake varchar(64), AnnouncementDiscordMessageSnowflake varchar(64), AnnouncementTitle varchar, AnnouncementText varchar, LegalEmojies varchar, NaggingPlan varchar, NonRespondants varchar)"
 ]
 
 const logger = new ConsoleLogger("[SQLite]")
@@ -26,23 +27,21 @@ const logger = new ConsoleLogger("[SQLite]")
  * Create the database tables necessary for this bot to run, if not already created.
  */
 export async function createTables() {
-    for await (const t of TABLE_STRINGS) {
-        await db.exec(t)
-    }
-    logger.logLine("Database tables up and running")
+    await db.exec(TABLE_STRINGS.join(";"))
+    await logger.logLine("Database tables up and running")
 }
 
-type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered" | "ShowDayGuests" | string
+type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "FoodOrdered" | "ShowDayGuests" | "Announcements" | string
 
 /**
  * Method caller is responsible for the amount and order of params, such that it matches the column layout of the table specified
  * @param table The table to insert an entry into
  * @param params The values of the entry, in the order specified in the Database Layout
  */
-export async function addEntry(table: DatabaseTables, ...params: (string | number)[]) {
-    const query = "INSERT INTO " + table + " VALUES(" + params + ")"
+export async function addEntry(table: DatabaseTables, ...params: (string | number | null)[]) {
+    const query = "INSERT INTO " + table + " VALUES(" + params.map(() => "?") + ")"
     debugLogQuery(query)
-    await db.exec(query)
+    await db.run(query, params)
 }
 
 /**
@@ -65,7 +64,7 @@ export async function selectEntries(table: DatabaseTables, condition: string, co
  * @param columns which columns to include. If undefined, all columns will be included
  */
 export async function selectEntry(table: DatabaseTables, condition: string, columns?: string[]) {
-    const columnString = columns === undefined ? "*" : "(" + columns + ")"
+    const columnString = columns === undefined ? "*" : columns
     const query = "SELECT " + columnString + " FROM " + table + " WHERE " + condition
     debugLogQuery(query)
     return await db.get(query)

@@ -6,7 +6,8 @@
     "lint": "eslint .",
     "lintFix": "eslint . --fix",
     "transpile": "tsc",
-    "deployCommands": "rm -r -f build && tsc && node ./build/discord/deployCommands.js"
+    "deployCommands": "rm -r -f build && tsc && node ./build/discord/deployCommands.js",
+    "generateSmartSuiteTypes": "rm -r -f build && tsc && node ./build/smartsuite/smartsuiteTypesGenerate.js"
   },
   "type": "module",
   "author": "Simon Mørland",
@@ -22,9 +23,11 @@
     "schedgeup-scraper": "3.2.5",
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1",
-    "typescript": "5.8.3"
+    "bullmq": "^5.56.4",
+    "smartsuite-typescript-api": "0.1.0"
   },
   "devDependencies": {
+    "typescript": "5.8.3",
     "@types/mailparser": "3.4.6",
     "@types/nodemailer": "8.0.0",
     "eslint-config-dat": "2.0.1"

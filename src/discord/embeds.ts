@@ -1,8 +1,8 @@
 import {Collection, EmbedBuilder, Message, TextChannel,} from "discord.js"
 import {Event, Worker} from "schedgeup-scraper"
-import {formatLength, getDayNameNO, renderDatehhmm} from "../common/date.js"
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
-import {pickRandomFOHMessage} from "../common/util.js"
+import {formatLength, getDayNameNO, renderDatehhmm} from "../util/date.js"
+import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
+import {pickRandomFOHMessage} from "../util/util.js"
 
 /**
  * Create an event status message for the current channel. If no event info is found in the topic it will ignore the call
