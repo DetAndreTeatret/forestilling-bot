@@ -1,10 +1,11 @@
 import {createTables} from "./database/sqlite.js"
-import {EnvironmentVariable, isDebugEnabled, needEnvVariable, setupConfig} from "./common/config.js"
+import {EnvironmentVariable, isDebugEnabled, needEnvVariable, setupConfig} from "./util/config.js"
 import {setupScraper} from "schedgeup-scraper"
 import {setupMailServices} from "./mail/mail.js"
 import {discordClient, startDiscordClient} from "./discord/client.js"
 import {update} from "./discord/commands/update.js"
-import {ConsoleLogger} from "./common/logging.js"
+import {ConsoleLogger} from "./util/logging.js"
+import {setupMessageQueue, shutdownMessages} from "./util/announcementNaggingMessageQueue.js"
 
 start().then(() => {
     if (isDebugEnabled()) {
@@ -22,31 +23,43 @@ start().then(() => {
 export let EDITION: string
 export let STARTING = true
 
-export async function start() {
+async function start() {
     EDITION = await findEdition()
     console.log("Starting forestilling-bot...")
     console.log("Edition: " + EDITION)
-
-    // An attempt to log unhandled rejections and errors more effectively
-    process.on("unhandledRejection", async error => {
-        console.error("Unhandled promise rejection!")
-        console.dir(error, {depth: 30})
-        process.exit(110)
-    })
-
-    process.on("uncaughtException", async error => {
-        console.error("Uncaught exception!")
-        console.dir(error, {depth: 30})
-        process.exit(111)
-    })
 
     setupConfig()
     await createTables()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
     await setupMailServices()
+    setupMessageQueue()
     STARTING = false
 }
+
+async function stop(code: number, signal?: string) {
+    if (signal) console.warn("Received signal " + signal)
+    console.log("Stopping forestilling-bot...")
+    await shutdownMessages()
+    process.exit(code)
+}
+
+// An attempt to log unhandled rejections and errors more effectively
+process.on("unhandledRejection", async error => {
+    console.error("Unhandled promise rejection!")
+    console.dir(error, {depth: 30})
+    stop(110)
+})
+
+process.on("uncaughtException", async error => {
+    console.error("Uncaught exception!")
+    console.dir(error, {depth: 30})
+    stop(111)
+})
+
+// Handle termination as gracefully as possible
+process.on("SIGINT", ()  => stop(0, "SIGINT"))
+process.on("SIGTERM", () => stop(0, "SIGTERM"))
 
 /**
  * Execute git command to find the latest commit hash and message

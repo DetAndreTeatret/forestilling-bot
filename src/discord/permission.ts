@@ -1,7 +1,7 @@
 import {GuildMember} from "discord.js"
 import {needSetting} from "../database/settings.js"
-import {needNotNullOrUndefined} from "../common/util.js"
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
+import {needNotNullOrUndefined} from "../util/util.js"
+import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
 
 export enum PermissionLevel {
     ADMINISTRATOR,

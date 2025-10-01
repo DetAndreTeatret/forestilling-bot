@@ -1,7 +1,7 @@
 import {Guild} from "discord.js"
 import {update} from "./commands/update.js"
 import {fetchSetting, updateSetting} from "../database/settings.js"
-import {ConsoleLogger} from "../common/logging.js"
+import {ConsoleLogger} from "../util/logging.js"
 import {checkDeletions} from "./commands/delete.js"
 import {postUrgentDebug} from "./client.js"
 

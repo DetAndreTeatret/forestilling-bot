@@ -1,6 +1,6 @@
 import https from "https"
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
-import {isToday} from "../common/date.js"
+import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
+import {isToday} from "../util/date.js"
 
 const LIST_TABLE_URL_FORMAT = "/%t/records/list/"
 

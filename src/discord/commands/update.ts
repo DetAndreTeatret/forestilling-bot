@@ -1,7 +1,7 @@
 import {ChannelType, ChatInputCommandInteraction, Collection, Guild, SlashCommandBuilder, TextChannel} from "discord.js"
 import {DateRange, Event, getEventInfos, scrapeEvents} from "schedgeup-scraper"
 import {updateCastList, updateEventInfo} from "../embeds.js"
-import {afterDays, renderDateYYYYMMDD} from "../../common/date.js"
+import {afterDays, renderDateYYYYMMDD} from "../../util/date.js"
 import {addGuildToUpdate, startDaemon} from "../daemon.js"
 import {
     addEventToShowDay,
@@ -11,8 +11,8 @@ import {
     isDayTimeShow
 } from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
-import {ConsoleLogger, DelegatingLogger, DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
-import {needNotNullOrUndefined} from "../../common/util.js"
+import {ConsoleLogger, DelegatingLogger, DiscordMessageReplyLogger, Logger} from "../../util/logging.js"
+import {needNotNullOrUndefined} from "../../util/util.js"
 import {
     ChannelMemberDifference,
     createNewChannelForEvent,
