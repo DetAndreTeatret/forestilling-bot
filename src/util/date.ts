@@ -22,7 +22,10 @@ export function renderDatehhmmss(date: Date) {
 
 export function renderDatehhmm(date: Date) {
     return date.toLocaleString("nb-NO", {hour: "2-digit", minute: "2-digit"})
+}
 
+export function renderDateMMDDhh(date: Date) {
+    return date.toLocaleString("nb-NO", {month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"})
 }
 
 export function tomorrow(date?: Date) {

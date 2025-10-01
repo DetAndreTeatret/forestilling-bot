@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
-import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
+import {DiscordMessageReplyLogger, Logger} from "../../util/logging.js"
 import {getDeleteableChannels} from "../../database/discord.js"
 import {deleteEntries} from "../../database/sqlite.js"
 import {deleteFoodChannelEntries} from "../../database/food.js"

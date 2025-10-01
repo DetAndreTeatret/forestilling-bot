@@ -1,8 +1,8 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {fetchTodaysOrders} from "../../smartsuite/smartsuite.js"
+import {fetchTodaysOrders} from "../../smartsuite/smartsuiteLegacy.js"
 import {PermissionLevel} from "../permission.js"
 import {fetchTodaysFoodOrder} from "../../database/food.js"
-import {renderDatehhmmss} from "../../common/date.js"
+import {renderDatehhmmss} from "../../util/date.js"
 
 export const permissionLevel = PermissionLevel.HUSANSVARLIG
 
