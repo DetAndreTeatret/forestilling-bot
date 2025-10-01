@@ -5,9 +5,11 @@ import {
     SlashCommandSubcommandBuilder,
     TextChannel, User
 } from "discord.js"
-import {needNotNullOrUndefined} from "../../common/util.js"
-import {fetchAllUsers, fetchUser} from "../../database/user.js"
-import {DiscordMessageReplyLogger, Logger} from "../../common/logging.js"
+import {needNotNullOrUndefined} from "../../util/util.js"
+import {DatabaseUser, fetchAllUsers, fetchUser, updateUser} from "../../database/user.js"
+import {DiscordMessageReplyLogger, Logger} from "../../util/logging.js"
+import {getPersonnel} from "../../smartsuite/personnel.js"
+import {scrapeUsers} from "schedgeup-scraper"
 
 export const data = new SlashCommandBuilder()
     .setName("userstats")
@@ -26,6 +28,11 @@ export const data = new SlashCommandBuilder()
         new SlashCommandSubcommandBuilder()
             .setName("userlist")
             .setDescription("Create a report off all linked users")
+    )
+    .addSubcommand(
+        new SlashCommandSubcommandBuilder()
+            .setName("syncusers")
+            .setDescription("Sync users without a linked SS record, if they have one. (internal)")
     )
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -56,6 +63,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await listUsers(channel, logger, null, null)
             break
         }
+        case "syncusers": {
+            await syncAndUpdateUserInfo(logger)
+            break
+        }
         default: {
             throw new Error("Illegal state in userStats")
         }
@@ -81,7 +92,7 @@ async function unlinkedUserStats(guild: Guild, logger: Logger) {
 
 }
 
-export async function listUsers(channel: TextChannel, logger: Logger, discordUser: User | null, schedgeUpId: string | null) {
+async function listUsers(channel: TextChannel, logger: Logger, discordUser: User | null, schedgeUpId: string | null) {
     await logger.logLine("Fetching user info!")
 
     let user
@@ -101,7 +112,7 @@ export async function listUsers(channel: TextChannel, logger: Logger, discordUse
 
     if (user) {
         const discordMember = await channel.guild.members.fetch(user.discordSnowflake)
-        await logger.logLine("UserID:" + user.userId + ", SchedgeUpID:" + user.schedgeUpId + ", DiscordDisplayName: " + discordMember.displayName)
+        await logger.logLine("UserID: " + user.userId + "\nSchedgeUpID: " + user.schedgeUpId + "\nDiscordDisplayName: " + discordMember.displayName + "\nSmartSuiteRecordID: " + (user.smartSuiteRecordID ?? "not linked yet"))
     } else {
         await logger.logLine("Creating user report...")
         const allUsers = await fetchAllUsers()
@@ -109,7 +120,7 @@ export async function listUsers(channel: TextChannel, logger: Logger, discordUse
         for await (const databaseUser of allUsers) {
             await logger.logPart("Adding user: " + databaseUser.userId + "/" + allUsers.length) // TODO store display name??
             const discordUser = await channel.guild.members.fetch(databaseUser.discordSnowflake)
-            report += "\nUserID: " + databaseUser.userId + ", SchedgeUpID: " + databaseUser.schedgeUpId + ", DiscordUser: " + (discordUser === undefined ? databaseUser.discordSnowflake : discordUser.displayName)
+            report += "\nUserID: " + databaseUser.userId + ", SchedgeUpID: " + databaseUser.schedgeUpId + ", DiscordUser: " + (discordUser === undefined ? databaseUser.discordSnowflake : discordUser.displayName) + " SmartSuiteRecordID: " + (databaseUser.smartSuiteRecordID ?? "not linked yet")
         }
         const attachmentBuilder = new AttachmentBuilder(Buffer.from(report))
         attachmentBuilder.setName("UserReport.txt")
@@ -118,4 +129,21 @@ export async function listUsers(channel: TextChannel, logger: Logger, discordUse
         await channel.send({files: [attachmentBuilder]})
     }
 
+}
+
+async function syncAndUpdateUserInfo(logger: Logger) {
+    const users = await fetchAllUsers()
+    const SUUsers = await scrapeUsers(users.map(u => u.schedgeUpId))
+    const smartSuiteRecords = await getPersonnel()
+
+    for (const user of users) {
+        if (user.smartSuiteRecordID) continue
+        // Bonus, check for existing record on SS
+        const smartSuiteRecord = smartSuiteRecords.find(p => p.name.toLowerCase().trim() === SUUsers.find(u => u.userId === user.schedgeUpId)!.displayName)
+        if (!smartSuiteRecord) continue
+
+        // Update an existing user with new SmartSuite info
+        await updateUser(new DatabaseUser(user.userId, user.schedgeUpId, user.discordSnowflake, smartSuiteRecord.recordID), user.schedgeUpId)
+        await logger.logLine(`Added SmartSuite link to existing user\n(${smartSuiteRecord.name}/[${smartSuiteRecord.roles.join(",")}]/${smartSuiteRecord.recordID})`)
+    }
 }

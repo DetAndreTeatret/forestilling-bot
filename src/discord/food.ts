@@ -7,10 +7,10 @@ import {
     Message,
     Snowflake
 } from "discord.js"
-import {getDayNameNO, renderDateYYYYMMDD} from "../common/date.js"
+import {getDayNameNO, renderDateYYYYMMDD} from "../util/date.js"
 import {replyFoodMail} from "../mail/mail.js"
 import {fetchFoodOrderByUser, FoodOrder, NO_CONVERSATION_YET} from "../database/food.js"
-import {DiscordMessageReplyLogger} from "../common/logging.js"
+import {DiscordMessageReplyLogger} from "../util/logging.js"
 import {discordClient, postDebug} from "./client.js"
 
 let messageCache: string | undefined = undefined

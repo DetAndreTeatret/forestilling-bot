@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, TextChannel} from "discord.js"
 import {addShowGuest, deleteShowGuest} from "../../database/user.js"
-import {DummyLogger} from "../../common/logging.js"
-import {needNotNullOrUndefined} from "../../common/util.js"
+import {DummyLogger} from "../../util/logging.js"
+import {needNotNullOrUndefined} from "../../util/util.js"
 import {addMemberToChannel, removeMemberFromChannel} from "../channels.js"
 
 

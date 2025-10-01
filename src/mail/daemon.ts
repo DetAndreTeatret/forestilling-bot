@@ -1,6 +1,6 @@
-import {EnvironmentVariable, needEnvVariable} from "../common/config.js"
+import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
 import {gmail} from "./mail.js"
-import {ConsoleLogger} from "../common/logging.js"
+import {ConsoleLogger} from "../util/logging.js"
 
 
 const INTERVAL = 1000 * 60 * 60 * 24 // 24 hours

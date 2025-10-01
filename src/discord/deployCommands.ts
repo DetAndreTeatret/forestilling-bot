@@ -2,7 +2,7 @@ import {fileURLToPath} from "url"
 import {REST, Routes} from "discord.js"
 import fs from "node:fs"
 import path from "node:path"
-import {EnvironmentVariable, needEnvVariable, setupConfig} from "../common/config.js"
+import {EnvironmentVariable, needEnvVariable, setupConfig} from "../util/config.js"
 
 // STANDALONE SCRIPT
 // Used to deploy slash commends when any are added/removed/changed
@@ -15,7 +15,7 @@ const commands = []
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const commandsPath = path.join(__dirname, "commands")
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"))
+const commandFiles = fs.readdirSync(commandsPath, {recursive: true, encoding: "utf-8"}).filter(file => file.endsWith(".js"))
 for await (const file of commandFiles) {
     const filePath = path.join(commandsPath, file)
     const command = await import(filePath)
@@ -38,7 +38,9 @@ const rest = new REST().setToken(needEnvVariable(EnvironmentVariable.BOT_TOKEN))
         )
         // @ts-ignore
         console.log(`Successfully reloaded ${data.length} application (/) commands.`)
+        process.exit()
     } catch (error) {
         console.error(error)
+        process.exit(1)
     }
 })()

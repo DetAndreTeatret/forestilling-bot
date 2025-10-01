@@ -1,4 +1,4 @@
-import {renderDateYYYYMMDD} from "../common/date.js"
+import {renderDateYYYYMMDD} from "../util/date.js"
 import {addEntry, deleteEntries, selectAllEntires, selectEntry, updateEntry} from "./sqlite.js"
 import {TextChannel} from "discord.js"
 
