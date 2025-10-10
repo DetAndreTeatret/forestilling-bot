@@ -68,7 +68,7 @@ export interface AnnouncementContentData {
 }
 
 export async function needAllAnnouncementContents(): Promise<AnnouncementContentData[]> {
-    const result = await selectAllEntires("Announcements", ["AnnouncementID", "AnnouncementTitle, AnnouncementContent"])
+    const result = await selectAllEntires("Announcements", ["AnnouncementID", "AnnouncementTitle", "AnnouncementText"])
     return result.map(value => {
         return {
             id: Number(value["AnnouncementID"]),
