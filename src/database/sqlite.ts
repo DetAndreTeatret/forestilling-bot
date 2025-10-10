@@ -51,7 +51,7 @@ export async function addEntry(table: DatabaseTables, ...params: (string | numbe
  * @param columns which columns to include. If undefined, all columns will be included
  */
 export async function selectEntries(table: DatabaseTables, condition: string, columns?: string[]/* TODO: Make this a type? prevent typos */) {
-    const columnString = columns === undefined ? "*" : "(" + columns + ")"
+    const columnString = columns === undefined ? "*" : columns
     const query = "SELECT " + columnString + " FROM " + table + " WHERE " + condition
     debugLogQuery(query)
     return await db.all(query)
@@ -76,7 +76,7 @@ export async function selectEntry(table: DatabaseTables, condition: string, colu
  * @param columns which columns to include. If undefined, all columns will be included
  */
 export async function selectAllEntires(table: DatabaseTables, columns?: string[]) {
-    const columnString = columns === undefined ? "*" : "(" + columns + ")"
+    const columnString = columns === undefined ? "*" : columns
     const query = "SELECT " + columnString + " FROM " + table
     debugLogQuery(query)
     return await db.all(query)
