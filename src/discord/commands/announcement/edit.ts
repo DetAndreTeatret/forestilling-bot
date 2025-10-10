@@ -1,6 +1,6 @@
 import {
     ActionRowBuilder, AnySelectMenuInteraction, ButtonBuilder, ButtonInteraction, ButtonStyle,
-    ChatInputCommandInteraction, EmbedBuilder,
+    ChatInputCommandInteraction, EmbedBuilder, MessageFlagsBitField,
     ModalBuilder, ModalSubmitInteraction,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
@@ -23,6 +23,11 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const jobs = await getAllJobs()
 
+    if (jobs.length === 0) {
+        await interaction.reply({content: "Det er for øyeblikket ingen aktive annonseringer å administrere :)", flags: [MessageFlagsBitField.Flags.Ephemeral]})
+        return
+    }
+
     const jobPicker = new StringSelectMenuBuilder({
         customId: "announcementEdit-picker",
         minValues: 1,
@@ -31,15 +36,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     })
 
     const contentDatas = await needAllAnnouncementContents()
+    const foundAnnouncements: number[] = []
 
     jobPicker.addOptions(jobs.filter(j => j.name === "initiateNagging").map(job => {
         const data = job.data as NagInitiationJobData
-        const contentData = contentDatas.find(c => c.id === data.announcement)!
+        const contentData = contentDatas.find(c => c.id === data.announcement && !foundAnnouncements.includes(data.announcement))!
+        foundAnnouncements.push(data.announcement)
 
         return new StringSelectMenuOptionBuilder({
             label: contentData.title,
             value: String(data.announcement)
-        })}))
+        })
+    }))
 
     await interaction.reply({
         content: "Velg en kunngjøring å administrere",

@@ -30,7 +30,6 @@ const messageQueueLogger = new ConsoleLogger("[BullMQ]")
  * and if a message and/or mail is to be sent.
  */
 export function setupMessageQueue() {
-    naggingQueue.drain(true)
     naggingQueue.getJobs().then(jobs => jobs.forEach(async job => {
         if (await job.isCompleted()) return
         messageQueueLogger.logLine(">>> " + jobToString(job) + " <<<")
