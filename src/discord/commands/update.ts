@@ -114,7 +114,19 @@ export async function update(guild: Guild, logger: Logger) {
     const today = new Date()
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
     const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)), false)
-    const events = await scrapeEvents(eventInfos)
+    let events = await scrapeEvents(eventInfos)
+    // We filter out events we don't want to create a show for here, a little weird but probably fine
+    events = events.filter(event => {
+            const title = event.title.toLowerCase()
+            if (title.includes("prøve")) return false
+            // This solution is to prevent the need to search for "turn" three times for each possible ending, and I don't trust users on their grammar
+            // Checks for "turne", "turné" and "turnè"
+            if (title.includes("turn")) {
+                const c = event.title.charAt(event.title.indexOf("turn") + 4).toLowerCase()
+                if (c === "e" || c === "è" || c === "é") return false
+            }
+            return true
+    })
 
     await logger.logLine("Mapping currently running Discord channels...")
     const channels = await mapRunningChannels(guild)
@@ -123,7 +135,6 @@ export async function update(guild: Guild, logger: Logger) {
     const daysUpdated: TextChannel[] = []
     const channelMemberDifferences: ChannelMemberDifference[] = []
 
-    // TODO decide if bot should keep any show related info stored, or rebuild everytime?
     for (let i = 0; i < events.length; i++) {
         const event = events[i]
         const isEventDaytime = await isDayTimeShow(event.showTemplateId === undefined ? "null" : event.showTemplateId, event.title)
