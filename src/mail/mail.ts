@@ -5,13 +5,10 @@ import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
 import {renderDateYYYYMMDD} from "../common/date.js"
 import {google} from "googleapis"
-import {authenticate} from "@google-cloud/local-auth"
 import path from "node:path"
 import appRootPath from "app-root-path"
 import {APIEndpoint} from "googleapis-common"
-import {OAuth2Client} from "google-auth-library"
 import {PubSub} from "@google-cloud/pubsub"
-import fs from "node:fs"
 import {simpleParser} from "mailparser"
 import {startDaemon} from "./daemon.js"
 import {ConsoleLogger} from "../common/logging.js"
@@ -19,8 +16,7 @@ import {postUrgentDebug} from "../discord/client.js"
 
 export let gmail: APIEndpoint
 
-const CREDENTIALS_PATH = path.join(appRootPath.path, "google_creds.json")
-const TOKEN_PATH = path.join(appRootPath.path, "google_token.json")
+const SERVICE_ACCOUNT_CREDS_PATH = path.join(appRootPath.path, "service_account.json")
 
 const logger = new ConsoleLogger("[Mail]")
 
@@ -56,7 +52,8 @@ const logger = new ConsoleLogger("[Mail]")
  * Prepare all mail related shenanigans
  */
 export async function setupMailServices() {
-    const auth = await authorize()
+    const auth = loadServiceAccountCreds()
+    if (!auth) throw new Error("Could not load service account, missing credentials?")
 
     google.options({auth: auth})
 
@@ -232,54 +229,21 @@ async function handleRogueMail(body: string, reason: string) {
 /**
  * Reads previously authorized credentials from the save file.
  */
-function loadSavedCredentialsIfExist(): OAuth2Client | null {
+function loadServiceAccountCreds() {
     try {
-        const content = fs.readFileSync(TOKEN_PATH).toString()
-        const credentials = JSON.parse(content)
-        return google.auth.fromJSON(credentials) as OAuth2Client
+        return new google.auth.GoogleAuth({
+            keyFilename: SERVICE_ACCOUNT_CREDS_PATH,
+            scopes: [
+                "https://mail.google.com/",
+                "https://www.googleapis.com/auth/pubsub",
+                "https://www.googleapis.com/auth/cloud-platform",
+            ],
+            clientOptions: {
+                subject: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
+            }
+        })
     } catch (err) {
-        logger.logWarning("Could not load credentials because of " + err)
+        logger.logWarning("Could not load service account creds because of " + err)
         return null
     }
 }
-
-/**
- * Serializes credentials to a file compatible with GoogleAuth.fromJSON.
- * // TODO find page that gave you this preset? Link here
- */
-function saveCredentials(client: OAuth2Client) {
-    const content = fs.readFileSync(CREDENTIALS_PATH).toString()
-    const keys = JSON.parse(content)
-    const key = keys.installed || keys.web
-    const payload = JSON.stringify({
-        type: "authorized_user",
-        client_id: key.client_id,
-        client_secret: key.client_secret,
-        refresh_token: client.credentials.refresh_token,
-    })
-    fs.writeFileSync(TOKEN_PATH, payload)
-}
-
-/**
- * Load or request or authorization to call APIs.
- *
- */
-async function authorize() {
-    let client = loadSavedCredentialsIfExist()
-    if (client) {
-        return client
-    }
-    client = await authenticate({
-        scopes: [
-            "https://mail.google.com/",
-            "https://www.googleapis.com/auth/pubsub",
-            "https://www.googleapis.com/auth/cloud-platform",
-        ],
-        keyfilePath: CREDENTIALS_PATH,
-    })
-    if (client.credentials) {
-        saveCredentials(client)
-    }
-    return client
-}
-
