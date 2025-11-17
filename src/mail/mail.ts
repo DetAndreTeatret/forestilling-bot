@@ -75,7 +75,9 @@ export async function setupMailServices() {
 
     startDaemon() // This refreshes the watch request once every day
 
-    const pubsub = new PubSub({projectId: needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID), keyFilename: path.join(appRootPath.path, "google_token.json")})
+    const pubsub = new PubSub({projectId: needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID),
+        // @ts-ignore
+        auth: auth})
     const sub = pubsub.subscription("gmail-sub")
 
     sub.on("message", async function(message) {
@@ -135,6 +137,7 @@ export async function setupMailServices() {
 
     sub.on("error", function(error: Error) {
         logger.logWarning("Gmail Pub/Sub error!! "  + error)
+        console.dir(error, {depth: 10})
         postUrgentDebug("Gmail Pub/Sub error!! "  + error)
     })
 
