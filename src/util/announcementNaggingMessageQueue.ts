@@ -1,7 +1,9 @@
 import {ConsoleLogger} from "./logging.js"
 import {Redis} from "ioredis"
 import {Queue, Worker, Job} from "bullmq"
-import {needNaggingData, removeCompletedAnnouncement} from "../database/discord.js"
+import {
+    needNaggingData,
+} from "../database/discord.js"
 import {discordClient} from "../discord/client.js"
 import {DatabaseUser, fetchUser} from "../database/user.js"
 import {getSinglePersonnel} from "../smartsuite/personnel.js"
@@ -9,6 +11,7 @@ import {sendNagMail} from "../mail/mail.js"
 import {Snowflake} from "discord.js"
 import {inspect} from "util"
 import {naggingRules} from "../discord/commands/announcement/create.js"
+import {stopAnnouncement} from "../discord/commands/announcement/edit.js"
 
 type NagJobNames = "initiateNagging" | "nag"
 type NagJobDataTypes = NagInitiationJobData | NagJobData
@@ -42,7 +45,13 @@ export function setupMessageQueue() {
 
             const member = await discordClient.guild.members.fetch(naggingData.originalNagger)
 
-            // The first two nags are always pre determined
+            // If no-one is left to nag just stop the announcement and exit
+            if (naggingData.nagWho.length <= 0) {
+                await stopAnnouncement(data.announcement, false, "Alle som skal svare har svart!", messageQueueLogger)
+                return
+            }
+
+            // The first two nags are always pre-determined
             if (data.step === -2) {
                 naggingData.nagWho.forEach(snowflake => {
                     fetchUser(undefined, snowflake).then(who => {
@@ -98,16 +107,10 @@ export function setupMessageQueue() {
                 })
             })
 
-            // If anyone left to nag post the next job...
-            if (naggingData.nagWho.length > 0) {
-                addNagJob("initiateNagging", {
-                    announcement: data.announcement,
-                    step: data.step + 1
-                }, new Date(Date.now() + nagRules[data.step + 1].hours * 60 * 60 * 1000))
-            } else {
-                // TODO is this enough for closing?
-                await removeCompletedAnnouncement(data.announcement)
-            }
+            addNagJob("initiateNagging", {
+                announcement: data.announcement,
+                step: data.step + 1
+            }, new Date(Date.now() + nagRules[data.step + 1].hours * 60 * 60 * 1000))
         } else if (job.name === "nag") {
             const data = job.data as NagJobData
 
@@ -160,6 +163,7 @@ export function deleteNagJobs(announcementId: number) {
 
 /**
  * Add a job to the queue, if a deadline is provided the job will be delayed until the given date.
+ * No jobs will be run between 2000 and 0800, if any deadline lands in this time range it is postponed until 0800.
  */
 export function addNagJob(name: NagJobNames, data: NagJobDataTypes, deadline?: Date) {
     if ((name === "nag" && "step" in data) || (name === "initiateNagging" && "snowflakeBackup" in data)) {
