@@ -19,7 +19,7 @@ const TABLE_STRINGS = [
     "CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), ReferenceTable varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)",
     "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))",
     "CREATE TABLE IF NOT EXISTS Announcements(AnnouncementID INTEGER PRIMARY KEY, DiscordUserSnowflake varchar(64), AnnouncementDiscordChannelSnowflake varchar(64), AnnouncementDiscordMessageSnowflake varchar(64), AnnouncementTitle varchar, AnnouncementText varchar, LegalEmojies varchar, NaggingPlan varchar, NonRespondants varchar)"
-]
+] // TODO AnnouncmentText -> Content?
 
 const logger = new ConsoleLogger("[SQLite]")
 

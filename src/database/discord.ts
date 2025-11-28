@@ -24,7 +24,24 @@ export async function createDatabaseAnnouncement(announcement: Announcement, id:
 }
 
 export async function editAnnouncement(data: AnnouncementContentData) {
-    await updateEntry("Announcements", "AnnouncementID=\"" + data.id + "\"", ["AnnouncementTitle", "AnnouncementContent"], [data.title, data.content])
+    await updateEntry("Announcements", "AnnouncementID=\"" + data.id + "\"", ["AnnouncementTitle", "AnnouncementText"], [data.title, data.content])
+}
+
+export async function needAnnouncementData(announcementID: number): Promise<AnnouncementNaggingData & AnnouncementResponseData & AnnouncementContentData> {
+    const result = await selectEntry("Announcements", "AnnouncementID=\"" + announcementID + "\"")
+    if (!result || !isValidNaggingKey(result["NaggingPlan"]) || !isValidEmojiSetKey(result["LegalEmojies"])) throw new Error("Error when fetching data of announcement " + result)
+    return {
+        naggingRulesKey: result["NaggingPlan"],
+        nagWho: String(result["NonRespondants"]).split(","),
+        originalNagger: result["DiscordUserSnowflake"],
+        announcementChannelID: result["AnnouncementDiscordChannelSnowflake"],
+        announcementMessageID: result["AnnouncementDiscordMessageSnowflake"],
+        nonRespondants: String(result["NonRespondants"]).split(","),
+        legalEmojies: result["LegalEmojies"],
+        id: Number(result["AnnouncementID"]),
+        title: result["AnnouncementTitle"],
+        content: result["AnnouncementText"]
+    }
 }
 
 export interface AnnouncementNaggingData {
@@ -73,18 +90,18 @@ export async function needAllAnnouncementContents(): Promise<AnnouncementContent
         return {
             id: Number(value["AnnouncementID"]),
             title: value["AnnouncementTitle"],
-            content: value["AnnouncementContent"]
+            content: value["AnnouncementText"]
         }
     })
 }
 
 export async function needAnnouncementContent(announcementId: string): Promise<AnnouncementContentData> {
-    const result = await selectEntry("Announcements", "AnnouncementID=\"" + announcementId + "\"", ["AnnouncementTitle", "AnnouncementContent"])
+    const result = await selectEntry("Announcements", "AnnouncementID=\"" + announcementId + "\"", ["AnnouncementTitle", "AnnouncementText"])
     if (!result) throw new Error("No announcement found with id " + announcementId)
     return {
         id: Number(announcementId),
         title: result["AnnouncementTitle"],
-        content: result["AnnouncementContent"]
+        content: result["AnnouncementText"]
     }
 }
 
@@ -121,6 +138,10 @@ export async function addNonRespondant(announcementMessageID: Snowflake, discord
     await updateEntry("Announcements", "AnnouncementDiscordMessageSnowflake=\"" + announcementMessageID + "\"", ["NonRespondants"], [current.join(",")])
 }
 
-export async function removeCompletedAnnouncement(announcementID: number) {
+/**
+ * Deletes an announcement from the database, only used when removing an announcement before its completed.
+ * @param announcementID
+ */
+export async function deleteAnnouncement(announcementID: number) {
     await deleteEntries("Announcements", "AnnouncementID=\"" + announcementID + "\"")
 }

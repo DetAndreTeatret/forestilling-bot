@@ -24,7 +24,11 @@ import {
     handleAnnouncementWorkMenuSelect
 } from "./commands/announcement/create.js"
 import {isAnnouncementMessage} from "../database/discord.js"
-import {handleAnnouncementEditRequest, handleAnnouncementEditSubmit} from "./commands/announcement/edit.js"
+import {
+    handleAnnouncementEditButton,
+    handleAnnouncementEditRequest,
+    handleAnnouncementEditSubmit
+} from "./commands/announcement/edit.js"
 
 
 export let discordClient: SuperClient
@@ -128,13 +132,25 @@ export async function startDiscordClient() {
         }
 
         if (interaction.channel && interaction.isButton()) {
-            if (interaction.customId.includes("announcement-button")) {
-                await handleAnnouncementWorkButton(interaction)
-                return
-            } else if (interaction.channel.isDMBased()) {
-                await handleFoodMessageButtons(interaction)
-            } else {
-                await handleFoodOrderButtons(interaction)
+            const path = interaction.customId.split("-")
+            if (path[1] !== "button") throw new Error("Faulty custom ID in button click" + path[1])
+            switch (path[0]) {
+                case "food": {
+                    await handleFoodOrderButtons(interaction) // TODO this and foodorder uses wrong schema for custom id, misses component type identifier on second index
+                    break
+                }
+                case "foodOrder": {
+                    await handleFoodMessageButtons(interaction)
+                    break
+                }
+                case "announcement": {
+                    await handleAnnouncementWorkButton(interaction)
+                    break
+                }
+                case "announcementEdit": {
+                    await handleAnnouncementEditButton(interaction)
+                    break
+                }
             }
             return
         }
