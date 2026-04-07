@@ -21,7 +21,7 @@
     "nodemailer": "8.0.4",
     "schedgeup-scraper": "3.2.5",
     "sqlite": "5.1.1",
-    "sqlite3": "5.1.7",
+    "sqlite3": "6.0.1",
     "typescript": "5.8.3"
   },
   "devDependencies": {
