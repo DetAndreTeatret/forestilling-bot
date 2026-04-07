@@ -18,7 +18,7 @@
     "dotenv": "17.3.1",
     "googleapis": "171.4.0",
     "mailparser": "3.9.3",
-    "nodemailer": "8.0.1",
+    "nodemailer": "8.0.4",
     "schedgeup-scraper": "3.2.5",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
