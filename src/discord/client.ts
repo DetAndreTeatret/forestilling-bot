@@ -1,10 +1,11 @@
 import {
+    ChannelType,
     Client,
     ClientOptions,
     Collection,
     Events,
     GatewayIntentBits,
-    Guild, MessageFlagsBitField,
+    Guild, MessageFlagsBitField, MessageReaction,
     RepliableInteraction, Snowflake,
     TextChannel
 } from "discord.js"
@@ -21,9 +22,15 @@ import {fileURLToPath} from "url"
 import {
     handleAnnouncementReaction,
     handleAnnouncementTextSubmit, handleAnnouncementWorkButton,
-    handleAnnouncementWorkMenuSelect
+    handleAnnouncementWorkMenuSelect, revertOldAnnouncementReaction
 } from "./commands/announcement/create.js"
-import {isAnnouncementMessage} from "../database/discord.js"
+import {
+    addNonRespondant,
+    isActiveAnnouncementMessage, isInactiveAnnouncementMessage,
+    needAllAnnouncementData, removeNonRespondant,
+    RespondantData,
+    switchResponse
+} from "../database/discord.js"
 import {
     handleAnnouncementEditButton,
     handleAnnouncementEditRequest,
@@ -40,9 +47,13 @@ const logger = new ConsoleLogger("[Discord]")
 const DISCORD_RAW_REACTION_EVENTS = ["MESSAGE_REACTION_ADD", "MESSAGE_REACTION_REMOVE", "MESSAGE_REACTION_REMOVE_ALL"] as const
 // This is typed this way such that we can pass the events to the same handler in the announcement code, instead of doing three separate functions
 export type DiscordEmojiEvent =
-    {type: typeof DISCORD_RAW_REACTION_EVENTS[0] | typeof DISCORD_RAW_REACTION_EVENTS[1], name: string | null, id: Snowflake | null}
+    {
+        type: typeof DISCORD_RAW_REACTION_EVENTS[0] | typeof DISCORD_RAW_REACTION_EVENTS[1],
+        name: string | null,
+        id: Snowflake | null
+    }
     |
-    {type: typeof DISCORD_RAW_REACTION_EVENTS[2], name: undefined, id: undefined}
+    { type: typeof DISCORD_RAW_REACTION_EVENTS[2], name: undefined, id: undefined }
 
 export class SuperClient extends Client { // TODO look over methods inside/outside Client
     commands = new Collection() // TODO can be stronger typed
@@ -64,7 +75,10 @@ export async function startDiscordClient() {
     const commandsPath = path.join(__dirname, "commands")
     let commandFiles: string[] = []
     try {
-        commandFiles = fs.readdirSync(commandsPath, {recursive: true, encoding: "utf-8"}).filter(file => file.endsWith(".js"))
+        commandFiles = fs.readdirSync(commandsPath, {
+            recursive: true,
+            encoding: "utf-8"
+        }).filter(file => file.endsWith(".js"))
     } catch (e) {
         logger.logWarning("Error reading command files: " + e)
         throw e
@@ -95,11 +109,12 @@ export async function startDiscordClient() {
 
     await client.populateGuild()
 
+    // Could not get reaction events to work, so solved it with Raw type
     client.on(Events.Raw, e => {
         if (!STARTING && e.d.guild_id === discordClient.guild.id) {
             if (e.t === DISCORD_RAW_REACTION_EVENTS[0] && e.d.member.user && !e.d.member.user.bot) {
-                isAnnouncementMessage(e.d.message_id).then(() => {
-                    handleAnnouncementReaction(e.d.message_id, e.d.channel_id, {
+                isActiveAnnouncementMessage(e.d.message_id).then((isActive) => {
+                    if (isActive) handleAnnouncementReaction(e.d.message_id, e.d.channel_id, {
                         type: e.t,
                         id: e.d.emoji.id,
                         name: e.d.emoji.name
@@ -108,14 +123,26 @@ export async function startDiscordClient() {
             }
 
             if (e.t === DISCORD_RAW_REACTION_EVENTS[1]) {
-                isAnnouncementMessage(e.d.message_id).then(() => {
-                    handleAnnouncementReaction(e.d.message_id, e.d.channel_id, {
+                isActiveAnnouncementMessage(e.d.message_id).then((isActive) => {
+                    if (isActive) handleAnnouncementReaction(e.d.message_id, e.d.channel_id, {
                         type: e.t,
                         id: e.d.emoji.id,
                         name: e.d.emoji.name
                     }, e.d.user_id)
                 })
             }
+
+            // To try and be as predictable as possible, we deny emoji reactions to messages that belongs to old announcements.
+            if (e.t === DISCORD_RAW_REACTION_EVENTS[0]) {
+                isInactiveAnnouncementMessage(e.d.message_id).then((isInactive) => {
+                    if (isInactive) {
+                        revertOldAnnouncementReaction(e.d.message_id, e.d.channel_id, e.d.user_id)
+                    }
+                })
+            }
+
+            // console.dir(e, {depth: 20})
+
         }
     })
 
@@ -239,6 +266,100 @@ export async function startDiscordClient() {
             }
         }
     })
+
+    // Check all active announcement messages for changes in reactions since last restart
+    // This should be done before the BullMQ queue is restarted, in case a nag initiation is about to start
+    // and someone responded during downtime
+    const announcements = await needAllAnnouncementData()
+    for await (const announcement of announcements) {
+        await logger.logLine(`Checking active announcement ${announcement.title}(${announcement.id}) for changes in reactions`)
+        const announcementChannel = await client.guild.channels.fetch(announcement.announcementChannelID)
+        if (!announcementChannel || announcementChannel.type !== ChannelType.GuildText) {
+            throw new Error("Could not find announcement channel during start mapping of reactions")
+        }
+
+        const announcementMessage = await announcementChannel.messages.fetch(announcement.announcementMessageID)
+
+        const reactions = (await Promise.all(announcementMessage.reactions.cache.map(async reaction => [reaction, await reaction.users.fetch()] as const)))
+
+        // First, we map out all user reactions to see if they appear more than once
+        const reactionsByUser: Map<Snowflake, MessageReaction[]> = new Map()
+
+        for await (const reactionAndUsers of reactions) {
+            for await (const user of reactionAndUsers[1]) {
+                if (user[1].bot) continue
+
+                let reactions = reactionsByUser.get(user[0])
+                if (!reactions) reactions = []
+                reactions.push(reactionAndUsers[0])
+                reactionsByUser.set(user[0], reactions)
+            }
+        }
+
+        reactionsByUser.forEach((userReactions, snowflake) => {
+            // Users who appear once, are either unchanged or new respondants!
+            if (userReactions.length === 1) {
+                // Check if response is new or old
+                if (!announcement.respondantData.find(data => data.respondant === snowflake)) {
+                    // New response!
+                    const emoji = userReactions[0].emoji
+                    removeNonRespondant(announcement.announcementMessageID, snowflake, {respondant: snowflake, lastResponseEmoji: emoji.id ?? emoji.name ?? "Unknown Emoji", lastResponseTime: Date.now()})
+                }
+
+                return
+            }
+
+            // If a user has reacted twice, we assume they just tried to switch, and we keep the reaction not stored.
+            // If a user has reacted more than twice, we assume they tried to switch but missclicked, we choose a random of the ones not stored
+
+            const storedReaction = announcement.respondantData.find(d => d.respondant === snowflake)
+            if (!storedReaction) {
+                throw new Error("No respondant data found in database for " + snowflake)
+            }
+
+            // We iterate like this since we can't guarantee any order in the duplicates array
+            let finalResponse: RespondantData | undefined
+            let chosenReaction = false
+            for (const reaction of userReactions) {
+                const emoji = reaction.emoji
+                if (emoji.id === storedReaction.lastResponseEmoji || emoji.name === storedReaction.lastResponseEmoji || chosenReaction) {
+                    // Old reaction or reaction we will not keep, remove
+                    reaction.users.remove(snowflake)
+                } else {
+                    // If a user has reacted more than twice in addition to the old reaction, we just pick the first we enconuter
+                    // That's not the old reaction.
+                    chosenReaction = true
+                    finalResponse = {
+                        respondant: storedReaction.respondant,
+                        lastResponseEmoji: emoji.id ?? emoji.name ?? "Unknown Emoji",
+                        lastResponseTime: Date.now(),
+                    }
+                }
+            }
+
+            if (!finalResponse) {
+                throw new Error("No response was chosen for swap...")
+            }
+
+            // We have to check if the multiple responses was their first or replacing an existing response
+            if (announcement.nonRespondants.includes(finalResponse.respondant)) {
+                logger.logLine("Removed " + finalResponse.respondant + " from non respondants with response " + finalResponse.lastResponseEmoji)
+                removeNonRespondant(announcement.announcementMessageID, finalResponse.respondant, finalResponse)
+            } else {
+                logger.logLine(`Switched ${finalResponse.respondant} to new response ${finalResponse.lastResponseEmoji} (${userReactions.length} duplicates)`)
+                switchResponse(announcement.announcementMessageID, finalResponse)
+            }
+        })
+
+        // Then, check if any respondants are missing(new non-respondants)
+        const reactingUsers = Array.from(reactionsByUser.keys())
+        for await (const data of announcement.respondantData) {
+            if (!reactingUsers.includes(data.respondant) && !announcement.nonRespondants.includes(data.respondant)) {
+                logger.logLine(data.respondant + " removed their reaction for announcement during downtime")
+                await addNonRespondant(announcement.announcementMessageID, data.respondant)
+            }
+        }
+    }
 
     // Try to recover any ongoing food convo
     const maybeOrderer = await whoOrderedToday()
