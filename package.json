@@ -16,7 +16,6 @@
     "discord.js": "^14.22.1",
     "@google-cloud/pubsub": "^5.0.0",
     "app-root-path": "3.1.0",
-    "discord.js": "^14.12.1",
     "dotenv": "17.4.1",
     "googleapis": "171.4.0",
     "mailparser": "3.9.6",
@@ -24,7 +23,6 @@
     "schedgeup-scraper": "3.2.5",
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1",
-    "sqlite3": "5.1.7",
     "bullmq": "^5.56.4",
     "smartsuite-typescript-api": "0.1.0"
   },
