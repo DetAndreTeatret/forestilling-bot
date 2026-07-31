@@ -18,7 +18,7 @@ const TABLE_STRINGS = [
     "CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))",
     "CREATE TABLE IF NOT EXISTS FoodOrdered(DiscordChannelSnowflake varchar(64), PickupTime varchar(4), OrderedByDiscordUserSnowflake varchar(64), ReferenceTable varchar(100), MailConvoSubject varchar(150), CreatedAtEpoch TIMESTAMP)",
     "CREATE TABLE IF NOT EXISTS ShowDayGuests(DiscordChannelSnowflake varchar(64), DiscordUserSnowflake varchar(64))",
-    "CREATE TABLE IF NOT EXISTS Announcements(AnnouncementID INTEGER PRIMARY KEY, DiscordUserSnowflake varchar(64), AnnouncementDiscordChannelSnowflake varchar(64), AnnouncementDiscordMessageSnowflake varchar(64), AnnouncementTitle varchar, AnnouncementText varchar, LegalEmojies varchar, NaggingPlan varchar, NonRespondants varchar)"
+    "CREATE TABLE IF NOT EXISTS Announcements(AnnouncementID INTEGER PRIMARY KEY, DiscordUserSnowflake varchar(64), AnnouncementDiscordChannelSnowflake varchar(64), AnnouncementDiscordMessageSnowflake varchar(64), AnnouncementTitle varchar, AnnouncementText varchar, LegalEmojies varchar, NonRespondants varchar, RespondantData JSON, CreatedAtEpoch TIMESTAMP, IsActive BOOLEAN)"
 ] // TODO AnnouncmentText -> Content?
 
 const logger = new ConsoleLogger("[SQLite]")
@@ -38,7 +38,7 @@ type DatabaseTables = "UserList" | "Settings" | "ShowDays" | "DayTimeShows" | "F
  * @param table The table to insert an entry into
  * @param params The values of the entry, in the order specified in the Database Layout
  */
-export async function addEntry(table: DatabaseTables, ...params: (string | number | null)[]) {
+export async function addEntry(table: DatabaseTables, ...params: (string | number | null | boolean)[]) {
     const query = "INSERT INTO " + table + " VALUES(" + params.map(() => "?") + ")"
     debugLogQuery(query)
     await db.run(query, params)
@@ -88,10 +88,10 @@ export async function deleteEntries(table: DatabaseTables, condition: string) {
     return await db.exec(query)
 }
 
-export async function updateEntry(table: DatabaseTables, condition: string, columns: string[], newValues: string[]) {
-    const query = "UPDATE " + table + " SET " + createUpdateColumnString(columns, newValues) + " WHERE " + condition
+export async function updateEntry(table: DatabaseTables, condition: string, columns: string[], newValues: (string | boolean)[]) {
+    const query = "UPDATE " + table + " SET " + createUpdateColumnString(columns) + " WHERE " + condition
     debugLogQuery(query)
-    return await db.exec(query)
+    return await db.run(query, newValues)
 }
 
 export async function executeQuery(query: string) {
@@ -99,10 +99,10 @@ export async function executeQuery(query: string) {
     return await db.exec(query)
 }
 
-function createUpdateColumnString(columns: string[], newValues: string[]) {
+function createUpdateColumnString(columns: string[]) {
     let result = ""
     for (let i = 0; i < columns.length; i++) {
-        result += columns[i] + "=\"" + newValues[i] + "\""
+        result += columns[i] + "=?"
         if (i + 1 !== columns.length) result += ","
     }
 

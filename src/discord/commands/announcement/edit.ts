@@ -6,31 +6,44 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     TextInputBuilder,
-    TextInputStyle, ComponentType, Snowflake
+    TextInputStyle, ComponentType, Snowflake, ChannelType
 } from "discord.js"
-import {deleteNagJobs, getAllJobs, NagInitiationJobData} from "../../../util/announcementNaggingMessageQueue.js"
+import {
+    deleteNagJobs,
+    getAllJobs,
+    jobToString,
+    NagInitiationJobData
+} from "../../../util/announcementNaggingMessageQueue.js"
 import {
     AnnouncementContentData, editAnnouncement,
     needAllAnnouncementContents,
     needAnnouncementContent,
-    needNaggingData, deleteAnnouncement, needAnnouncementData
+    needNaggingData, deactivateAnnouncement, needAnnouncementData
 } from "../../../database/discord.js"
 import {discordClient, postUrgentDebug} from "../../client.js"
 import {ConsoleLogger, Logger} from "../../../util/logging.js"
+import {inspect} from "util"
 
 export const data = new SlashCommandBuilder()
     .setName("kunngjøring-admin")
     .setDescription("Endre eller slett aktive kunngjøringer")
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const jobs = await getAllJobs()
+    const jobs = await getAllJobs("completed")
+    const contentDatas = await needAllAnnouncementContents()
 
-    if (jobs.length === 0) {
-        const jobs = await getAllJobs()
+    if (contentDatas.length === 0) {
+        const flushJobsButton = new ButtonBuilder({
+            customId: "announcementEdit-button-flushALL",
+            label: "Fjern ALLE jobber(farlig)",
+            style: ButtonStyle.Danger,
+        })
+        const jobsString = jobs.map(async j => `${j.name}/${j.id}/${await j.getState()}/${inspect(j.data)}`)
+
         await interaction.reply({
-            content: "Det er for øyeblikket ingen aktive annonseringer å administrere :)\nVentende jobber: " +
-                (jobs.length > 0 ? jobs.map(j => `${j.name}/${j.id}/${j.data}`).join("\n") : "Ingen for øyeblikket"),
-            flags: [MessageFlagsBitField.Flags.Ephemeral]
+            content: "Det er for øyeblikket ingen aktive annonseringer å administrere :)\nVentende jobber: \n>>> " + (jobsString.length > 0 ? jobsString.join("\n>>> ") : "Ingen for øyeblikket"),
+            flags: [MessageFlagsBitField.Flags.Ephemeral],
+            components: jobs.length > 0 ? [new ActionRowBuilder<ButtonBuilder>({components: [flushJobsButton]})] : undefined
         })
         return
     }
@@ -40,7 +53,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         placeholder: "Trykk her for å se en liste over aktive kunngjøringer"
     })
 
-    const contentDatas = await needAllAnnouncementContents()
     const foundAnnouncements: number[] = []
 
     jobPicker.addOptions(jobs.filter(j => j.name === "initiateNagging")
@@ -57,9 +69,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .filter(j => j !== undefined)
     )
 
+    const jobDebugButton = new ButtonBuilder({
+        customId: "announcementEdit-button-jobsdebug",
+        label: "Se ventende jobber",
+        style: ButtonStyle.Primary,
+    })
+
+    const flushFailedJobsDebugButton = new ButtonBuilder({
+        customId: "announcementEdit-button-flushFailed",
+        label: "Fjern feilede jobber",
+        style: ButtonStyle.Danger,
+    })
+
     await interaction.reply({
         content: "Velg en kunngjøring å administrere",
-        components: [new ActionRowBuilder<StringSelectMenuBuilder>({components: [jobPicker]})],
+        components: [new ActionRowBuilder<StringSelectMenuBuilder>({components: [jobPicker]}), new ActionRowBuilder<ButtonBuilder>({components: [jobDebugButton, flushFailedJobsDebugButton]})],
         flags: [MessageFlagsBitField.Flags.Ephemeral]
     })
 }
@@ -114,6 +138,44 @@ function createAnnouncementEditMessage(contentData: AnnouncementContentData) {
 
 export async function handleAnnouncementEditButton(interaction: ButtonInteraction) {
     const path = interaction.customId.split("-")
+
+    switch (path[2]) {
+        case "jobsdebug": {
+            const jobs = await getAllJobs("completed")
+
+            const jobsStringified = (await Promise.all(jobs.map(j => jobToString(j)))).join("\n")
+
+            await interaction.reply({
+                content: jobsStringified,
+                flags: [MessageFlagsBitField.Flags.Ephemeral],
+            })
+
+            return
+        }
+        case "flushFailed": {
+            const reply = await interaction.deferReply({flags: [MessageFlagsBitField.Flags.Ephemeral]})
+            const jobs = await getAllJobs()
+            for await (const job of jobs) {
+                if (await job.isFailed()){
+                    await job.remove()
+                }
+            }
+
+            await reply.edit("Jobs successfully removed!")
+            return
+        }
+        case "flushALL": {
+            const reply = await interaction.deferReply({flags: [MessageFlagsBitField.Flags.Ephemeral]})
+            const jobs = await getAllJobs()
+            for await (const job of jobs) {
+                await job.remove()
+            }
+
+            await reply.edit("ALL jobs successfully removed!")
+            return
+        }
+    }
+
     const announcement = await needAnnouncementContent(path[3])
     switch (path[2]) {
         case "delete": {
@@ -157,11 +219,16 @@ export async function handleAnnouncementEditButton(interaction: ButtonInteractio
 
             const data = await needNaggingData(announcement.id)
 
-            const currentAnnouncement = await interaction.channel!.messages.fetch(data.announcementMessageID)
+            const announcementChannel = await interaction.guild!.channels.fetch(data.announcementChannelID)
+            if (!announcementChannel || announcementChannel.type !== ChannelType.GuildText) {
+                throw new Error("Error fetching channel for announcement, trying to edit. " + data.announcementChannelID + " " + announcement.id)
+            }
+
+            const currentAnnouncement = await announcementChannel.messages.fetch(data.announcementMessageID)
             const newEmbed = new EmbedBuilder(currentAnnouncement.embeds[0].data)
             newEmbed.setTitle(title)
             newEmbed.setDescription(content)
-            await interaction.channel!.messages.edit(data.announcementMessageID, {
+            await currentAnnouncement.edit({
                 embeds: [newEmbed],
             })
 
@@ -245,8 +312,8 @@ export async function handleAnnouncementEditSubmit(interaction: ModalSubmitInter
  */
 export async function stopAnnouncement(announcementID: number, deleteMessage: boolean, reason: string, logger: Logger) {
     // If not, time to deactivate!
-    // To preserve the state of the announcement with reactions at the time it is marked as completed, we send a message to the announcement OP
-    // We don't preserve any announcement history, so the logged info + the message sent to announcement OP is the only "archive"
+    // To preserve the state of the announcement with reactions at the time it is marked as completed, we send a message to the announcement OP.
+    // We don't preserve any announcement history, so the logged info + the message sent to announcement OP is the only "archive".
 
     const announcement = await needAnnouncementData(announcementID)
     const channel = await discordClient.guild.channels.fetch(announcement.announcementChannelID)
@@ -310,5 +377,5 @@ export async function stopAnnouncement(announcementID: number, deleteMessage: bo
 
     // To be safe we flush the job queue for related jobs
     deleteNagJobs(announcement.id)
-    await deleteAnnouncement(announcement.id)
+    await deactivateAnnouncement(announcement.id, announcement.announcementMessageID)
 }

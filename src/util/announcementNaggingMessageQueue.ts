@@ -1,9 +1,7 @@
 import {ConsoleLogger} from "./logging.js"
 import {Redis} from "ioredis"
-import {Queue, Worker, Job} from "bullmq"
-import {
-    needNaggingData,
-} from "../database/discord.js"
+import {Job, Queue, Worker} from "bullmq"
+import {needNaggingData,} from "../database/discord.js"
 import {discordClient} from "../discord/client.js"
 import {DatabaseUser, fetchUser} from "../database/user.js"
 import {getSinglePersonnel} from "../smartsuite/personnel.js"
@@ -35,13 +33,12 @@ const messageQueueLogger = new ConsoleLogger("[BullMQ]")
 export function setupMessageQueue() {
     naggingQueue.getJobs().then(jobs => jobs.forEach(async job => {
         if (await job.isCompleted()) return
-        messageQueueLogger.logLine(">>> " + jobToString(job) + " <<<")
+        messageQueueLogger.logLine(">>> " + await jobToString(job) + " <<<")
     }))
     worker = new Worker("mainQueue", async (job) => {
         if (job.name === "initiateNagging") {
             const data = job.data as NagInitiationJobData
             const naggingData = await needNaggingData(data.announcement)
-            const nagRules = naggingRules[naggingData.naggingRulesKey]
 
             const member = await discordClient.guild.members.fetch(naggingData.originalNagger)
 
@@ -87,11 +84,11 @@ export function setupMessageQueue() {
                 addNagJob("initiateNagging", {
                     announcement: data.announcement,
                     step: 0
-                }, new Date(Date.now() + nagRules[0].hours * 60 * 60 * 1000))
+                }, new Date(Date.now() + naggingRules.Quick[0].hours * 60 * 60 * 1000))
                 return
             }
 
-            const nagAction = nagRules[data.step]
+            const nagAction = naggingRules.Quick[Math.min(data.step, naggingRules.Quick.length - 1)]
             naggingData.nagWho.forEach(snowflake => {
                 fetchUser(undefined, snowflake).then(who => {
                     addNagJob("nag", {
@@ -110,7 +107,7 @@ export function setupMessageQueue() {
             addNagJob("initiateNagging", {
                 announcement: data.announcement,
                 step: data.step + 1
-            }, new Date(Date.now() + nagRules[data.step + 1].hours * 60 * 60 * 1000))
+            }, new Date(Date.now() + naggingRules.Quick[Math.min(data.step + 1, naggingRules.Quick.length - 1)].hours * 60 * 60 * 1000))
         } else if (job.name === "nag") {
             const data = job.data as NagJobData
 
@@ -151,8 +148,13 @@ export function setupMessageQueue() {
     // naggingQueue.drain(true)
 }
 
-export async function getAllJobs() {
-    return naggingQueue.getJobs()
+export async function getAllJobs(...excludeStatus: Awaited<ReturnType<InstanceType<typeof Job>["getState"]>>[]) {
+    const jobs = await naggingQueue.getJobs()
+    if (!excludeStatus) return jobs
+
+    return (await Promise.all(
+        jobs.map(async (j) => ({job: j, status: await j.getState()}))))
+        .filter(({status}) => !excludeStatus.includes(status)).map(({job}) => job)
 }
 
 export function deleteNagJobs(announcementId: number) {
@@ -182,7 +184,7 @@ export function addNagJob(name: NagJobNames, data: NagJobDataTypes, deadline?: D
             deadlineClone.setMinutes(0)
             deadlineClone.setSeconds(0)
         }
-        delay = Number(deadline) - Number(new Date())
+        delay = Number(deadlineClone) - Number(new Date())
     }
 
     naggingQueue.add(name, data, {delay: delay}).then(job => {
@@ -196,18 +198,20 @@ export async function shutdownMessages() {
     await naggingQueue.close()
 }
 
-function jobToString(job: Job<NagJobData | NagInitiationJobData>) {
+export async function jobToString(job: Job<NagJobData | NagInitiationJobData>) {
     if (!job || !job.name) return inspect(job, {depth: 30})
+    const state = await job.getState()
+    const jobStateBlob = `State: ${state},${state === "failed" ? " Failed reason: " + job.failedReason : ""}, Data: ${JSON.stringify(job.data)}\n         >>>`
     if (job.name === "initiateNagging") {
         const j = job.data as NagInitiationJobData
         // job.delay returns the delay specified at job creation, so we have to calculate the expected delay from this point in time ourselves
         const scheduledExecute = job.delay - (Date.now() - job.timestamp)
-        return `Next nag initiation for announcement with id ${j.announcement} at step ${j.step} should be started in ${quickPrettyMs(scheduledExecute)}`
+        return jobStateBlob + `Next nag initiation for announcement with id ${j.announcement} at step ${j.step} should be started in ${quickPrettyMs(scheduledExecute)}`
     } else if (job.name === "nag") {
         const j = job.data as NagJobData
-        return `${j.originalNagger} is about to nag ${j.userToNag?.discordSnowflake ?? j.snowflakeBackup} on mail(${j.mail})/Discord(${j.discord}) in channel: ${j.announcementChannelID} -> message: ${j.announcementMessageID}`
+        return jobStateBlob + `${j.originalNagger} is about to nag ${j.userToNag?.discordSnowflake ?? j.snowflakeBackup} on mail(${j.mail})/Discord(${j.discord}) in channel: ${j.announcementChannelID} -> message: ${j.announcementMessageID}`
     }
-    return "Mysterious job! " + job
+    return jobStateBlob + "Mysterious job! " + job
 }
 
 function quickPrettyMs(ms: number) {

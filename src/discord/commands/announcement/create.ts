@@ -6,7 +6,7 @@ import {
     ChannelType,
     ChatInputCommandInteraction,
     EmbedBuilder,
-    GuildChannel, InteractionWebhook,
+    GuildChannel, GuildMember, InteractionWebhook,
     MessageFlagsBitField,
     MessageReaction,
     ModalBuilder,
@@ -18,13 +18,13 @@ import {
     TextChannel,
     TextInputBuilder,
     TextInputStyle,
-    User, UserSelectMenuBuilder
+    UserSelectMenuBuilder
 } from "discord.js"
 import {needNotNullOrUndefined} from "../../../util/util.js"
 import {
     addNonRespondant,
     createDatabaseAnnouncement,
-    needResponseData, removeNonRespondant
+    needResponseData, removeNonRespondant, switchResponse
 } from "../../../database/discord.js"
 import {renderDateMMDDhh} from "../../../util/date.js"
 import {discordClient, DiscordEmojiEvent} from "../../client.js"
@@ -69,6 +69,7 @@ export type NaggingRulesKey = keyof typeof naggingRules
 // Strategies for nagging over time, each number is the number of hours after the last nag
 // The last number will be repeated until nagging stops (e.g, 1 hour interval nagging until the respondent finally responds)
 // The first number is after the initial deadline, so each first step here is really the second nag
+// Currently only Quick is used
 export const naggingRules = {
     // After 2 hours send a mail
     // After 4 hours send a Discord msg and mail, forever
@@ -78,17 +79,17 @@ export const naggingRules = {
     // After 12 hours send a Discord msg
     // After 12 hours send a Discord msg and mail forever
     "Quick": [nag(24), nag(12, false, true), nag(12), nag(12, true, true)],
-    // After 48 hours send a Discord msg TODO is this too slow first nag?
+    // After 24 hours send a Discord msg
     // After 12 hours send a mail
     // After 24 hours send a Discord msg
     // After 24 hours send a Discord msg and mail
     // After 12 hours send a Discord msg
     // After 12 hours send a Discord msg and mail, forever
-    "Chill": [nag(48), nag(12, false, true), nag(24), nag(24, true, true), nag(12), nag(12, true, true)]
+    "Chill": [nag(24), nag(12, false, true), nag(24), nag(24, true, true), nag(12), nag(12, true, true)]
 } as const
 
 export class Announcement {
-    readonly owner: User
+    readonly owner: GuildMember
     readonly channel: GuildChannel
     title: string
     content: string
@@ -105,7 +106,7 @@ export class Announcement {
     // Which emojies are to be used as reaction reply options?
     legalEmojies?: LegalEmoijiesKey
 
-    constructor(owner: User, channel: GuildChannel, title: string, content: string, deadline: string, messageWebhook: InteractionWebhook) {
+    constructor(owner: GuildMember, channel: GuildChannel, title: string, content: string, deadline: string, messageWebhook: InteractionWebhook) {
         this.owner = owner
         this.channel = channel
         this.title = title
@@ -223,19 +224,6 @@ export async function handleAnnouncementTextSubmit(interaction: ModalSubmitInter
             placeholder: "Velg hvem som skal mases på per bruker (kan blandes med roller)"
         })
 
-        const naggingRulesPicker = new StringSelectMenuBuilder({
-            customId: customID("picker", "nagging", announcementWebhookID),
-            minValues: 1,
-            maxValues: 1,
-            placeholder: "Velg en masestrategi"
-        })
-
-        naggingRulesPicker.addOptions(Object.entries(naggingRules).map(rule =>
-            new StringSelectMenuOptionBuilder({
-                label: rule[0],
-                value: rule[0]
-            })))
-
         const legalEmojiesPicker = new StringSelectMenuBuilder({
             customId: customID("picker", "emojis", announcementWebhookID),
             minValues: 1,
@@ -274,14 +262,14 @@ export async function handleAnnouncementTextSubmit(interaction: ModalSubmitInter
             components: [
                 new ActionRowBuilder<RoleSelectMenuBuilder>({components: [rolesPicker]}),
                 new ActionRowBuilder<UserSelectMenuBuilder>({components: [userPicker]}),
-                new ActionRowBuilder<StringSelectMenuBuilder>({components: [naggingRulesPicker]}),
                 new ActionRowBuilder<StringSelectMenuBuilder>({components: [legalEmojiesPicker]}),
                 new ActionRowBuilder<ButtonBuilder>({components: [changeContentButton, cancelButton, confirmButton]})
             ],
             flags: MessageFlagsBitField.Flags.Ephemeral
         })
 
-        wipAnnouncements.set(interaction.webhook.id, new Announcement(interaction.user, channel, title, text, deadline, interaction.webhook))
+        const member = await channel.guild.members.fetch(interaction.user)
+        wipAnnouncements.set(interaction.webhook.id, new Announcement(member, channel, title, text, deadline, interaction.webhook))
     }
 }
 
@@ -316,11 +304,6 @@ export async function handleAnnouncementWorkMenuSelect(interaction: AnySelectMen
         case "emojis": {
             if (!isValidEmojiSetKey(interaction.values[0])) throw new Error("Uh oh invalid emoji key")
             announcement.legalEmojies = interaction.values[0]
-            break
-        }
-        case "nagging": {
-            if (!isValidNaggingKey(interaction.values[0])) throw new Error("Uh oh invalid nagging key")
-            announcement.naggingRule = interaction.values[0]
             break
         }
         default:
@@ -390,7 +373,7 @@ export async function handleAnnouncementWorkButton(interaction: ButtonInteractio
 function canActivateAnnouncement(announcement: Announcement) {
     const errors: string[] = []
     if (!announcement.legalEmojies) errors.push("- Reaksjoner for å svare er ikke definert")
-    if (!announcement.naggingRule) errors.push("- Masestrategi er ikke valgt")
+    // if (!announcement.naggingRule) errors.push("- Masestrategi er ikke valgt")
     if (!announcement.hasAnyToNag()) errors.push("- Kunngjøringen må ha minst 1 bruker eller 1 rolle som mottakere")
 
     if (errors.length > 0) return errors.join("\n")
@@ -407,7 +390,7 @@ async function activateAnnouncement(announcement: Announcement, channel: TextCha
         {name: "Svarfrist(Før masing begynner)", value: renderDateMMDDhh(parseAnnouncementDeadline(announcement.deadline))},
         {name: "Svar da!", value: "For å svare på denne bruk en av emojiene under denne meldingen. Hvis du ikke svarer innen fristen vil du bli mast på helt til du svarer", inline: false}
     )
-    embed.setFooter({text: "Denne kunngjøringen ble sendt ut av " + announcement.owner.displayName})
+    embed.setFooter({text: "Denne kunngjøringen ble sendt ut av " + (announcement.owner.nickname ?? announcement.owner.displayName)})
     embed.setColor("Random")
 
     const naggersResolved = announcement.nagWho(channel)
@@ -487,9 +470,11 @@ function shouldIgnoreRole(tags: RoleTagData | null) {
 
 // Type predicate helpers
 
+/*
 export function isValidNaggingKey(key: string): key is NaggingRulesKey {
     return Object.keys(naggingRules).includes(key)
 }
+*/
 
 export function isValidEmojiSetKey(key: string): key is LegalEmoijiesKey {
     return legalEmojiSets.some(set => set.key === key)
@@ -550,13 +535,40 @@ export async function handleAnnouncementReaction(announcementMessage: Snowflake,
                 console.log("User switched their answer")
                 // User has at an earlier point reacted another reaction and now they change
                 existing.users.remove(userID)
+                switchResponse(announcementMessage, {respondant: userID, lastResponseTime: Date.now(), lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"})
             } else {
                 console.log("User added their answer")
-                removeNonRespondant(announcementMessage, userID)
+                removeNonRespondant(announcementMessage, userID, {respondant: userID, lastResponseTime: Date.now(), lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"})
             }
             return
         }
     }
+}
+
+// Unfortunately we can not add reactions "for" users, this means that if a user removes their old reaction it will stay removed.
+// But, we will deny new reactions.
+export async function revertOldAnnouncementReaction(announcementMessage: Snowflake, announcementChannel: Snowflake, userSnowflake: Snowflake) {
+    const channel = await discordClient.guild.channels.fetch(announcementChannel)
+    if (!channel || channel.type !== 0) throw new Error("Can't find announcement channel")
+
+    const message = await channel.messages.fetch(announcementMessage)
+
+    const responseData = await needResponseData(announcementMessage)
+    const data = responseData.respondantData.find(d => d.respondant === announcementMessage)
+    if (!data) {
+        for (const reaction of message.reactions.cache) {
+            reaction[1].users.remove(userSnowflake)
+        }
+    } else {
+        for (const reaction of message.reactions.cache) {
+            if (reaction[1].emoji.name ?? reaction[1].emoji.id !== data.lastResponseEmoji) {
+                reaction[1].users.remove(userSnowflake)
+            }
+        }
+    }
+
+    // Friendly warning...
+    await channel.client.users.send(userSnowflake, "Oops! Du prøvde å endre svaret ditt på en kunngjøring som allerede er lukket, hvis du vil endre svar nå anbefales det å sende en direkte melding til personen som lagde kunngjøringen")
 }
 
 function customID(type: string, name: string, announcementWebhookID?: Snowflake) {
