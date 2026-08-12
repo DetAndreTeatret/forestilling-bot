@@ -12,7 +12,7 @@
   "author": "Simon Mørland",
   "license": "MIT",
   "dependencies": {
-    "@google-cloud/pubsub": "^5.3.1",
+    "@google-cloud/pubsub": "^6.0.0",
     "app-root-path": "3.1.0",
     "discord.js": "^14.27.0",
     "dotenv": "17.4.2",
