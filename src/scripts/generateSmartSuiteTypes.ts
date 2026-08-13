@@ -1,8 +1,12 @@
 import {generateTableTypings, SmartSuiteAPI} from "smartsuite-typescript-api"
-import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
-import {configDotenv} from "dotenv"
+import {EnvironmentVariable, needEnvVariable, setupConfig} from "../util/config.js"
 
-configDotenv()
+// STANDALONE SCRIPT
+// Used to update typings for SmartSuite tables
+// Is never ran along the main bot, and is expected to be run as a standalone node script
+// use "npm run generateSmartSuiteTypes" to run this code
+
+setupConfig()
 
 const api = new SmartSuiteAPI({
     apiKey: needEnvVariable(EnvironmentVariable.SMARTSUITE_API_KEY),
@@ -20,6 +24,6 @@ async function generateTypes() {
 }
 
 generateTypes().then(() => {
-    console.log("Generated types for smartsuite types")
+    console.log("Generated types for SmartSuite types")
     process.exit(0)
 })

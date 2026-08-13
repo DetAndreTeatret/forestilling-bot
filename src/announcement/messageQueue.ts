@@ -1,15 +1,41 @@
-import {ConsoleLogger} from "./logging.js"
+import {ConsoleLogger} from "../util/logging.js"
 import {Redis} from "ioredis"
 import {Job, Queue, Worker} from "bullmq"
-import {needNaggingData,} from "../database/discord.js"
 import {discordClient} from "../discord/client.js"
 import {DatabaseUser, fetchUser} from "../database/user.js"
 import {getSinglePersonnel} from "../smartsuite/personnel.js"
 import {sendNagMail} from "../mail/mail.js"
 import {Snowflake} from "discord.js"
 import {inspect} from "util"
-import {naggingRules} from "../discord/commands/announcement/create.js"
-import {stopAnnouncement} from "../discord/commands/announcement/edit.js"
+import {needNaggingData} from "../database/announcement.js"
+import {naggingRules, stopAnnouncement} from "./announcement.js"
+
+// A job that starts a round of nagging, resulting in x amount of nag jobs being posted (and another of itself if necessary)
+export interface NagInitiationJobData {
+    // Related to which announcement (database entry id)
+    announcement: number
+    // Which number of nag is this
+    step: number
+}
+
+// A job that does the actual nagging to a single user
+interface NagJobData {
+    // Related to which announcement (database entry id)
+    announcement: number
+    // Display name of the user who started the nagging in the first place...
+    originalNagger: string
+    // Who am I nagging
+    userToNag: DatabaseUser | undefined
+    // Snowflake as backup if no user??
+    snowflakeBackup: Snowflake
+    // Nag on discord?
+    discord: boolean
+    // Nag on mail?
+    mail: boolean
+    // Some needed context info for the nag
+    announcementChannelID: Snowflake
+    announcementMessageID: Snowflake
+}
 
 type NagJobNames = "initiateNagging" | "nag"
 type NagJobDataTypes = NagInitiationJobData | NagJobData
@@ -18,7 +44,6 @@ const connection = new Redis({maxRetriesPerRequest: null})
 const naggingQueue = new Queue<NagJobDataTypes, void, NagJobNames>("mainQueue", {connection})
 let worker: Worker<NagJobDataTypes, void, NagJobNames> | undefined
 const messageQueueLogger = new ConsoleLogger("[BullMQ]")
-
 
 /**
  * Queue setup:
@@ -148,6 +173,12 @@ export function setupMessageQueue() {
     // naggingQueue.drain(true)
 }
 
+export async function shutdownMessageQueue() {
+    await messageQueueLogger.logLine("Closing workers and queues")
+    await worker?.close()
+    await naggingQueue.close()
+}
+
 export async function getAllJobs(...excludeStatus: Awaited<ReturnType<InstanceType<typeof Job>["getState"]>>[]) {
     const jobs = await naggingQueue.getJobs()
     if (!excludeStatus) return jobs
@@ -192,12 +223,6 @@ export function addNagJob(name: NagJobNames, data: NagJobDataTypes, deadline?: D
     })
 }
 
-export async function shutdownMessages() {
-    await messageQueueLogger.logLine("Closing workers and queues")
-    await worker?.close()
-    await naggingQueue.close()
-}
-
 export async function jobToString(job: Job<NagJobData | NagInitiationJobData>) {
     if (!job || !job.name) return inspect(job, {depth: 30})
     const state = await job.getState()
@@ -224,31 +249,4 @@ function quickPrettyMs(ms: number) {
     const days = Math.floor(hours / 60)
     if (days === 0) return `${hours}h ${min % 60}m`
     return `${days}d ${hours % 60}h`
-}
-
-// A job that starts a round of nagging, resulting in x amount of nag jobs being posted (and another of itself if necessary)
-export interface NagInitiationJobData {
-    // Related to which announcement (database entry id)
-    announcement: number
-    // Which number of nag is this
-    step: number
-}
-
-// A job that does the actual nagging to a single user
-interface NagJobData {
-    // Related to which announcement (database entry id)
-    announcement: number
-    // Display name of the user who started the nagging in the first place...
-    originalNagger: string
-    // Who am I nagging
-    userToNag: DatabaseUser | undefined
-    // Snowflake as backup if no user??
-    snowflakeBackup: Snowflake
-    // Nag on discord?
-    discord: boolean
-    // Nag on mail?
-    mail: boolean
-    // Some needed context info for the nag
-    announcementChannelID: Snowflake
-    announcementMessageID: Snowflake
 }

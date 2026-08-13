@@ -14,7 +14,7 @@ setupConfig()
 const commands = []
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const commandsPath = path.join(__dirname, "commands")
+const commandsPath = path.join(__dirname, "..", "discord", "commands")
 const commandFiles = fs.readdirSync(commandsPath, {recursive: true, encoding: "utf-8"}).filter(file => file.endsWith(".js"))
 for await (const file of commandFiles) {
     const filePath = path.join(commandsPath, file)

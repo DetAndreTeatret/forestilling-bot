@@ -5,7 +5,7 @@ import {setupMailServices} from "./mail/mail.js"
 import {discordClient, startDiscordClient} from "./discord/client.js"
 import {update} from "./discord/commands/update.js"
 import {ConsoleLogger} from "./util/logging.js"
-import {setupMessageQueue, shutdownMessages} from "./util/announcementNaggingMessageQueue.js"
+import {setupMessageQueue, shutdownMessageQueue} from "./announcement/messageQueue.js"
 
 start().then(() => {
     if (isDebugEnabled()) {
@@ -40,7 +40,7 @@ async function start() {
 async function stop(code: number, signal?: string) {
     if (signal) console.warn("Received signal " + signal)
     console.log("Stopping forestilling-bot...")
-    await shutdownMessages()
+    await shutdownMessageQueue()
     process.exit(code)
 }
 

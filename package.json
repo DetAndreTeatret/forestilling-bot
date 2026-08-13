@@ -6,8 +6,8 @@
     "lint": "eslint .",
     "lintFix": "eslint . --fix",
     "transpile": "tsc",
-    "deployCommands": "rm -r -f build && tsc && node ./build/discord/deployCommands.js",
-    "generateSmartSuiteTypes": "rm -r -f build && tsc && node ./build/smartsuite/smartsuiteTypesGenerate.js"
+    "deployCommands": "rm -r -f build && tsc && node ./build/scripts/deployDiscordCommands.js",
+    "generateSmartSuiteTypes": "rm -r -f build && tsc && node ./build/scripts/generateSmartSuiteTypes.js"
   },
   "type": "module",
   "author": "Simon Mørland",

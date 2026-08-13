@@ -1,146 +1,40 @@
 import {
-    ActionRowBuilder, AnySelectMenuInteraction,
-    ButtonBuilder,
-    ButtonInteraction,
-    ButtonStyle,
-    ChannelType,
-    ChatInputCommandInteraction,
-    EmbedBuilder,
-    GuildChannel, GuildMember, InteractionWebhook,
-    MessageFlagsBitField,
+    ActionRowBuilder, AnySelectMenuInteraction, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType,
+    EmbedBuilder, GuildChannel, LabelBuilder, MessageFlagsBitField,
     MessageReaction,
-    ModalBuilder,
-    ModalSubmitInteraction,
-    Role, RoleSelectMenuBuilder,
-    RoleTagData,
-    SlashCommandBuilder,
+    ModalBuilder, ModalSubmitInteraction, Role, RoleSelectMenuBuilder, RoleTagData,
     Snowflake, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-    TextChannel,
     TextInputBuilder,
-    TextInputStyle,
-    UserSelectMenuBuilder
+    TextInputStyle, UserSelectMenuBuilder
 } from "discord.js"
-import {needNotNullOrUndefined} from "../../../util/util.js"
+import {renderDateMMDDhh} from "../util/date.js"
+import {needNotNullOrUndefined} from "../util/util.js"
+import {discordClient, DiscordEmojiEvent} from "../discord/client.js"
 import {
-    addNonRespondant,
-    createDatabaseAnnouncement,
-    needResponseData, removeNonRespondant, switchResponse
-} from "../../../database/discord.js"
-import {renderDateMMDDhh} from "../../../util/date.js"
-import {discordClient, DiscordEmojiEvent} from "../../client.js"
-import {addNagJob} from "../../../util/announcementNaggingMessageQueue.js"
+    activateAnnouncement,
+    Announcement,
+    canActivateAnnouncement,
+    isValidEmojiSetKey,
+    legalEmojiSets,
+    parseAnnouncementDeadline, stopAnnouncement
+} from "./announcement.js"
+import {
+    addNonRespondant, AnnouncementContentData, editAnnouncement, needAnnouncementContent, needNaggingData,
+    needResponseData, removeNonRespondant,
+    switchResponse
+} from "../database/announcement.js"
+import {getAllJobs, jobToString} from "./messageQueue.js"
+import {ConsoleLogger} from "../util/logging.js"
+
+/*
+ * Most announcement logic regarding creation of embeds and handling interaction events in Discord.
+ * Also see announcement.ts in same dir
+ */
+
 
 const wipAnnouncements: Map<string, Announcement> = new Map()
 
-const DAY_IN_MILLISECONDS = 24*60*60*1000
-
-export type LegalEmoijiesKey = typeof legalEmojiSets[number]["key"]
-
-const legalEmojiSets = [{
-    key: "Ja/Nei",
-    names: ["👍", "👎"], // U+1F44D (thumbs up), U+1F44E (thumbs down)
-    ids: [null, null]
-}, {
-    key: "Ja/Nei/Kanskje",
-    names: ["Ja", "Nei", "🤷"],
-    ids: ["1024249472668151808", "1024249582739267654", null]
-}, {
-    key: "Lest",
-    names: ["Lest"],
-    ids: ["1024978383307817020"]
-}] as const
-
-
-interface NagAction {
-    readonly hours: number
-    readonly discord: boolean
-    readonly mail: boolean
-}
-
-/**
- * Defaults to Discord only when only hours are provided
- */
-function nag(hours: number, discord: boolean = true, mail: boolean = false): NagAction {
-    return {hours: hours, discord: discord, mail: mail}
-}
-
-export type NaggingRulesKey = keyof typeof naggingRules
-
-// Strategies for nagging over time, each number is the number of hours after the last nag
-// The last number will be repeated until nagging stops (e.g, 1 hour interval nagging until the respondent finally responds)
-// The first number is after the initial deadline, so each first step here is really the second nag
-// Currently only Quick is used
-export const naggingRules = {
-    // After 2 hours send a mail
-    // After 4 hours send a Discord msg and mail, forever
-    "ASAP": [nag(2, false, true), nag(4, true, true)],
-    // After 24 hours send a Discord msg
-    // After 12 hours send a mail
-    // After 12 hours send a Discord msg
-    // After 12 hours send a Discord msg and mail forever
-    "Quick": [nag(24), nag(12, false, true), nag(12), nag(12, true, true)],
-    // After 24 hours send a Discord msg
-    // After 12 hours send a mail
-    // After 24 hours send a Discord msg
-    // After 24 hours send a Discord msg and mail
-    // After 12 hours send a Discord msg
-    // After 12 hours send a Discord msg and mail, forever
-    "Chill": [nag(24), nag(12, false, true), nag(24), nag(24, true, true), nag(12), nag(12, true, true)]
-} as const
-
-export class Announcement {
-    readonly owner: GuildMember
-    readonly channel: GuildChannel
-    title: string
-    content: string
-    // The deadline before nagging starts, when hit a Discord message is sent, subsequent nags are defined in the ruleset "naggingRule"
-    deadline: string
-    messageWebhook: InteractionWebhook
-
-    // These values are not known at initiation of creation
-    nagUsers: Snowflake[]
-    nagRoles: Snowflake[]
-    // The rule describe the strategy for nagging over time after the deadline has been reached
-    // Se const for how logic should work
-    naggingRule?: NaggingRulesKey
-    // Which emojies are to be used as reaction reply options?
-    legalEmojies?: LegalEmoijiesKey
-
-    constructor(owner: GuildMember, channel: GuildChannel, title: string, content: string, deadline: string, messageWebhook: InteractionWebhook) {
-        this.owner = owner
-        this.channel = channel
-        this.title = title
-        this.content = content
-        this.deadline = deadline
-        this.messageWebhook = messageWebhook
-        this.nagUsers = []
-        this.nagRoles = []
-    }
-
-    nagWho(channel: GuildChannel) {
-        const result = [""].concat(this.nagUsers)
-        channel.members.forEach(member => {
-            for (const role of this.nagRoles) {
-                if (member.roles.cache.has(role)) result.push(member.id)
-            }
-        })
-        return result.filter((id, i) => !(id === "" || result.indexOf(id) !== i))
-    }
-
-    hasAnyToNag() {
-        return this.nagUsers.length > 0 || this.nagRoles.length > 0
-    }
-}
-
-export const data = new SlashCommandBuilder()
-    .setName("kunngjøring")
-    .setDescription("Lag en kunngjøring, maser automatisk på folk som ikke svarer!")
-
-export async function execute(interaction: ChatInputCommandInteraction) {
-    await interaction.showModal(createContentModal())
-}
-
-function createContentModal(announcementWebhookID?: string, existingTitle?: string, existingContent?: string, existingDeadline?: string) {
+export function createContentModal(announcementWebhookID?: string, existingTitle?: string, existingContent?: string, existingDeadline?: string) {
     const modalBuilder = new ModalBuilder()
     modalBuilder.setCustomId(customID("modal", "container", announcementWebhookID))
     modalBuilder.setTitle("Kunngjøring")
@@ -356,128 +250,13 @@ export async function handleAnnouncementWorkButton(interaction: ButtonInteractio
             if (channel.type !== ChannelType.GuildText) throw new Error("Invalid state uh oh")
             await interaction.deferUpdate()
             await activateAnnouncement(announcement, channel)
+            wipAnnouncements.delete(announcement.messageWebhook.id)
             await interaction.webhook.editMessage("@original", "Kunngjøring har blitt aktivert! Denne meldingen kan nå skjules")
             break
         }
         default:
             throw new Error("Received invalid announcement work button " + path)
     }
-}
-
-/**
- * Checks if necessary information on an announcement is present before publishing
- *
- * @return true if necessary info is present, if an error is found an error string is returned describing whats missing
- * @param announcement
- */
-function canActivateAnnouncement(announcement: Announcement) {
-    const errors: string[] = []
-    if (!announcement.legalEmojies) errors.push("- Reaksjoner for å svare er ikke definert")
-    // if (!announcement.naggingRule) errors.push("- Masestrategi er ikke valgt")
-    if (!announcement.hasAnyToNag()) errors.push("- Kunngjøringen må ha minst 1 bruker eller 1 rolle som mottakere")
-
-    if (errors.length > 0) return errors.join("\n")
-    return true
-}
-
-async function activateAnnouncement(announcement: Announcement, channel: TextChannel) {
-    if (!announcement.legalEmojies) throw new Error("ILLEGAL STATE")
-    // Post announcement to channel
-    const embed = new EmbedBuilder()
-    embed.setTitle(announcement.title)
-    embed.setDescription(announcement.content)
-    embed.addFields(
-        {name: "Svarfrist(Før masing begynner)", value: renderDateMMDDhh(parseAnnouncementDeadline(announcement.deadline))},
-        {name: "Svar da!", value: "For å svare på denne bruk en av emojiene under denne meldingen. Hvis du ikke svarer innen fristen vil du bli mast på helt til du svarer", inline: false}
-    )
-    embed.setFooter({text: "Denne kunngjøringen ble sendt ut av " + (announcement.owner.nickname ?? announcement.owner.displayName)})
-    embed.setColor("Random")
-
-    const naggersResolved = announcement.nagWho(channel)
-    const announcementMessage = await channel.send({
-        embeds: [embed],
-        content: naggersResolved.map(who => `<@${who}>`).join(" ")
-    })
-
-    const legalEmojis = legalEmojiSets.find(set => set.key === announcement.legalEmojies)
-    if (!legalEmojis) throw new Error("No legal emoji set found from key...")
-    for (let i = 0; i < legalEmojis.ids.length; i++) {
-        const name = legalEmojis.names[i]
-        const id = legalEmojis.ids[i]
-
-        if (!id) {
-            await announcementMessage.react(name)
-        } else {
-            await announcementMessage.react(`<:${name}:${id}>`)
-        }
-    }
-
-    announcementMessage.pin()
-
-    const id = Math.floor(Math.random() * 1000)
-    // It's time, activate all announcement forces
-    await createDatabaseAnnouncement(announcement, id, announcementMessage.id, naggersResolved)
-
-    const deadline = parseAnnouncementDeadline(announcement.deadline)
-    // If the deadline is in under 24h send the mail after 10 sec, if not the mail goes out after 24h
-    const initialMailDeadline = deadline.getTime() - Date.now() <= DAY_IN_MILLISECONDS ? 10000 : DAY_IN_MILLISECONDS
-    addNagJob("initiateNagging", {
-        announcement: id,
-        step: -2
-    }, new Date(Date.now() + initialMailDeadline))
-
-    addNagJob("initiateNagging", {
-        announcement: id,
-        step: -1
-    }, deadline)
-
-    await announcement.messageWebhook.editMessage("@original", {
-        components: [],
-        content: "Kunngjøring har blitt aktivert! Denne meldingen kan nå skjules",
-        embeds: []
-    })
-    wipAnnouncements.delete(announcement.messageWebhook.id)
-}
-
-function parseAnnouncementDeadline(deadline: string) {
-    const parts = needNotNullOrUndefined(deadline.match(/(\d+)(h)?/), "Parsing announcement deadline")
-    const deadlineDate = new Date()
-    const delay = Number(parts[1])
-    const isHours = parts.at(2)
-    if (isHours) {
-        deadlineDate.setHours(deadlineDate.getHours() + delay)
-    } else {
-        deadlineDate.setDate(deadlineDate.getDate() + delay)
-    }
-
-    return deadlineDate
-}
-
-// TODO:
-// On restart, need to read all current announcements and update responses before restarting nagging
-// What happens if someone changes their reaction? Only allow changes and not take-backs?
-
-function shouldIgnoreRole(tags: RoleTagData | null) {
-    if (tags) {
-        return (tags?.availableForPurchase ||
-            tags?.botId ||
-            tags?.integrationId ||
-            tags?.premiumSubscriberRole ||
-            tags?.subscriptionListingId) === true
-    }
-    return false
-}
-
-// Type predicate helpers
-
-/*
-export function isValidNaggingKey(key: string): key is NaggingRulesKey {
-    return Object.keys(naggingRules).includes(key)
-}
-*/
-
-export function isValidEmojiSetKey(key: string): key is LegalEmoijiesKey {
-    return legalEmojiSets.some(set => set.key === key)
 }
 
 export async function handleAnnouncementReaction(announcementMessage: Snowflake, announcementChannel: Snowflake, emojiEvent: DiscordEmojiEvent, userID: Snowflake) {
@@ -504,18 +283,18 @@ export async function handleAnnouncementReaction(announcementMessage: Snowflake,
             }
 
             const users = await reaction.users.fetch()
-                // User has another reaction than the event is about
-                if (users.has(userID) && reaction.emoji.name !== emojiEvent.name) {
-                    existing = reaction
-                }
-                // User added this reaction
-                if (users.has(userID) && reaction.emoji.name === emojiEvent.name) {
-                    added = reaction
-                }
-                // User removed this reaction
-                if (!users.has(userID) && reaction.emoji.name === emojiEvent.name) {
-                    removed = reaction
-                }
+            // User has another reaction than the event is about
+            if (users.has(userID) && reaction.emoji.name !== emojiEvent.name) {
+                existing = reaction
+            }
+            // User added this reaction
+            if (users.has(userID) && reaction.emoji.name === emojiEvent.name) {
+                added = reaction
+            }
+            // User removed this reaction
+            if (!users.has(userID) && reaction.emoji.name === emojiEvent.name) {
+                removed = reaction
+            }
         }
 
         // If manually removed we can always assume the user shall transition to a "non-respondant"
@@ -571,7 +350,227 @@ export async function revertOldAnnouncementReaction(announcementMessage: Snowfla
     await channel.client.users.send(userSnowflake, "Oops! Du prøvde å endre svaret ditt på en kunngjøring som allerede er lukket, hvis du vil endre svar nå anbefales det å sende en direkte melding til personen som lagde kunngjøringen")
 }
 
+export async function handleAnnouncementEditRequest(interaction: AnySelectMenuInteraction) {
+    const contentData = await needAnnouncementContent(interaction.values[0])
+    const message = createAnnouncementEditMessage(contentData)
+
+    await interaction.reply({
+        embeds: [message.embed],
+        components: [new ActionRowBuilder<ButtonBuilder>({components: message.components})],
+        flags: [MessageFlagsBitField.Flags.Ephemeral]
+    })
+
+    interaction.webhook.deleteMessage(interaction.message)
+}
+
+function createAnnouncementEditMessage(contentData: AnnouncementContentData) {
+    const deleteButton = new ButtonBuilder({
+        style: ButtonStyle.Danger,
+        label: "Slett aktiv kunngjøring",
+        customId: "announcementEdit-button-delete-" + contentData.id
+    })
+    const deactivateButton = new ButtonBuilder({
+        style: ButtonStyle.Danger,
+        label: "Stopp all masing om kunngjøring", // TODO stopp -> fullfør kunngjøring som den er
+        customId: "announcementEdit-button-deactivate-" + contentData.id
+    })
+    const editButton = new ButtonBuilder({
+        style: ButtonStyle.Primary,
+        label: "Endre tittel eller innhold",
+        customId: "announcementEdit-button-edit-" + contentData.id
+    })
+    const confirmEdits = new ButtonBuilder({
+        style: ButtonStyle.Success,
+        label: "Bekreft endringer",
+        customId: "announcementEdit-button-confirm-" + contentData.id
+    })
+
+    const embed = new EmbedBuilder({
+        title: "Arbeid med aktiv kunngjøring",
+        description: "Her kan du endre, deaktivere eller slette den valgte aktive kunngjøringen",
+        fields: [
+            {name: "Foreløpig tittel", value: contentData.title, inline: false},
+            {name: "Foreløpig innhold", value: contentData.content, inline: false}
+        ]
+    })
+
+    return {embed: embed, components: [editButton, confirmEdits, deactivateButton, deleteButton]}
+}
+
+export async function handleAnnouncementEditButton(interaction: ButtonInteraction) {
+    const path = interaction.customId.split("-")
+
+    switch (path[2]) {
+        case "jobsdebug": {
+            const jobs = await getAllJobs("completed")
+
+            const jobsStringified = (await Promise.all(jobs.map(j => jobToString(j)))).join("\n")
+
+            await interaction.reply({
+                content: jobsStringified,
+                flags: [MessageFlagsBitField.Flags.Ephemeral],
+            })
+
+            return
+        }
+        case "flushFailed": {
+            const reply = await interaction.deferReply({flags: [MessageFlagsBitField.Flags.Ephemeral]})
+            const jobs = await getAllJobs()
+            for await (const job of jobs) {
+                if (await job.isFailed()){
+                    await job.remove()
+                }
+            }
+
+            await reply.edit("Jobs successfully removed!")
+            return
+        }
+        case "flushALL": {
+            const reply = await interaction.deferReply({flags: [MessageFlagsBitField.Flags.Ephemeral]})
+            const jobs = await getAllJobs()
+            for await (const job of jobs) {
+                await job.remove()
+            }
+
+            await reply.edit("ALL jobs successfully removed!")
+            return
+        }
+    }
+
+    const announcement = await needAnnouncementContent(path[3])
+    switch (path[2]) {
+        case "delete": {
+            const confirmButton = new ButtonBuilder({
+                style: ButtonStyle.Danger,
+                label: "Slett kunngjøring(Ingen angring)",
+                customId: "announcementEdit-button-stop-" + announcement.id + "-nuke"
+            })
+
+            await interaction.reply({
+                content: "Er du helt sikker på at du vil slette og stoppe denne aktive kunngjøringen? Det finnes ingen angreknapp, og den orginale meldingen **vil bli slettet**",
+                components: [new ActionRowBuilder<ButtonBuilder>({components: [confirmButton]})],
+                flags: [MessageFlagsBitField.Flags.Ephemeral]
+            })
+            break
+        }
+        case "deactivate": {
+            const confirmButton = new ButtonBuilder({
+                style: ButtonStyle.Danger,
+                label: "Slett kunngjøring(Ingen angring)",
+                customId: "announcementEdit-button-stop-" + announcement.id + "-deactivate"
+            })
+
+            await interaction.reply({
+                content: "Er du helt sikker på at du vil deaktivere denne aktive kunngjøringen(Stopper all masing)? Det finnes ingen angreknapp, den orginale meldingen blir **ikke** slettet",
+                components: [new ActionRowBuilder<ButtonBuilder>({components: [confirmButton]})],
+                flags: [MessageFlagsBitField.Flags.Ephemeral]
+            })
+            break
+        }
+        case "edit": {
+            await interaction.showModal(createEditContentModal(announcement.id, announcement.title, announcement.content))
+            interaction.webhook.deleteMessage(interaction.message)
+            break
+        }
+        case "confirm": {
+            const fields = interaction.message.embeds[0].fields
+            const title = fields[0].value
+            const content = fields[1].value
+            await editAnnouncement({id: announcement.id, title: title, content: content})
+
+            const data = await needNaggingData(announcement.id)
+
+            const announcementChannel = await interaction.guild!.channels.fetch(data.announcementChannelID)
+            if (!announcementChannel || announcementChannel.type !== ChannelType.GuildText) {
+                throw new Error("Error fetching channel for announcement, trying to edit. " + data.announcementChannelID + " " + announcement.id)
+            }
+
+            const currentAnnouncement = await announcementChannel.messages.fetch(data.announcementMessageID)
+            const newEmbed = new EmbedBuilder(currentAnnouncement.embeds[0].data)
+            newEmbed.setTitle(title)
+            newEmbed.setDescription(content)
+            await currentAnnouncement.edit({
+                embeds: [newEmbed],
+            })
+
+            await interaction.reply({
+                content: "Endring av kunngjøring er bekreftet og gjennomført!",
+                flags: [MessageFlagsBitField.Flags.Ephemeral],
+            })
+
+            interaction.webhook.deleteMessage(interaction.message)
+            break
+        }
+        case "stop": {
+            // nuke(stop and delete all) | deactivate (stop)
+            const severity = path[4]
+
+            const reason = interaction.user.displayName + (severity === "nuke" ? " slettet den" : " deaktiverte den")
+            await stopAnnouncement(announcement.id, severity === "nuke", reason, new ConsoleLogger("[AnnouncementEdit]"))
+
+            await interaction.reply({
+                content: "Kunngjøring deaktivert" + (severity === "nuke" ? " og orginal melding slettet!" : ""),
+                flags: [MessageFlagsBitField.Flags.Ephemeral],
+            })
+
+            await interaction.webhook.deleteMessage(interaction.message)
+            break
+        }
+    }
+}
+
+function createEditContentModal(announcementID: number, existingTitle: string, existingContent: string) {
+    const modalBuilder = new ModalBuilder()
+    modalBuilder.setCustomId("announcementEdit-modal-" + announcementID)
+    modalBuilder.setTitle("Endre kunngjøring")
+
+    const title = new TextInputBuilder({
+        customId: "announcementEdit-modal-title",
+        required: true,
+        style: TextInputStyle.Short,
+        value: existingTitle
+    })
+
+    const content = new TextInputBuilder({
+        customId: "announcementEdit-modal-content",
+        required: true,
+        style: TextInputStyle.Paragraph,
+        value: existingContent
+    })
+
+    modalBuilder.addLabelComponents(
+        new LabelBuilder().setLabel("Tittel").setTextInputComponent(title),
+        new LabelBuilder().setLabel("Innhold").setTextInputComponent(content),
+    )
+
+    return modalBuilder
+}
+
+export async function handleAnnouncementEditSubmit(interaction: ModalSubmitInteraction) {
+    const message = createAnnouncementEditMessage({
+        id: Number(interaction.customId.split("-")[2]),
+        title: interaction.fields.getTextInputValue("announcementEdit-modal-title"),
+        content: interaction.fields.getTextInputValue("announcementEdit-modal-content"),
+    })
+
+    await interaction.reply({
+        embeds: [message.embed],
+        components: [new ActionRowBuilder<ButtonBuilder>({components: message.components})],
+        flags: MessageFlagsBitField.Flags.Ephemeral
+    })
+}
+
+function shouldIgnoreRole(tags: RoleTagData | null) {
+    if (tags) {
+        return (tags?.availableForPurchase ||
+            tags?.botId ||
+            tags?.integrationId ||
+            tags?.premiumSubscriberRole ||
+            tags?.subscriptionListingId) === true
+    }
+    return false
+}
+
 function customID(type: string, name: string, announcementWebhookID?: Snowflake) {
     return `announcement-${type}-${name}-` + (announcementWebhookID && announcementWebhookID !== "" ? announcementWebhookID : "")
 }
-
