@@ -4,7 +4,7 @@ import {PermissionLevel} from "../permission.js"
 import {fetchTodaysFoodOrder} from "../../database/food.js"
 import {renderDatehhmmss} from "../../util/date.js"
 
-export const permissionLevel = PermissionLevel.HUSANSVARLIG
+export const permissionLevel = PermissionLevel.ALL
 
 export const data = new SlashCommandBuilder()
     .setName("listemat")

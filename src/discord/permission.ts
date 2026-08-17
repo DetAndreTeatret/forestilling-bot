@@ -5,7 +5,8 @@ import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
 
 export enum PermissionLevel {
     ADMINISTRATOR,
-    HUSANSVARLIG
+    HUSANSVARLIG,
+    ALL
 }
 
 export async function checkPermission(member: GuildMember, permission: PermissionLevel): Promise<boolean> {
@@ -19,6 +20,9 @@ export async function checkPermission(member: GuildMember, permission: Permissio
             const husansvarligRole = needNotNullOrUndefined(await member.guild.roles.fetch(needEnvVariable(EnvironmentVariable.HUSANSVARLIG_ROLE_SNOWFLAKE)), "husansvarligRole")
             if (member.roles.cache.has(husansvarligRole.id)) return true
             return checkPermission(member, PermissionLevel.ADMINISTRATOR)
+        }
+        case PermissionLevel.ALL: {
+            return true
         }
         default: {
             console.error("Checked permission for non-existing level: " + permission)
