@@ -225,7 +225,7 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
 
 export async function sendNagMail(toWho: string, announcementMessageLink: string, nagger: string, content: string) {
     const mail = new MailComposer({
-        from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM), // TODO ikke fra matbestilling...
+        from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
         to: toWho,
         subject: `${nagger} har lagt ut en kunngjøring på Discord og trenger svar fra deg`,
         text: content

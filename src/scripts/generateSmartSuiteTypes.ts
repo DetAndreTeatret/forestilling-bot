@@ -16,7 +16,7 @@ const api = new SmartSuiteAPI({
 async function generateTypes() {
     const solutions = needEnvVariable(EnvironmentVariable.SMARTSUITE_SOLUTIONS).split(",")
     for (const solution of solutions) {
-        const tables = await api.getTables(solution) // TODO sensitive?
+        const tables = await api.getTables(solution)
         for (const t of tables) {
             await generateTableTypings(t, {
                 forceCamelCase: true,

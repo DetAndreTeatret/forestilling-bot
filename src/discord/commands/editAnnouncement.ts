@@ -53,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 label: contentData.title,
                 value: String(data.announcement)
             })
-        }) // TODO too many passes?
+        })
         .filter(j => j !== undefined)
     )
 
