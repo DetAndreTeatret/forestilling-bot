@@ -14,13 +14,15 @@ const api = new SmartSuiteAPI({
 })
 
 async function generateTypes() {
-    const tables = await api.getTables("650d4178fc2de4faa605d647") // TODO sensitive?
-    for (const t of tables) {
-        await generateTableTypings(t, {
-            forceCamelCase: true,
-        })
+    const solutions = needEnvVariable(EnvironmentVariable.SMARTSUITE_SOLUTIONS).split(",")
+    for (const solution of solutions) {
+        const tables = await api.getTables(solution) // TODO sensitive?
+        for (const t of tables) {
+            await generateTableTypings(t, {
+                forceCamelCase: true,
+            })
+        }
     }
-
 }
 
 generateTypes().then(() => {
