@@ -23,7 +23,7 @@
     "schedgeup-scraper": "3.2.5",
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1",
-    "bullmq": "^5.56.4",
+    "bullmq": "^6.0.0",
     "smartsuite-typescript-api": "0.1.0"
   },
   "devDependencies": {
