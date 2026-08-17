@@ -1,6 +1,6 @@
 import {GuildChannel, Snowflake} from "discord.js"
 import {selectEntries} from "./sqlite.js"
-import {renderDateYYYYMMDD} from "../common/date.js"
+import {renderDateYYYYMMDD} from "../util/date.js"
 
 /**
  * Get snowflakes of {@link GuildChannel}s that can be deleted. (System time newer than time stored in database)

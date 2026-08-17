@@ -45,7 +45,7 @@ export class DiscordMessageReplyLogger implements Logger {
     private message: Promise<InteractionResponse>
 
     constructor(interaction: ChatInputCommandInteraction | ButtonInteraction) {
-        this.message = interaction.reply("Ikke tenk på denne meldingen!")
+        this.message = interaction.deferReply()
     }
 
     async logLine(part: string) {

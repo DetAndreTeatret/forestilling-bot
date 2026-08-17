@@ -1,20 +1,22 @@
 import {Snowflake} from "discord.js"
 import {Worker} from "schedgeup-scraper"
-import {addEntry, deleteEntries, selectAllEntires, selectEntries, selectEntry} from "./sqlite.js"
-import {Logger} from "../common/logging.js"
+import {addEntry, deleteEntries, selectAllEntires, selectEntries, selectEntry, updateEntry} from "./sqlite.js"
+import {Logger} from "../util/logging.js"
 
 /**
  * A class representing a single user as it's stored in the database
  */
-export class User {
+export class DatabaseUser {
     private readonly _userId: number
     private readonly _schedgeUpId: string
     private readonly _discordSnowflake: Snowflake
+    private readonly _smartSuiteRecordID: string | undefined
 
-    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake) {
+    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake, smartSuiteRecordID?: string) {
         this._userId = userId
         this._schedgeUpId = schedgeUpId
         this._discordSnowflake = discordSnowflake
+        this._smartSuiteRecordID = smartSuiteRecordID
     }
 
 
@@ -38,23 +40,28 @@ export class User {
     get discordSnowflake(): Snowflake {
         return this._discordSnowflake
     }
+
+    get smartSuiteRecordID() {
+        return this._smartSuiteRecordID
+    }
 }
 
 /**
  * Create a new user. No users can share SchedgeUp ids or Discord snowflakes
  * @param schedgeUpId The SchedgeUp id of the account that should be linked to this user.
  * @param discordUserSnowflake The Discord snowflake of the account that should be linked to this user.
+ * @param smartSuiteRecordID The record id in SmartSuite belonging to this user
  */
-export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake) {
+export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake, smartSuiteRecordID?: string) {
     // First column should be null so the userid is autoincremented
-    await addEntry("UserList", "null", schedgeUpId, discordUserSnowflake)
+    await addEntry("UserList", null, schedgeUpId, discordUserSnowflake, smartSuiteRecordID ?? "")
 }
 
 /**
  * Fetch all stored users, returns empty array if no users
  */
 export async function fetchAllUsers(columns?: string[]) {
-    return (await selectAllEntires("UserList", columns)).map(result => new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"]))
+    return (await selectAllEntires("UserList", columns)).map(result => new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["SmartSuiteRecordID"]))
 }
 
 /**
@@ -67,7 +74,20 @@ export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Sno
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
     if (result === undefined) return undefined
-    return new User(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
+    return new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["SmartSuiteRecordID"])
+}
+
+/**
+ * Update a user in the database, provide either SU id, Discord snowflake or SS record ID to find user, and a User
+ * object with the new info.
+ */
+export async function updateUser(newInfo: DatabaseUser, schedgeUpId?: string, discordUserSnowflake?: Snowflake, smartSuiteRecordID?: string) {
+    if (!schedgeUpId && !discordUserSnowflake && !smartSuiteRecordID) throw new Error("All search params can't be undefined")
+    if (!newInfo.smartSuiteRecordID) throw new Error("User object needs to be complete to update an existing user")
+    await updateEntry("UserList",
+        "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\" OR SmartSuiteRecordID=\"" + smartSuiteRecordID + "\"",
+        ["SchedgeUpID", "DiscordUserSnowflake", "SmartSuiteRecordID"],
+        [newInfo.schedgeUpId, newInfo.discordSnowflake, newInfo.smartSuiteRecordID])
 }
 
 /**
