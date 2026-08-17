@@ -131,7 +131,7 @@ export async function startDiscordClient() {
             if (e.t === DISCORD_RAW_REACTION_EVENTS[0]) {
                 isInactiveAnnouncementMessage(e.d.message_id).then((isInactive) => {
                     if (isInactive) {
-                        revertOldAnnouncementReaction(e.d.message_id, e.d.channel_id, e.d.user_id)
+                        revertOldAnnouncementReaction(e.d.message_id, e.d.channel_id, e.d.user_id, e.d.emoji.id, e.d.emoji.name)
                     }
                 })
             }

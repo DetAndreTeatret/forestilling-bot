@@ -223,12 +223,12 @@ async function receiveFoodMail(body: string, mailConvoID: string, mailConvoSubje
     await receiveFoodOrderResponse(body, orderer)
 }
 
-export async function sendNagMail(toWho: string, where: string, nagger: string) {
+export async function sendNagMail(toWho: string, announcementMessageLink: string, nagger: string, content: string) {
     const mail = new MailComposer({
         from: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM), // TODO ikke fra matbestilling...
         to: toWho,
         subject: `${nagger} har lagt ut en kunngjøring på Discord og trenger svar fra deg`,
-        text: "masmasmas, please svar bby\n" + where + "\n\n Svar leses ikke"
+        text: content
     })
 
     const builtMail = await mail.compile().build()
@@ -240,7 +240,7 @@ export async function sendNagMail(toWho: string, where: string, nagger: string) 
         },
     })
 
-    logger.logLine("Sent nagging mail to " + toWho + " for " + where + " from " + nagger)
+    logger.logLine("Sent nagging mail to " + toWho + " for " + announcementMessageLink + " from " + nagger)
 }
 
 async function handleRogueMail(body: string, reason: string) {

@@ -12,6 +12,8 @@ import {naggingRules, stopAnnouncement} from "./announcement.js"
 
 // A job that starts a round of nagging, resulting in x amount of nag jobs being posted (and another of itself if necessary)
 export interface NagInitiationJobData {
+    // When is/was the deadline of the announcement, formatted as a readable string
+    announcementDeadline: string
     // Related to which announcement (database entry id)
     announcement: number
     // Which number of nag is this
@@ -20,8 +22,14 @@ export interface NagInitiationJobData {
 
 // A job that does the actual nagging to a single user
 interface NagJobData {
+    // Which number of nag is this
+    step: number
     // Related to which announcement (database entry id)
     announcement: number
+    // The title of the announcement
+    announcementTitle: string
+    // When is/was the deadline of the announcement, formatted as a readable string
+    announcementDeadline: string
     // Display name of the user who started the nagging in the first place...
     originalNagger: string
     // Who am I nagging
@@ -54,6 +62,10 @@ const messageQueueLogger = new ConsoleLogger("[BullMQ]")
  *
  * A nag job is just a task to send a message and/or a mail to a given user, the job does not need to know anything else than who to nag
  * and if a message and/or mail is to be sent.
+ *
+ * Step -2 is always a mail only nag, deployed as an initial reminder that an announcement has been created
+ * Step -1 is always a Discord only nag, and is deployed at the time of the deadline, starting the automatic nagging process.
+ * Step 0 and onwards are deployed automatically according to the nagging rules provided if people do not respond before the deadline
  */
 export function setupMessageQueue() {
     naggingQueue.getJobs().then(jobs => jobs.forEach(async job => {
@@ -63,50 +75,57 @@ export function setupMessageQueue() {
     worker = new Worker("mainQueue", async (job) => {
         if (job.name === "initiateNagging") {
             const data = job.data as NagInitiationJobData
-            const naggingData = await needNaggingData(data.announcement)
+            const announcementData = await needNaggingData(data.announcement)
 
-            const member = await discordClient.guild.members.fetch(naggingData.originalNagger)
+            const member = await discordClient.guild.members.fetch(announcementData.originalNagger)
 
             // If no-one is left to nag just stop the announcement and exit
-            if (naggingData.nagWho.length <= 0) {
+            if (announcementData.nagWho.length <= 0) {
                 await stopAnnouncement(data.announcement, false, "Alle som skal svare har svart!", messageQueueLogger)
                 return
             }
 
             // The first two nags are always pre-determined
             if (data.step === -2) {
-                naggingData.nagWho.forEach(snowflake => {
+                announcementData.nagWho.forEach(snowflake => {
                     fetchUser(undefined, snowflake).then(who => {
                         addNagJob("nag", {
+                            step: data.step,
                             announcement: data.announcement,
+                            announcementTitle: announcementData.title,
+                            announcementDeadline: data.announcementDeadline,
                             originalNagger: member.displayName,
                             userToNag: who,
                             snowflakeBackup: snowflake,
                             discord: false,
                             mail: true,
-                            announcementChannelID: naggingData.announcementChannelID,
-                            announcementMessageID: naggingData.announcementMessageID
+                            announcementChannelID: announcementData.announcementChannelID,
+                            announcementMessageID: announcementData.announcementMessageID
                         })
                     })
                 })
                 return
             }
             if (data.step === -1) {
-                naggingData.nagWho.forEach(snowflake => {
+                announcementData.nagWho.forEach(snowflake => {
                     fetchUser(undefined, snowflake).then(who => {
                         addNagJob("nag", {
+                            step: data.step,
                             announcement: data.announcement,
+                            announcementTitle: announcementData.title,
+                            announcementDeadline: data.announcementDeadline,
                             originalNagger: member.displayName,
                             userToNag: who,
                             snowflakeBackup: snowflake,
                             discord: true,
                             mail: false,
-                            announcementChannelID: naggingData.announcementChannelID,
-                            announcementMessageID: naggingData.announcementMessageID
+                            announcementChannelID: announcementData.announcementChannelID,
+                            announcementMessageID: announcementData.announcementMessageID
                         })
                     })
                 })
                 addNagJob("initiateNagging", {
+                    announcementDeadline: data.announcementDeadline,
                     announcement: data.announcement,
                     step: 0
                 }, new Date(Date.now() + naggingRules.Quick[0].hours * 60 * 60 * 1000))
@@ -114,27 +133,33 @@ export function setupMessageQueue() {
             }
 
             const nagAction = naggingRules.Quick[Math.min(data.step, naggingRules.Quick.length - 1)]
-            naggingData.nagWho.forEach(snowflake => {
+            announcementData.nagWho.forEach(snowflake => {
                 fetchUser(undefined, snowflake).then(who => {
                     addNagJob("nag", {
+                        step: data.step,
                         announcement: data.announcement,
+                        announcementTitle: announcementData.title,
+                        announcementDeadline: data.announcementDeadline,
                         originalNagger: member.displayName,
                         userToNag: who,
                         snowflakeBackup: snowflake,
                         discord: nagAction.discord,
                         mail: nagAction.mail,
-                        announcementChannelID: naggingData.announcementChannelID,
-                        announcementMessageID: naggingData.announcementMessageID
+                        announcementChannelID: announcementData.announcementChannelID,
+                        announcementMessageID: announcementData.announcementMessageID
                     })
                 })
             })
 
             addNagJob("initiateNagging", {
+                announcementDeadline: data.announcementDeadline,
                 announcement: data.announcement,
                 step: data.step + 1
             }, new Date(Date.now() + naggingRules.Quick[Math.min(data.step + 1, naggingRules.Quick.length - 1)].hours * 60 * 60 * 1000))
         } else if (job.name === "nag") {
             const data = job.data as NagJobData
+            const nagger = await discordClient.guild.members.fetch(data.originalNagger)
+            const naggerName = nagger.nickname ?? nagger.displayName
 
             const messageLink = `https://discord.com/channels/${discordClient.guild.id}/${data.announcementChannelID}/${data.announcementMessageID}`
 
@@ -147,8 +172,8 @@ export function setupMessageQueue() {
                     const recipient = await getSinglePersonnel(data.userToNag.smartSuiteRecordID)
                     if (!recipient) throw new Error("Uh oh, stored SmartSuite record ID does not find any existing record?!")
                     if (recipient.mail) {
-                        await sendNagMail(recipient.mail, messageLink, data.originalNagger)
-                        await messageQueueLogger.logLine(">>> Sent Mail nag to " + data.userToNag.discordSnowflake)
+                        await sendNagMail(recipient.mail, messageLink, naggerName, getNaggingMessageContent(data.step, "Mail", naggerName, data.announcementTitle, data.announcementDeadline, messageLink))
+                        await messageQueueLogger.logLine(">>> Sent Mail nag to " + data.userToNag.discordSnowflake + "//" + recipient.mail)
                     } else {
                         messageQueueLogger.logLine(">>> " + data.userToNag.userId + " does not have a linked e-mail, defaulting to Discord")
                         data.discord = true
@@ -158,7 +183,7 @@ export function setupMessageQueue() {
 
             if (data.discord) {
                 const snowflake = data.userToNag?.discordSnowflake ?? data.snowflakeBackup
-                await discordClient.users.send(snowflake, "Mas mas mas mas, svar da!!\n\n" + messageLink)
+                await discordClient.users.send(snowflake, getNaggingMessageContent(data.step, "Discord", naggerName, data.announcementTitle, data.announcementDeadline, messageLink))
 
                 await messageQueueLogger.logLine(">>> Sent Discord nag to " + snowflake)
             }
@@ -171,6 +196,33 @@ export function setupMessageQueue() {
     })
     messageQueueLogger.logLine("Done setting up message queue stuff")
     // naggingQueue.drain(true)
+}
+
+function getNaggingMessageContent(step: number, medium: "Discord" | "Mail", naggerName: string, announcementTitle: string, deadline: string, messageLink: string) {
+    let answer
+    if (step === -2) {
+        // This is a message sent 24h or closer to the announcement post to remind people that they need to respond
+        answer = "Hei!\n\n" + naggerName + " har lagt ut en kunngjøring " + (medium === "Mail" ? "på Discord" : "her på Discord") + "med tittel " + announcementTitle + " som de har spurt om svar fra deg på.\n" +
+            "De har satt fristen til " + deadline + ", lykke til!"
+    } else if (step === -1) {
+        answer = "Heisann!\n\nKunngjøringen til " + naggerName + " med tittel " + announcementTitle + " har nå nådd fristen sin før masing begynner, og den savner fortsatt et svar fra deg.\n" +
+            "Du kommer til å fortsette å få påminnelser helt til du har svart eller til " + naggerName + " avslutter masingen manuelt..."
+    } else {
+        answer = "Heisann på deisann!\n\nKunngjøringen til " + naggerName + " med tittel " + announcementTitle + " hadde svarfrist " + deadline + ", og savner fortsatt svar fra deg!\n" +
+            "\"Du kommer til å fortsette å få påminnelser helt til du har svart eller til " + naggerName + " avslutter masingen manuelt...\""
+    }
+
+    if (medium === "Mail") {
+        answer += "\n\nSvar til denne epostadressen leses ikke, hvis du har spørsmål bør du kontakte " + naggerName + " direkte :)\n\n*************\n\n\nMvh\nDet Andre Teatrets store robothjerne\n\nDET ANDRE TEATRET\n- nesten som et ordentlig teater, bare litt morsommere -\n\nwww.detandreteatret.no\nfacebook.com/detandreteatret\n\n\"Det er viktig å kle av seg på scenen iblant\"\n- Mats Eldøen\n\n"
+    }
+
+    if (medium === "Discord") {
+        answer += "\n\nDu kan trykke her for å se kunngjøringen: " + messageLink
+    }
+
+    if (!answer) throw new Error("Could not generate nagging message content for step " + step + " and medium " + medium)
+
+    return answer
 }
 
 export async function shutdownMessageQueue() {
@@ -240,6 +292,7 @@ export async function jobToString(job: Job<NagJobData | NagInitiationJobData>) {
 }
 
 function quickPrettyMs(ms: number) {
+    if (ms === 0) return 0
     const sec = Math.floor(ms / 1000)
     if (sec === 0) return ms + "ms"
     const min = Math.floor(sec / 60)

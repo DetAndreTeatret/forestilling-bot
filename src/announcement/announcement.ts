@@ -175,12 +175,21 @@ export async function activateAnnouncement(announcement: Announcement, channel: 
     const deadline = parseAnnouncementDeadline(announcement.deadline)
     // If the deadline is in under 24h send the mail after 10 sec, if not the mail goes out after 24h
     const initialMailDeadline = deadline.getTime() - Date.now() <= DAY_IN_MILLISECONDS ? 10000 : DAY_IN_MILLISECONDS
+    const prettyDeadline = new Intl.DateTimeFormat("no-NB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "long"
+    }).format(deadline)
+
     addNagJob("initiateNagging", {
+        announcementDeadline: prettyDeadline,
         announcement: id,
         step: -2
     }, new Date(Date.now() + initialMailDeadline))
 
     addNagJob("initiateNagging", {
+        announcementDeadline: prettyDeadline,
         announcement: id,
         step: -1
     }, deadline)
@@ -215,14 +224,15 @@ export async function stopAnnouncement(announcementID: number, deleteMessage: bo
     const reactionsMapped: Map<string, Snowflake[]> = new Map()
     for (const reaction0 of message.reactions.cache) {
         const reaction = reaction0[1]
-        const users = (await reaction.users.fetch()).filter(user => !user.bot).map(user => user.displayName)
+        const users = await Promise.all((await reaction.users.fetch()).filter(user => !user.bot).map(user => discordClient.guild.members.fetch(user)))
+        const members = users.map(member => member.nickname ?? member.displayName)
         if (!reaction.emoji.name) {
             throw new Error("Emoji has no name??")
         }
 
-        if (users.length === 0) users.push("Ingen har reagert med denne")
+        if (users.length === 0) members.push("Ingen har reagert med denne")
 
-        reactionsMapped.set(reaction.emoji.name, users)
+        reactionsMapped.set(reaction.emoji.name, members)
     }
     const reactionsMappedText = Array.from(reactionsMapped).map(entry => `${entry[0]}:\n${entry[1].join(", ")}`).join("\n")
 
@@ -242,7 +252,7 @@ export async function stopAnnouncement(announcementID: number, deleteMessage: bo
     const report = new ContainerBuilder({
         components: [
             {
-                content: "En kunngjøring som du lagde har blitt stoppet! \nÅrsaken er fordi: " + reason,
+                content: "En kunngjøring du lagde med tittel " + announcement.title + "har blitt stoppa! \nÅrsaken er fordi: " + reason,
                 type: ComponentType.TextDisplay
             },
             {
@@ -273,7 +283,7 @@ export async function stopAnnouncement(announcementID: number, deleteMessage: bo
 }
 
 export function parseAnnouncementDeadline(deadline: string) {
-    const parts = needNotNullOrUndefined(deadline.match(/(\d+)(h)?/), "Parsing announcement deadline")
+    const parts = needNotNullOrUndefined(deadline.match(/(\d+)(t)?/), "Parsing announcement deadline")
     const deadlineDate = new Date()
     const delay = Number(parts[1])
     const isHours = parts.at(2)

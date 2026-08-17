@@ -314,10 +314,18 @@ export async function handleAnnouncementReaction(announcementMessage: Snowflake,
                 console.log("User switched their answer")
                 // User has at an earlier point reacted another reaction and now they change
                 existing.users.remove(userID)
-                switchResponse(announcementMessage, {respondant: userID, lastResponseTime: Date.now(), lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"})
+                switchResponse(announcementMessage, {
+                    respondant: userID,
+                    lastResponseTime: Date.now(),
+                    lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"
+                })
             } else {
                 console.log("User added their answer")
-                removeNonRespondant(announcementMessage, userID, {respondant: userID, lastResponseTime: Date.now(), lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"})
+                removeNonRespondant(announcementMessage, userID, {
+                    respondant: userID,
+                    lastResponseTime: Date.now(),
+                    lastResponseEmoji: added.emoji.id ?? added.emoji.name ?? "Unknown Emoji"
+                })
             }
             return
         }
@@ -326,28 +334,28 @@ export async function handleAnnouncementReaction(announcementMessage: Snowflake,
 
 // Unfortunately we can not add reactions "for" users, this means that if a user removes their old reaction it will stay removed.
 // But, we will deny new reactions.
-export async function revertOldAnnouncementReaction(announcementMessage: Snowflake, announcementChannel: Snowflake, userSnowflake: Snowflake) {
+export async function revertOldAnnouncementReaction(announcementMessage: Snowflake, announcementChannel: Snowflake, userSnowflake: Snowflake, emojiID: Snowflake, emojiName: string) {
     const channel = await discordClient.guild.channels.fetch(announcementChannel)
     if (!channel || channel.type !== 0) throw new Error("Can't find announcement channel")
 
     const message = await channel.messages.fetch(announcementMessage)
 
     const responseData = await needResponseData(announcementMessage)
-    const data = responseData.respondantData.find(d => d.respondant === announcementMessage)
-    if (!data) {
-        for (const reaction of message.reactions.cache) {
-            reaction[1].users.remove(userSnowflake)
-        }
-    } else {
-        for (const reaction of message.reactions.cache) {
-            if (reaction[1].emoji.name ?? reaction[1].emoji.id !== data.lastResponseEmoji) {
-                reaction[1].users.remove(userSnowflake)
-            }
+    const data = responseData.respondantData.find(d => d.respondant === userSnowflake)
+
+    for (const reaction of message.reactions.cache) {
+        const r = reaction[1]
+        // We allow "new" reactions for their original response
+        if ((data && (data.lastResponseEmoji === r.emoji.id || data.lastResponseEmoji === r.emoji.name))) continue
+
+        if (r.emoji.id === emojiID || r.emoji.name === emojiName) {
+            await reaction[1].users.remove(userSnowflake)
         }
     }
 
+
     // Friendly warning...
-    await channel.client.users.send(userSnowflake, "Oops! Du prøvde å endre svaret ditt på en kunngjøring som allerede er lukket, hvis du vil endre svar nå anbefales det å sende en direkte melding til personen som lagde kunngjøringen")
+    await channel.client.users.send(userSnowflake, "Oops! Du prøvde å endre svaret ditt på en kunngjøring som allerede er lukket, hvis du vil endre svar nå anbefales det å sende en direkte melding til personen som lagde kunngjøringen\n\n" + `https://discord.com/channels/${discordClient.guild.id}/${announcementChannel}/${announcementMessage}`)
 }
 
 export async function handleAnnouncementEditRequest(interaction: AnySelectMenuInteraction) {
@@ -417,7 +425,7 @@ export async function handleAnnouncementEditButton(interaction: ButtonInteractio
             const reply = await interaction.deferReply({flags: [MessageFlagsBitField.Flags.Ephemeral]})
             const jobs = await getAllJobs()
             for await (const job of jobs) {
-                if (await job.isFailed()){
+                if (await job.isFailed()) {
                     await job.remove()
                 }
             }
@@ -456,7 +464,7 @@ export async function handleAnnouncementEditButton(interaction: ButtonInteractio
         case "deactivate": {
             const confirmButton = new ButtonBuilder({
                 style: ButtonStyle.Danger,
-                label: "Slett kunngjøring(Ingen angring)",
+                label: "Stopp masing om kunngjøring(Ingen angring)",
                 customId: "announcementEdit-button-stop-" + announcement.id + "-deactivate"
             })
 

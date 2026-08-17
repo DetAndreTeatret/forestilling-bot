@@ -51,6 +51,7 @@ export async function needAllAnnouncementData(ignoreInactive: boolean = true): P
 }
 
 export interface AnnouncementNaggingData {
+    title: string
     nagWho: Snowflake[],
     originalNagger: Snowflake,
     announcementChannelID: Snowflake,
@@ -61,6 +62,7 @@ export async function needNaggingData(announcementID: number): Promise<Announcem
     const result = await selectEntry("Announcements", "AnnouncementID=\"" + announcementID + "\"", ["DiscordUserSnowflake", "AnnouncementDiscordChannelSnowflake", "AnnouncementDiscordMessageSnowflake", "NonRespondants"])
     if (!result) throw new Error("Error when fetching nagging data of announcement")
     return {
+        title: result["AnnouncementTitle"],
         nagWho: String(result["NonRespondants"]).split(",").filter(nr => nr !== ""),
         originalNagger: result["DiscordUserSnowflake"],
         announcementChannelID: result["AnnouncementDiscordChannelSnowflake"],
