@@ -139,11 +139,11 @@ async function syncAndUpdateUserInfo(logger: Logger) {
     for (const user of users) {
         if (user.smartSuiteRecordID) continue
         // Bonus, check for existing record on SS
-        const smartSuiteRecord = smartSuiteRecords.find(p => p.name.toLowerCase().trim() === SUUsers.find(u => u.userId === user.schedgeUpId)!.displayName)
+        const smartSuiteRecord = smartSuiteRecords.find(p => p.name.toLowerCase().trim() === SUUsers.find(u => u.userId === user.schedgeUpId)?.displayName.toLowerCase().trim())
         if (!smartSuiteRecord) continue
 
         // Update an existing user with new SmartSuite info
         await updateUser(new DatabaseUser(user.userId, user.schedgeUpId, user.discordSnowflake, smartSuiteRecord.recordID), user.schedgeUpId)
-        await logger.logLine(`Added SmartSuite link to existing user\n(${smartSuiteRecord.name}/[${smartSuiteRecord.roles.join(",")}]/${smartSuiteRecord.recordID})`)
+        await logger.logPart(`Added SmartSuite link to existing user\n(${smartSuiteRecord.name}/[${smartSuiteRecord.roles.join(",")}]/${smartSuiteRecord.recordID})`)
     }
 }
