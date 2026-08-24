@@ -155,7 +155,7 @@ export async function startDiscordClient() {
 
         if (interaction.channel && interaction.isButton()) {
             const path = interaction.customId.split("-")
-            if (path[1] !== "button") throw new Error("Faulty custom ID in button click" + path[1])
+            if (path[1] !== "button") throw new Error("Faulty custom ID in button click " + path[1])
             switch (path[0]) {
                 case "food": {
                     await handleFoodOrderButtons(interaction) // TODO this and foodorder uses wrong schema for custom id, misses component type identifier on second index
@@ -179,7 +179,7 @@ export async function startDiscordClient() {
 
         if (interaction.isModalSubmit()) {
             const path = interaction.customId.split("-")
-            if (path[1] !== "modal") throw new Error("Faulty custom ID in modal submit" + path[1])
+            if (path[1] !== "modal") throw new Error("Faulty custom ID in modal submit " + path[1])
             switch (path[0]) {
                 case "announcement": {
                     await handleAnnouncementTextSubmit(interaction)
@@ -195,7 +195,7 @@ export async function startDiscordClient() {
 
         if (interaction.isAnySelectMenu()) {
             const path = interaction.customId.split("-")
-            if (path[1] !== "picker") throw new Error("Faulty custom ID in select menu" + path[1])
+            if (path[1] !== "picker") throw new Error("Faulty custom ID in select menu " + path[1])
             switch (path[0]) {
                 case "announcement": {
                     await handleAnnouncementWorkMenuSelect(interaction)

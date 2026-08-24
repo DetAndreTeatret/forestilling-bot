@@ -62,7 +62,7 @@ export class ShowDay {
  */
 export async function createNewShowday(discordChannelSnowflake: string, showDay: Date, dayTime: boolean, ...schedgeUpIds: string[]) {
     // null to autoincrement
-    await addEntry("ShowDays", "null", "\"" + renderDateYYYYMMDD(showDay) + "\"", schedgeUpIds.join(","), discordChannelSnowflake, Date.now(), Number(dayTime))
+    await addEntry("ShowDays", null, renderDateYYYYMMDD(showDay), schedgeUpIds.join(","), discordChannelSnowflake, Date.now(), Number(dayTime))
 }
 
 /**
@@ -110,7 +110,7 @@ export async function fetchShowDayByDiscordChannel(channel: TextChannel) {
 }
 
 export async function addDayTimeShow(templateIdOrShowName: string) {
-    await addEntry("DayTimeShows", "\"" + templateIdOrShowName.toLowerCase() + "\"")
+    await addEntry("DayTimeShows", templateIdOrShowName.toLowerCase())
 }
 
 export async function removeDayTimeShow(templateIdOrShowName: string) {

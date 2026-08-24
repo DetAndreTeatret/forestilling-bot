@@ -81,11 +81,11 @@ export async function updateFoodConversation(orderer: Snowflake, mailConvoID: st
     if (result["ReferenceTable"] === NO_CONVERSATION_YET) {
         const tableID = "MailReferences" + orderer + "_" + Date.now()
         await executeQuery("CREATE TABLE " + tableID + "(Reference varchar)")
-        await addEntry(tableID, "\"" + mailConvoID + "\"")
+        await addEntry(tableID, mailConvoID)
         await updateEntry("FoodOrdered", "OrderedByDiscordUserSnowflake=\"" + orderer + "\"", ["ReferenceTable", "MailConvoSubject"], [tableID, mailConvoSubject])
     } else {
         const tableID = result["ReferenceTable"]
-        await addEntry(tableID, "\"" + mailConvoID + "\"")
+        await addEntry(tableID, mailConvoID)
     }
 }
 
