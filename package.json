@@ -27,7 +27,7 @@
     "smartsuite-typescript-api": "0.1.0"
   },
   "devDependencies": {
-    "typescript": "5.8.3",
+    "typescript": "7.0.2",
     "@types/mailparser": "3.4.6",
     "@types/nodemailer": "8.0.0",
     "eslint-config-dat": "2.0.1"
