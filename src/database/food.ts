@@ -30,8 +30,7 @@ export class FoodOrder {
  * @param whoOrdered the user that initiated the order, will receive any mail updates from the restaurant
  */
 export async function markChannelAsOrdered(channel: TextChannel, pickupTime: string, whoOrdered: Snowflake) {
-    const packedString = "\"" + NO_CONVERSATION_YET + "\""
-    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, packedString, packedString, Date.now())
+    await addEntry("FoodOrdered", channel.id, pickupTime, whoOrdered, NO_CONVERSATION_YET, NO_CONVERSATION_YET, Date.now())
 }
 
 /**
