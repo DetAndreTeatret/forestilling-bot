@@ -24,7 +24,8 @@
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1",
     "bullmq": "^6.0.0",
-    "smartsuite-typescript-api": "0.1.0"
+    "smartsuite-typescript-api": "0.1.0",
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "typescript": "5.8.3",
