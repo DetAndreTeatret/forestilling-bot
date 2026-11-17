@@ -2,7 +2,7 @@ import {sheetsClient} from "./clients.js"
 import {renderDateYYYYMMDD} from "../util/date.js"
 
 export interface SheetRowResult {
-    rowIndex: number // 1-based index matching row numbers in Sheets
+    rowIndex: number // relative to the rows returned, not total in the sheet
     timestamp: Date
     data: (string | number | boolean)[]
 }
@@ -46,7 +46,7 @@ export async function getRowsByDate(spreadsheetId: string, range: string, target
         if (rowDate && !isNaN(rowDate.getTime())) {
             if (renderDateYYYYMMDD(rowDate) === targetDateStr) {
                 matchedRows.push({
-                    rowIndex: i + 1,
+                    rowIndex: i,
                     timestamp: rowDate,
                     data: row,
                 })

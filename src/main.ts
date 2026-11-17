@@ -33,9 +33,10 @@ async function start() {
     await createTables()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
-    setupGoogleServices() // Populates google clients and auth, needs to be before mail client
+    setupGoogleServices() // Populates google clients and auth, needs to be before mail setup
     await setupMailServices()
     setupMessageQueue()
+
     STARTING = false
 }
 
