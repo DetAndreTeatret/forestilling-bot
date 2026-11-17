@@ -1,11 +1,12 @@
 import {createTables} from "./database/sqlite.js"
 import {EnvironmentVariable, isDebugEnabled, needEnvVariable, setupConfig} from "./util/config.js"
 import {setupScraper} from "schedgeup-scraper"
-import {setupMailServices} from "./mail/mail.js"
+import {setupMailServices} from "./google/mail.js"
 import {discordClient, startDiscordClient} from "./discord/client.js"
 import {update} from "./discord/commands/update.js"
 import {ConsoleLogger} from "./util/logging.js"
 import {setupMessageQueue, shutdownMessageQueue} from "./announcement/messageQueue.js"
+import {setupGoogleServices} from "./google/clients.js"
 
 start().then(() => {
     if (isDebugEnabled()) {
@@ -32,6 +33,7 @@ async function start() {
     await createTables()
     await startDiscordClient() // Populates discord client global
     await setupScraper()
+    setupGoogleServices() // Populates google clients and auth, needs to be before mail client
     await setupMailServices()
     setupMessageQueue()
     STARTING = false
