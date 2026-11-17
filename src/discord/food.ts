@@ -8,7 +8,7 @@ import {
     Snowflake
 } from "discord.js"
 import {getDayNameNO, renderDateYYYYMMDD} from "../util/date.js"
-import {replyFoodMail} from "../mail/mail.js"
+import {replyFoodMail} from "../google/mail.js"
 import {fetchFoodOrderByUser, FoodOrder, NO_CONVERSATION_YET} from "../database/food.js"
 import {DiscordMessageReplyLogger} from "../util/logging.js"
 import {discordClient, postDebug} from "./client.js"

@@ -4,19 +4,12 @@ import {fetchShowDayByDate} from "../database/showday.js"
 import {updateFoodConversation, whoOrderedForChannel} from "../database/food.js"
 import {receiveFoodOrderResponse} from "../discord/food.js"
 import {renderDateYYYYMMDD} from "../util/date.js"
-import {google} from "googleapis"
-import path from "node:path"
-import appRootPath from "app-root-path"
-import {APIEndpoint} from "googleapis-common"
-import {PubSub} from "@google-cloud/pubsub"
+import {gmail_v1} from "googleapis"
 import {simpleParser} from "mailparser"
-import {startDaemon} from "./daemon.js"
+import {startDaemon} from "./mailDaemon.js"
 import {ConsoleLogger} from "../util/logging.js"
 import {postUrgentDebug} from "../discord/client.js"
-
-export let gmail: APIEndpoint
-
-const SERVICE_ACCOUNT_CREDS_PATH = path.join(appRootPath.path, "service_account.json")
+import {gmailClient, pubsubClient} from "./clients.js"
 
 const logger = new ConsoleLogger("[Mail]")
 
@@ -52,20 +45,11 @@ const logger = new ConsoleLogger("[Mail]")
  * Prepare all mail related shenanigans
  */
 export async function setupMailServices() {
-    const auth = loadServiceAccountCreds()
-    if (!auth) throw new Error("Could not load service account, missing credentials?")
-
-    google.options({auth: auth})
-
-    gmail = google.gmail({
-        version: "v1"
-    })
-
-    await gmail.users.stop({
+    await gmailClient.users.stop({
         userId: "me",
     })
 
-    await gmail.users.watch({
+    await gmailClient.users.watch({
         userId: "me",
         requestBody: {
             topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmail",
@@ -75,10 +59,7 @@ export async function setupMailServices() {
 
     startDaemon() // This refreshes the watch request once every day
 
-    const pubsub = new PubSub({projectId: needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID),
-        // @ts-ignore
-        auth: auth})
-    const sub = pubsub.subscription("gmail-sub")
+    const sub = pubsubClient.subscription("gmail-sub")
 
     sub.on("message", async function(message) {
         message.ack()
@@ -88,15 +69,15 @@ export async function setupMailServices() {
         // fetching since history id in notification is kinda broken?? gmail api decides randomly when to include the message history
         // when using users#history#list
         // We do a wide search for unread messages from interesting mail addresses instead
-        const mails = await gmail.users.messages.list({
+        const mails = await gmailClient.users.messages.list({
             userId: "me",
             q: "from:" + needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_TO_FOODORDER) + ";label:unread"
         })
 
-        const messageInfos: {id: string, threadId: string }[] = [] // TODO Make type
+        const messageInfos: gmail_v1.Schema$Message[] = []
         if (mails.data.messages) {
             for (let i = 0; i < mails.data.messages.length; i++) {
-                mails.data.messages.forEach((message: {id: string, threadId: string}) => {messageInfos.push(message)})
+                mails.data.messages.forEach(message => {messageInfos.push(message)})
             }
         }
         if (messageInfos.length === 0) {
@@ -108,9 +89,9 @@ export async function setupMailServices() {
 
         // Fetch and parse the actual messages
         for (const messageInfo of messageInfos) {
-            const message = await gmail.users.messages.get({
+            const message = await gmailClient.users.messages.get({
                 userId: "me",
-                id: messageInfo.id,
+                id: messageInfo.id ?? undefined,
                 format: "RAW"})
             if (!message.data.raw) {
                 throw new Error("missing raw >:(")
@@ -127,10 +108,12 @@ export async function setupMailServices() {
             await receiveFoodMail(parsed.text, parsed.messageId, parsed.subject)
 
             // Remove the unread label so the same mail won't be returned next fetch
-            await gmail.users.messages.modify({
+            await gmailClient.users.messages.modify({
                 userId: "me",
-                id: messageInfo.id,
-                removeLabelIds: ["UNREAD"]
+                id: messageInfo.id ?? undefined,
+                requestBody: {
+                    removeLabelIds: ["UNREAD"]
+                }
             })
         }
     })
@@ -153,7 +136,7 @@ export async function sendFoodMail(body: string) {
 
     const builtMail = await mail.compile().build()
 
-    await gmail.users.messages.send({
+    await gmailClient.users.messages.send({
         userId: "me",
         requestBody: {
             raw: builtMail.toString("base64")
@@ -184,7 +167,7 @@ export async function replyFoodMail(orderText: string, referenceIDs: string[], s
 
     const builtMail = await mail.compile().build()
 
-    await gmail.users.messages.send({
+    await gmailClient.users.messages.send({
         userId: "me",
         requestBody: {
             raw: builtMail.toString("base64")
@@ -233,7 +216,7 @@ export async function sendNagMail(toWho: string, announcementMessageLink: string
 
     const builtMail = await mail.compile().build()
 
-    await gmail.users.messages.send({
+    await gmailClient.users.messages.send({
         userId: "me",
         requestBody: {
             raw: builtMail.toString("base64")
@@ -247,26 +230,4 @@ async function handleRogueMail(body: string, reason: string) {
     const warning = reason + "\n\n\"" + body + "\""
     logger.logWarning(warning)
     await postUrgentDebug(warning)
-}
-
-/**
- * Reads previously authorized credentials from the save file.
- */
-function loadServiceAccountCreds() {
-    try {
-        return new google.auth.GoogleAuth({
-            keyFilename: SERVICE_ACCOUNT_CREDS_PATH,
-            scopes: [
-                "https://mail.google.com/",
-                "https://www.googleapis.com/auth/pubsub",
-                "https://www.googleapis.com/auth/cloud-platform",
-            ],
-            clientOptions: {
-                subject: needEnvVariable(EnvironmentVariable.EMAIL_ADDRESS_FROM),
-            }
-        })
-    } catch (err) {
-        logger.logWarning("Could not load service account creds because of " + err)
-        return null
-    }
 }

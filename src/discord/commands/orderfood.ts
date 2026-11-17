@@ -19,9 +19,8 @@ import {PermissionLevel} from "../permission.js"
 import {hasChannelOrdered, markChannelAsOrdered} from "../../database/food.js"
 import {fetchUser} from "../../database/user.js"
 import {scrapeUsers} from "schedgeup-scraper"
-import {sendFoodMail} from "../../mail/mail.js"
-import {fetchTodaysOrders} from "../../smartsuite/smartsuiteLegacy.js"
-import {listFood} from "./listFood.js"
+import {sendFoodMail} from "../../google/mail.js"
+import {fetchTodaysSubmittedOrders, listFood} from "./listFood.js"
 import {postDebug} from "../client.js"
 
 const DEFAULT_HENTETIDSPUNKT = "1900"
@@ -106,7 +105,7 @@ export async function handleFoodOrderButtons(interaction: ButtonInteraction) {
                 phoneNumber = schedgeUpUser.phoneNumber
             }
 
-            const todaysOrders = await fetchTodaysOrders()
+            const todaysOrders = await fetchTodaysSubmittedOrders()
             if (todaysOrders.length === 0) {
                 await interaction.editReply("Det er ingen som har bestilt mat i dag! \nMatbestilling ble ikke sendt")
                 return

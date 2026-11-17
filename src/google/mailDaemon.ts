@@ -1,5 +1,5 @@
 import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
-import {gmail} from "./mail.js"
+import {gmailClient} from "./clients.js"
 import {ConsoleLogger} from "../util/logging.js"
 
 
@@ -20,14 +20,14 @@ async function tickDaemon() {
 
     logger.logLine("Refreshing watch request for mail notifications!")
 
-    await gmail.users.stop({
+    await gmailClient.users.stop({
         userId: "me",
     })
 
-    await gmail.users.watch({
+    await gmailClient.users.watch({
         userId: "me",
         requestBody: {
-            topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmail",
+            topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmailClient",
             labelIds: ["INBOX"],
         },
     })
