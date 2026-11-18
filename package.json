@@ -6,7 +6,7 @@
     "lint": "eslint .",
     "lintFix": "eslint . --fix",
     "transpile": "tsc",
-    "deployCommands": "rm -r -f build && tsc && node ./build/scripts/deployDiscordCommands.js",
+    "deployCommands": "rm -r -f build && tsc && node ./build/scripts/deployDiscordCommands.js"
   },
   "type": "module",
   "author": "Simon Mørland",
