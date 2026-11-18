@@ -12,7 +12,7 @@ const db = await open({
 })
 
 const TABLE_STRINGS = [
-    "CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64), SmartSuiteRecordID varchar)",
+    "CREATE TABLE IF NOT EXISTS UserList(UserID INTEGER PRIMARY KEY, SchedgeUpID varchar(7), DiscordUserSnowflake varchar(64))",
     "CREATE TABLE IF NOT EXISTS Settings(SettingKey varchar(60), SettingValue varchar(255))",
     "CREATE TABLE IF NOT EXISTS ShowDays(ShowDayID INTEGER PRIMARY KEY, ShowDayDate DATETEXT, SchedgeUpIDs varchar(40), DiscordChannelSnowflake varchar(64), CreatedAtEpoch TIMESTAMP, DayTimeShows BOOLEAN)",
     "CREATE TABLE IF NOT EXISTS DayTimeShows(ShowTemplateIDOrName varchar(60))",

@@ -7,7 +7,6 @@
     "lintFix": "eslint . --fix",
     "transpile": "tsc",
     "deployCommands": "rm -r -f build && tsc && node ./build/scripts/deployDiscordCommands.js",
-    "generateSmartSuiteTypes": "rm -r -f build && tsc && node ./build/scripts/generateSmartSuiteTypes.js"
   },
   "type": "module",
   "author": "Simon Mørland",
@@ -24,7 +23,6 @@
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1",
     "bullmq": "^6.0.0",
-    "smartsuite-typescript-api": "0.1.0",
     "ioredis": "^6.0.0"
   },
   "devDependencies": {

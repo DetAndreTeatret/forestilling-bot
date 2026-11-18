@@ -6,10 +6,8 @@ import {
     TextChannel, User
 } from "discord.js"
 import {needNotNullOrUndefined} from "../../util/util.js"
-import {DatabaseUser, fetchAllUsers, fetchUser, updateUser} from "../../database/user.js"
+import {fetchAllUsers, fetchUser} from "../../database/user.js"
 import {DiscordMessageReplyLogger, Logger} from "../../util/logging.js"
-import {getPersonnel} from "../../smartsuite/personnel.js"
-import {scrapeUsers} from "schedgeup-scraper"
 
 export const data = new SlashCommandBuilder()
     .setName("userstats")
@@ -28,11 +26,6 @@ export const data = new SlashCommandBuilder()
         new SlashCommandSubcommandBuilder()
             .setName("userlist")
             .setDescription("Create a report off all linked users")
-    )
-    .addSubcommand(
-        new SlashCommandSubcommandBuilder()
-            .setName("syncusers")
-            .setDescription("Sync users without a linked SS record, if they have one. (internal)")
     )
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -61,10 +54,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
         case "userlist": {
             await listUsers(channel, logger, null, null)
-            break
-        }
-        case "syncusers": {
-            await syncAndUpdateUserInfo(logger)
             break
         }
         default: {
@@ -112,7 +101,7 @@ async function listUsers(channel: TextChannel, logger: Logger, discordUser: User
 
     if (user) {
         const discordMember = await channel.guild.members.fetch(user.discordSnowflake)
-        await logger.logLine("UserID: " + user.userId + "\nSchedgeUpID: " + user.schedgeUpId + "\nDiscordDisplayName: " + discordMember.displayName + "\nSmartSuiteRecordID: " + (user.smartSuiteRecordID ?? "not linked yet"))
+        await logger.logLine("UserID: " + user.userId + "\nSchedgeUpID: " + user.schedgeUpId + "\nDiscordDisplayName: " + discordMember.displayName)
     } else {
         await logger.logLine("Creating user report...")
         const allUsers = await fetchAllUsers()
@@ -120,7 +109,7 @@ async function listUsers(channel: TextChannel, logger: Logger, discordUser: User
         for await (const databaseUser of allUsers) {
             await logger.logPart("Adding user: " + databaseUser.userId + "/" + allUsers.length) // TODO store display name??
             const discordUser = await channel.guild.members.fetch(databaseUser.discordSnowflake)
-            report += "\nUserID: " + databaseUser.userId + ", SchedgeUpID: " + databaseUser.schedgeUpId + ", DiscordUser: " + (discordUser === undefined ? databaseUser.discordSnowflake : discordUser.displayName) + " SmartSuiteRecordID: " + (databaseUser.smartSuiteRecordID ?? "not linked yet")
+            report += "\nUserID: " + databaseUser.userId + ", SchedgeUpID: " + databaseUser.schedgeUpId + ", DiscordUser: " + (discordUser === undefined ? databaseUser.discordSnowflake : discordUser.displayName)
         }
         const attachmentBuilder = new AttachmentBuilder(Buffer.from(report))
         attachmentBuilder.setName("UserReport.txt")
@@ -129,21 +118,4 @@ async function listUsers(channel: TextChannel, logger: Logger, discordUser: User
         await channel.send({files: [attachmentBuilder]})
     }
 
-}
-
-async function syncAndUpdateUserInfo(logger: Logger) {
-    const users = await fetchAllUsers()
-    const SUUsers = await scrapeUsers(users.map(u => u.schedgeUpId))
-    const smartSuiteRecords = await getPersonnel()
-
-    for (const user of users) {
-        if (user.smartSuiteRecordID) continue
-        // Bonus, check for existing record on SS
-        const smartSuiteRecord = smartSuiteRecords.find(p => p.name.toLowerCase().trim() === SUUsers.find(u => u.userId === user.schedgeUpId)?.displayName.toLowerCase().trim())
-        if (!smartSuiteRecord) continue
-
-        // Update an existing user with new SmartSuite info
-        await updateUser(new DatabaseUser(user.userId, user.schedgeUpId, user.discordSnowflake, smartSuiteRecord.recordID), user.schedgeUpId)
-        await logger.logPart(`Added SmartSuite link to existing user\n(${smartSuiteRecord.name}/[${smartSuiteRecord.roles.join(",")}]/${smartSuiteRecord.recordID})`)
-    }
 }

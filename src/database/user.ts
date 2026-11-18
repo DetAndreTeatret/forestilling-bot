@@ -10,13 +10,11 @@ export class DatabaseUser {
     private readonly _userId: number
     private readonly _schedgeUpId: string
     private readonly _discordSnowflake: Snowflake
-    private readonly _smartSuiteRecordID: string | undefined
 
-    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake, smartSuiteRecordID?: string) {
+    constructor(userId: number, schedgeUpId: string, discordSnowflake: Snowflake) {
         this._userId = userId
         this._schedgeUpId = schedgeUpId
         this._discordSnowflake = discordSnowflake
-        this._smartSuiteRecordID = smartSuiteRecordID
     }
 
 
@@ -41,27 +39,23 @@ export class DatabaseUser {
         return this._discordSnowflake
     }
 
-    get smartSuiteRecordID() {
-        return this._smartSuiteRecordID
-    }
 }
 
 /**
  * Create a new user. No users can share SchedgeUp ids or Discord snowflakes
  * @param schedgeUpId The SchedgeUp id of the account that should be linked to this user.
  * @param discordUserSnowflake The Discord snowflake of the account that should be linked to this user.
- * @param smartSuiteRecordID The record id in SmartSuite belonging to this user
  */
-export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake, smartSuiteRecordID?: string) {
+export async function addNewUser(schedgeUpId: string, discordUserSnowflake: Snowflake) {
     // First column should be null so the userid is autoincremented
-    await addEntry("UserList", null, schedgeUpId, discordUserSnowflake, smartSuiteRecordID ?? "")
+    await addEntry("UserList", null, schedgeUpId, discordUserSnowflake)
 }
 
 /**
  * Fetch all stored users, returns empty array if no users
  */
 export async function fetchAllUsers(columns?: string[]) {
-    return (await selectAllEntires("UserList", columns)).map(result => new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["SmartSuiteRecordID"]))
+    return (await selectAllEntires("UserList", columns)).map(result => new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"]))
 }
 
 /**
@@ -74,20 +68,19 @@ export async function fetchUser(schedgeUpId?: string, discordUserSnowflake?: Sno
 
     const result = await selectEntry("UserList", "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"")
     if (result === undefined) return undefined
-    return new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"], result["SmartSuiteRecordID"])
+    return new DatabaseUser(result["UserID"], result["SchedgeUpID"], result["DiscordUserSnowflake"])
 }
 
 /**
- * Update a user in the database, provide either SU id, Discord snowflake or SS record ID to find user, and a User
+ * Update a user in the database, provide either SU or Discord snowflake to find user, and a User
  * object with the new info.
  */
-export async function updateUser(newInfo: DatabaseUser, schedgeUpId?: string, discordUserSnowflake?: Snowflake, smartSuiteRecordID?: string) {
-    if (!schedgeUpId && !discordUserSnowflake && !smartSuiteRecordID) throw new Error("All search params can't be undefined")
-    if (!newInfo.smartSuiteRecordID) throw new Error("User object needs to be complete to update an existing user")
+export async function updateUser(newInfo: DatabaseUser, schedgeUpId?: string, discordUserSnowflake?: Snowflake) {
+    if (!schedgeUpId && !discordUserSnowflake) throw new Error("All search params can't be undefined")
     await updateEntry("UserList",
-        "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\" OR SmartSuiteRecordID=\"" + smartSuiteRecordID + "\"",
-        ["SchedgeUpID", "DiscordUserSnowflake", "SmartSuiteRecordID"],
-        [newInfo.schedgeUpId, newInfo.discordSnowflake, newInfo.smartSuiteRecordID])
+        "SchedgeUpID=\"" + schedgeUpId + "\" OR DiscordUserSnowflake=\"" + discordUserSnowflake + "\"",
+        ["SchedgeUpID", "DiscordUserSnowflake"],
+        [newInfo.schedgeUpId, newInfo.discordSnowflake])
 }
 
 /**

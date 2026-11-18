@@ -66,7 +66,7 @@ export async function listFood() {
  * F - optional, an allergy if the submitter has one
  */
 export async function fetchTodaysSubmittedOrders() {
-    const rows = await getRowsByDate(needEnvVariable(EnvironmentVariable.FOOD_ORDER_SPREADSHEET), "A2:Z", new Date(), 3, (dateString) => {
+    const rows = await getRowsByDate(needEnvVariable(EnvironmentVariable.FOOD_ORDER_SPREADSHEET_ID), "A2:Z", new Date(), 3, (dateString) => {
         const parts = dateString.trim().split(".").map(part => Number(part))
         return new Date(parts[2], parts[1] - 1, parts[0])
     })
