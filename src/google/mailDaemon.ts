@@ -27,7 +27,7 @@ async function tickDaemon() {
     await gmailClient.users.watch({
         userId: "me",
         requestBody: {
-            topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmailClient",
+            topicName: "projects/" + needEnvVariable(EnvironmentVariable.GOOGLE_PROJECT_ID) + "/topics/gmail",
             labelIds: ["INBOX"],
         },
     })
