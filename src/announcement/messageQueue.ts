@@ -3,12 +3,12 @@ import {Redis} from "ioredis"
 import {Job, Queue, Worker} from "bullmq"
 import {discordClient} from "../discord/client.js"
 import {DatabaseUser, fetchUser} from "../database/user.js"
-import {getSinglePersonnel} from "../smartsuite/personnel.js"
 import {sendNagMail} from "../google/mail.js"
 import {Snowflake} from "discord.js"
 import {inspect} from "util"
 import {needNaggingData} from "../database/announcement.js"
 import {naggingRules, stopAnnouncement} from "./announcement.js"
+import {scrapeUsers} from "schedgeup-scraper"
 
 // A job that starts a round of nagging, resulting in x amount of nag jobs being posted (and another of itself if necessary)
 export interface NagInitiationJobData {
@@ -165,15 +165,15 @@ export function setupMessageQueue() {
 
             // If we can't send a mail for some reason we send a discord message, as long as this nag does not already send a Discord message
             if (data.mail) {
-                if (!data.userToNag || !data.userToNag.smartSuiteRecordID) {
-                    messageQueueLogger.logLine(">>> " + data.userToNag?.userId + " does not have a linked SmartSuite record, defaulting to Discord")
+                if (!data.userToNag) {
+                    messageQueueLogger.logLine(">>> Cant send mail for context " + data + "\nTrying to send Discord message instead")
                     data.discord = true
                 } else {
-                    const recipient = await getSinglePersonnel(data.userToNag.smartSuiteRecordID)
-                    if (!recipient) throw new Error("Uh oh, stored SmartSuite record ID does not find any existing record?!")
-                    if (recipient.mail) {
-                        await sendNagMail(recipient.mail, messageLink, naggerName, getNaggingMessageContent(data.step, "Mail", naggerName, data.announcementTitle, data.announcementDeadline, messageLink))
-                        await messageQueueLogger.logLine(">>> Sent Mail nag to " + data.userToNag.discordSnowflake + "//" + recipient.mail)
+                    const recipient =  (await scrapeUsers([data.userToNag.schedgeUpId]))[0]
+                    if (!recipient) throw new Error("Uh oh, cant find SchedgeUp user?!")
+                    if (recipient.emailAddress) {
+                        await sendNagMail(recipient.emailAddress, messageLink, naggerName, getNaggingMessageContent(data.step, "Mail", naggerName, data.announcementTitle, data.announcementDeadline, messageLink))
+                        await messageQueueLogger.logLine(">>> Sent Mail nag to " + data.userToNag.discordSnowflake + "//" + recipient.emailAddress)
                     } else {
                         messageQueueLogger.logLine(">>> " + data.userToNag.userId + " does not have a linked e-mail, defaulting to Discord")
                         data.discord = true
