@@ -8,7 +8,7 @@ import {
     createNewShowday,
     fetchShowDayByDate,
     fetchShowDayBySU,
-    isDayTimeShow
+    isDayTimeShow, removeEventFromShowDay
 } from "../../database/showday.js"
 import {fetchSetting, updateSetting} from "../../database/settings.js"
 import {ConsoleLogger, DelegatingLogger, DiscordMessageReplyLogger, Logger} from "../../util/logging.js"
@@ -16,7 +16,7 @@ import {needNotNullOrUndefined} from "../../util/util.js"
 import {
     ChannelMemberDifference,
     createNewChannelForEvent,
-    mapRunningChannels,
+    mapRunningShowdayChannels,
     updateMembersForChannel
 } from "../channels.js"
 
@@ -90,9 +90,12 @@ function formatMemberDifference(differences: ChannelMemberDifference[]) {
 
 /**
  * Look for changes in SchedgeUp
+ * @param guild the Guild of the bot
+ * @param logger the logger to use for this run
+ * @param daytimeStatusChangeCheck is this update triggered because of a change in daytime status for a show?
  * @return All members removed or added during the update
  */
-export async function update(guild: Guild, logger: Logger) {
+export async function update(guild: Guild, logger: Logger, daytimeStatusChangeCheck?: boolean) {
     // First time stuff
     addGuildToUpdate(guild)
     const roleSnowflake = await fetchSetting("admin_role_snowflake")
@@ -115,6 +118,7 @@ export async function update(guild: Guild, logger: Logger) {
     // Shift the week such that Monday is day 0, and Sunday is day 6(We want new shows from Monday)
     const eventInfos = await getEventInfos(new DateRange(today, afterDays(6 - (today.getDay() === 0 ? 6 : today.getDay() - 1), today)), false)
     let events = await scrapeEvents(eventInfos)
+
     // We filter out events we don't want to create a show for here, a little weird but probably fine
     events = events.filter(event => {
             const title = event.title.toLowerCase()
@@ -128,8 +132,21 @@ export async function update(guild: Guild, logger: Logger) {
             return true
     })
 
+    // To remove the need for the update function to look for changes to which shows are day time or not on each update, we check here if
+    // the changed show matches any existing shows. If we find any, we remove them from the old show before we start the update.
+    if (daytimeStatusChangeCheck) {
+        for (const event of events) {
+            const isEventDaytime = await isDayTimeShow(event.showTemplateId ?? "", event.title)
+            const oldShowDay = await fetchShowDayBySU(event.id, !isEventDaytime)
+            if (oldShowDay) {
+                // And if one exists, we have to remove the event from its old showday
+                await removeEventFromShowDay(event.id, !isEventDaytime)
+            }
+        }
+    }
+
     await logger.logLine("Mapping currently running Discord channels...")
-    const channels = await mapRunningChannels(guild)
+    const channels = await mapRunningShowdayChannels(guild)
     const channelsMapped = await mapChannelsToEvents(channels, events)
 
     const daysUpdated: TextChannel[] = []
@@ -139,6 +156,15 @@ export async function update(guild: Guild, logger: Logger) {
         const event = events[i]
         const isEventDaytime = await isDayTimeShow(event.showTemplateId === undefined ? "null" : event.showTemplateId, event.title)
         const showDay = await fetchShowDayBySU(event.id, isEventDaytime)
+
+        // In some cases a show will be reclassified as daytime/non-daytime after the channel has been made, and since the showday is fetched with the
+        // daytime parameter we have to check if there exists a showday with this event with the wrong daytime status
+        const oldShowDay = await fetchShowDayBySU(event.id, !isEventDaytime)
+        if (oldShowDay) {
+            // And if one exists, we have to remove the event from its old showday
+            await removeEventFromShowDay(event.id, !isEventDaytime)
+        }
+
         if (!showDay) {
 
             // No ShowDay for the given event found, maybe there is one for the given date?
@@ -168,7 +194,7 @@ export async function update(guild: Guild, logger: Logger) {
 
                     // Update pinned info messages
                     await updateEventInfo(channel, showDay0.when, events.map(e => e.title).join(", "))
-                    await updateCastList(channel, events, showDay0.dayTimeShows)
+                    await updateCastList(channel, events.sort((e1, e2) => e1.eventStartTime.getTime() - e2.eventStartTime.getTime()), showDay0.dayTimeShows)
                 } else {
                     throw new Error("Could not find channel belonging to ShowDay " + renderDateYYYYMMDD(showDay0.when))
                 }
@@ -197,7 +223,7 @@ export async function update(guild: Guild, logger: Logger) {
                 channelMemberDifferences.push(await updateMembersForChannel(channel, events, logger))
 
                 // Update pinned info messages
-                await updateEventInfo(channel, showDay.when, events.map(e => e.title).join(", ")) // TODO Is a full rebuild every time necessary?
+                await updateEventInfo(channel, showDay.when, events.map(e => e.title).join(", "))
                 await updateCastList(channel, events, showDay.dayTimeShows)
 
             } else {
@@ -226,7 +252,7 @@ async function mapChannelsToEvents(channels: Collection<TextChannel, string[]>, 
             }
         }
 
-        channelsMapped.set(channel[0], foundEvents)
+        channelsMapped.set(channel[0], foundEvents.sort((e1, e2) => e1.eventStartTime.getTime() - e2.eventStartTime.getTime()))
     }
 
     return channelsMapped

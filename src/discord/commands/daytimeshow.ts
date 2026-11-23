@@ -1,5 +1,12 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {addDayTimeShow, fetchAllDayTimeShows, isDayTimeShow, removeDayTimeShow} from "../../database/showday.js"
+import {
+    addDayTimeShow,
+    fetchAllDayTimeShows,
+    isDayTimeShow,
+    removeDayTimeShow
+} from "../../database/showday.js"
+import {update} from "./update.js"
+import {ConsoleLogger} from "../../util/logging.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -20,17 +27,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     } else if (remove) {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
             await removeDayTimeShow(templateIdOrShowName)
-            await interaction.reply("Removed " + templateIdOrShowName.toLowerCase() + " from the list of day time shows")
+            await interaction.reply(`Fjernet ${templateIdOrShowName.toLowerCase()} som en dagtidsforestilling.\n**En oppdatering av kanalene er satt i gang**`)
+            update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         } else {
-            await interaction.reply("That template id or show name is **not** registered in the list!")
+            await interaction.reply(`Den gitte forestillingenstittelen eller mal-IDen ${templateIdOrShowName.toLowerCase()} **er ikke** lagret som en eksisterende dagtidsforestilling. Stavet du riktig?`)
         }
 
     } else {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
-            await interaction.reply("That template id or show name **is already** registered in the list!")
+            await interaction.reply(`Den gitte forestillingenstittelen eller mal-IDen ${templateIdOrShowName.toLowerCase()} **er allerede** lagret som en eksisterende dagtidsforestilling. Stavet du riktig?`)
         } else {
             await addDayTimeShow(templateIdOrShowName)
-            await interaction.reply("Added " + templateIdOrShowName.toLowerCase() + " to the list of day time shows")
+            await interaction.reply(`La til ${templateIdOrShowName.toLowerCase()} som en prestidigitatorial.\n**En oppdatering av kanalene er satt i gang**`)
+            update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         }
     }
 }
