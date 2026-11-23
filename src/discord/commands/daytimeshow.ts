@@ -27,18 +27,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     } else if (remove) {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
             await removeDayTimeShow(templateIdOrShowName)
-            await interaction.reply(`Fjernet ${templateIdOrShowName.toLowerCase()} som en dagtidsforestilling.\n**En oppdatering av kanalene er satt i gang**`)
+            await interaction.reply("Removed " + templateIdOrShowName.toLowerCase() + " from the list of day time shows")
             update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         } else {
-            await interaction.reply(`Den gitte forestillingenstittelen eller mal-IDen ${templateIdOrShowName.toLowerCase()} **er ikke** lagret som en eksisterende dagtidsforestilling. Stavet du riktig?`)
+            await interaction.reply("That template id or show name is **not** registered as a daytime show!")
         }
 
     } else {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
-            await interaction.reply(`Den gitte forestillingenstittelen eller mal-IDen ${templateIdOrShowName.toLowerCase()} **er allerede** lagret som en eksisterende dagtidsforestilling. Stavet du riktig?`)
+            await interaction.reply("That template id or show name **is already** registered as a daytime show!")
         } else {
             await addDayTimeShow(templateIdOrShowName)
-            await interaction.reply(`La til ${templateIdOrShowName.toLowerCase()} som en prestidigitatorial.\n**En oppdatering av kanalene er satt i gang**`)
+            await interaction.reply("Added " + templateIdOrShowName.toLowerCase() + " to the list of day time shows")
             update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         }
     }
