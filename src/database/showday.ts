@@ -81,6 +81,17 @@ export async function addEventToShowDay(showDay: ShowDay, eventId: string) {
     }
 }
 
+export async function removeEventFromShowDay(eventId: string, dayTime: boolean) {
+    const result = await fetchShowDayBySU(eventId, dayTime)
+    if (!result) {
+        throw new Error("ShowDay not found when trying to update ShowDay")
+    } else {
+        const currentIds = result.schedgeUpIds
+        currentIds.splice(currentIds.indexOf(eventId), 1)
+        await updateEntry("ShowDays", "SchedgeUpIDs LIKE \"%" + eventId + "%\" AND DayTimeShows=" + Number(dayTime), ["SchedgeUpIDs"], [currentIds.join(",")])
+    }
+}
+
 /**
  * Fetch the show day belonging to a SchedgeUp event given the SchedgeUp event id
  * @param schedgeUpShowId the SchedgeUp to use for searching
@@ -107,6 +118,11 @@ export async function fetchShowDayByDiscordChannel(channel: TextChannel) {
     const result = await selectEntry("ShowDays", "DiscordChannelSnowflake=\"" + channel.id + "\"")
     if (result === undefined) return undefined
     return new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"])
+}
+
+export async function fetchAllShowDays() {
+    const results = await selectAllEntires("ShowDays")
+    return results.map(result => new ShowDay(new Date(result["ShowDayDate"]), String(result["SchedgeUpIDs"]).split(","), result["DiscordChannelSnowflake"], result["CreatedAtEpoch"], result["DayTimeShows"]))
 }
 
 export async function addDayTimeShow(templateIdOrShowName: string) {

@@ -13,15 +13,13 @@ import {selectEntry} from "../database/sqlite.js"
 import {needSetting, updateSetting} from "../database/settings.js"
 import {EnvironmentVariable, needEnvVariable} from "../util/config.js"
 import {Logger} from "../util/logging.js"
-import {fetchShowDayBySU} from "../database/showday.js"
+import {fetchAllShowDays} from "../database/showday.js"
 import {getDayNameNO} from "../util/date.js"
 import {Event} from "schedgeup-scraper"
 import {postCastList, postEventInfo} from "./embeds.js"
 import {getLinkedDiscordUser, getLinkedSchedgeUpUser, getShowGuestsForChannel} from "../database/user.js"
 import {checkPermission, PermissionLevel} from "./permission.js"
 
-export const DISCORD_CHANNEL_TOPIC_FORMAT = "(Do not remove this) ID:%i"
-export const EVENT_DISCORD_CHANNEL_ID_REGEX = new RegExp("^\\(Do not remove this\\) ID:\\d+R?$")
 export const DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX = "dagtid"
 
 /**
@@ -29,22 +27,17 @@ export const DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX = "dagtid"
  * The values in the collection are the SchedgeUpIDs for the shows that use the given channel
  * @param guild The guild to search for running channels
  */
-export async function mapRunningChannels(guild: Guild) {
+export async function mapRunningShowdayChannels(guild: Guild) {
     const channels = await guild.channels.fetch()
     const runningChannels: Collection<TextChannel, string[]> = new Collection<TextChannel, string[]>()
+    const allShowDays = await fetchAllShowDays()
 
     for await (const channel of channels.values()) {
         if (channel == null || channel.type !== ChannelType.GuildText) continue
 
-        const textChannel = channel as TextChannel
-        if (textChannel.topic === null) continue
-
-        if (EVENT_DISCORD_CHANNEL_ID_REGEX.test(textChannel.topic)) {
-            const id = textChannel.topic.split(":")[1]
-            const result = await fetchShowDayBySU(id, textChannel.name.includes(DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX))
-            if (result) {
-                runningChannels.set(textChannel, result.schedgeUpIds)
-            }
+        const result = allShowDays.find(s => s.discordChannelSnowflake === channel.id)
+        if (result) {
+            runningChannels.set(channel, result.schedgeUpIds)
         }
     }
 
@@ -92,7 +85,7 @@ export async function createNewChannelForEvent(guild: Guild, event: Event, dayTi
     const channel = await guild.channels.create({
         name: getDayNameNO(event.eventStartTime) + (dayTime ? "-" + DAYTIME_DISCORD_CHANNEL_NAME_SUFFIX : ""),
         type: ChannelType.GuildText,
-        topic: DISCORD_CHANNEL_TOPIC_FORMAT.replace("%i", event.id),
+        topic: "Denne kanalen hører til en forestillingskveld, og blir oppdatert automatisk av en bot",
         parent: (await getShowsCategory(guild)).id,
     })
 

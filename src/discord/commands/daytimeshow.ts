@@ -1,5 +1,12 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder} from "discord.js"
-import {addDayTimeShow, fetchAllDayTimeShows, isDayTimeShow, removeDayTimeShow} from "../../database/showday.js"
+import {
+    addDayTimeShow,
+    fetchAllDayTimeShows,
+    isDayTimeShow,
+    removeDayTimeShow
+} from "../../database/showday.js"
+import {update} from "./update.js"
+import {ConsoleLogger} from "../../util/logging.js"
 
 
 export const data = new SlashCommandBuilder()
@@ -21,16 +28,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
             await removeDayTimeShow(templateIdOrShowName)
             await interaction.reply("Removed " + templateIdOrShowName.toLowerCase() + " from the list of day time shows")
+            update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         } else {
-            await interaction.reply("That template id or show name is **not** registered in the list!")
+            await interaction.reply("That template id or show name is **not** registered as a daytime show!")
         }
 
     } else {
         if (await isDayTimeShow(templateIdOrShowName, "null")) {
-            await interaction.reply("That template id or show name **is already** registered in the list!")
+            await interaction.reply("That template id or show name **is already** registered as a daytime show!")
         } else {
             await addDayTimeShow(templateIdOrShowName)
             await interaction.reply("Added " + templateIdOrShowName.toLowerCase() + " to the list of day time shows")
+            update(interaction.guild!, new ConsoleLogger("[UpdateFromDaytimeShowChange]"), true)
         }
     }
 }
