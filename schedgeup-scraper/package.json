@@ -1,0 +1,33 @@
+{
+  "name": "schedgeup-scraper",
+  "version": "3.3.1",
+  "description": "Web scraper for SchedgeUp",
+  "scripts": {
+    "lint": "eslint .",
+    "lintFix": "eslint . --fix",
+    "transpile": "tsc",
+    "release": "npm install && npm run lintFix && tsc && npm publish --access public",
+    "test": "tsc && mocha --exit"
+  },
+  "keywords": [
+    "schedgeup"
+  ],
+  "author": "Simon Mørland",
+  "license": "MIT",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "dependencies": {
+    "async-mutex": "0.5.0",
+    "libphonenumber-js": "1.13.17",
+    "puppeteer": "25.18.1",
+    "typescript": "5.8.3",
+    "dotenv": "18.0.10"
+  },
+  "devDependencies": {
+    "mocha": "12.0.3"
+  }
+}

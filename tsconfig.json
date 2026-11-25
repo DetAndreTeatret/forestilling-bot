@@ -2,20 +2,17 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Node 20",
 
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "outDir": "build",
-    "module": "node16",
     "lib": ["es2023", "dom"],
-    "target": "es2022",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node16",
     "sourceMap": false,
     "declaration": false
   },
-  "include": [
-    "src"
+  "exclude": [
+    "node_modules", "build", "schedgeup-scraper"
+  ],
+  "references": [
+    { "path": "./schedgeup-scraper" }
   ]
 }

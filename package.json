@@ -2,7 +2,7 @@
   "name": "forestilling-bot",
   "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
-    "start": "rm -r -f build && npm run lint && tsc && node build/main.js",
+    "start": "rm -r -f build && tsc && node build/main.js",
     "lint": "eslint .",
     "lintFix": "eslint . --fix",
     "transpile": "tsc",
@@ -14,21 +14,23 @@
   "dependencies": {
     "@google-cloud/pubsub": "^6.0.0",
     "app-root-path": "3.1.0",
+    "bullmq": "^6.0.0",
     "discord.js": "^14.27.0",
     "dotenv": "18.0.10",
     "googleapis": "189.0.0",
-    "mailparser": "3.15.0",
+    "ioredis": "^6.0.0",
+    "mailparser": "3.14.2",
     "nodemailer": "10.6.0",
-    "schedgeup-scraper": "3.3.1",
     "sqlite": "5.1.1",
-    "sqlite3": "6.0.1",
-    "bullmq": "^6.0.0",
-    "ioredis": "^6.0.0"
+    "sqlite3": "6.0.1"
   },
   "devDependencies": {
-    "typescript": "5.8.3",
     "@types/mailparser": "3.9.0",
     "@types/nodemailer": "8.0.2",
-    "eslint-config-dat": "2.0.1"
-  }
+    "eslint": "^9.26.0",
+    "eslint-config-dat": "2.1.0",
+    "typescript": "5.8.3"
+  },
+  "workspaces": ["schedgeup-scraper"]
+
 }
