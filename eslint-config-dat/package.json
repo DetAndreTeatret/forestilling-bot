@@ -1,8 +1,9 @@
 {
   "name": "eslint-config-dat",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "ESlint standard config for DAT",
-  "main": "config.ts",
+  "main": "dist/config.ts",
+  "types": "dist/config.d.ts",
   "type": "module",
   "author": "Simon Mørland",
   "license": "MIT",
