@@ -1,11 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Node 20",
+  "display": "Main project",
 
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "outDir": "build",
-    "lib": ["es2023", "dom"],
     "sourceMap": false,
     "declaration": false
   },

@@ -29,7 +29,7 @@
     "@types/nodemailer": "8.0.2",
     "eslint": "^9.26.0",
     "eslint-config-dat": "2.1.0",
-    "typescript": "5.8.3"
+    "typescript": "7.0.2"
   },
   "workspaces": ["schedgeup-scraper"]
 

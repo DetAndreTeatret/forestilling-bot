@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Node 20",
+  "display": "schedgeup-scraper",
+
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "declaration": true,
-    "composite": true,
     "outDir": "dist",
-    "lib": ["es2023", "dom"],
+    "declaration": true,
+    "composite": true
   },
   "exclude": [
     "node_modules", "dist", "test"
