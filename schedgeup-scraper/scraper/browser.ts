@@ -154,6 +154,6 @@ export async function navigateToUrl(page: Page, url: string, tryCount: number = 
             }
         }
 
-        throw new Error("Error with navigating to new page persists after multiple retries... \n" + e)
+        throw new Error("Error with navigating to new page persists after multiple retries... \n", {cause: e})
     }
 }

@@ -2,10 +2,10 @@
   "name": "forestilling-bot",
   "description": "Bot som lager Discord kanaler for forestillingskvelder.",
   "scripts": {
-    "start": "rm -r -f build && tsc && node build/main.js",
+    "start": "rm -r -f build && tsc -b && node build/main.js",
     "lint": "eslint .",
     "lintFix": "eslint . --fix",
-    "transpile": "tsc",
+    "transpile": "tsc -b",
     "deployCommands": "rm -r -f build && tsc && node ./build/scripts/deployDiscordCommands.js"
   },
   "type": "module",
@@ -24,13 +24,14 @@
     "sqlite": "5.1.1",
     "sqlite3": "6.0.1"
   },
+  "//":  "TODO: two versions of TS are imported since TS7.0 does not include the api eslint needs to work, the api should be added in TS7.1, and the the import for TS6 can be removed",
   "devDependencies": {
     "@types/mailparser": "3.9.0",
     "@types/nodemailer": "8.0.2",
-    "eslint": "^9.26.0",
-    "eslint-config-dat": "2.1.0",
-    "typescript": "7.0.2"
+    "eslint": "^10.15.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "@typescript/native": "npm:typescript@^7.0.2"
   },
-  "workspaces": ["schedgeup-scraper"]
+  "workspaces": ["schedgeup-scraper", "eslint-config-dat"]
 
 }

@@ -68,7 +68,7 @@ export async function startDiscordClient() {
     const client = new SuperClient({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildMessageReactions]})
 
     const commandsPath = path.join(__dirname, "commands")
-    let commandFiles: string[] = []
+    let commandFiles: string[]
     try {
         commandFiles = fs.readdirSync(commandsPath, {
             recursive: true,

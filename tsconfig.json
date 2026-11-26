@@ -12,6 +12,7 @@
     "node_modules", "build", "schedgeup-scraper"
   ],
   "references": [
-    { "path": "./schedgeup-scraper" }
+    { "path": "./schedgeup-scraper" },
+    { "path": "./eslint-config-dat" }
   ]
 }

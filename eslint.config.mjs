@@ -7,6 +7,6 @@ export default defineConfig([
         extends: [datConfig]
     },
     {
-        ignores: ["build/**", "schedgeup-scraper/dist/**"] // node_modules ignored by default
+        ignores: ["build/**", "schedgeup-scraper/dist/**", "**/*.d.ts"] // node_modules ignored by default
     },
 ])

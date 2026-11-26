@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "eslint-config-dat",
+
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "composite": true
+  },
+  "exclude": [
+    "node_modules", "dist"
+  ]
+}
